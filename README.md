@@ -14,10 +14,9 @@
 
 I'm going to guess how you got here and you can tell me if I get it right:
 
-> 💭 The LLM programmer hype gave you a nerd boner  
-> 😬 The people hyping LLM programming made your boner crawl back into your body _(are you ready to 'scale your impact', dog?)_  
-> 🫠 You held your nose and downloaded Cursor/added Cline or Roo Code/npm installed Claude Code  
-> <sub>_(after regretfully installing Node.js jk typescripters don't cry is just joke)_</sub>
+- 💭 The LLM programmer hype gave you a nerd boner  
+- 😬 The people hyping LLM programming made your boner crawl back into your body _(are you ready to 'scale your impact', dog?)_  
+- 🫠 You held your nose and downloaded Cursor/added Cline or Roo Code/npm installed Claude Code <sub>_(after regretfully installing Node.js jk typescripters don't cry is just joke)_</sub>
 
 At first this was obviously novel and interesting. Some things were shitty but mostly you were enjoying not having to write a context manager or even recognize that you needed one for your dumb client wrapper.
 

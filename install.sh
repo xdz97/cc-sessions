@@ -361,19 +361,20 @@ settings_content='{
         ]
       }
     ]
-  }'
+  }
+}'
 
 # Add statusline if requested
 if [ "$install_statusline" = "y" ]; then
-    settings_content="${settings_content%\}},
+    # Remove the last closing brace, add comma and statusline, then close
+    settings_content="${settings_content%\}}"  # Remove last }
+    settings_content="${settings_content%$'\n'}"  # Remove trailing newline
+    settings_content="${settings_content},
   \"statusLine\": {
     \"type\": \"command\",
     \"command\": \"\$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh\",
     \"padding\": 0
   }
-}"
-else
-    settings_content="${settings_content%\}}
 }"
 fi
 

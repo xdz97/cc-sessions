@@ -113,7 +113,7 @@ That's it. That's the whole DAIC thing. Discussion, Alignment, Implementation, C
 </details>
 
 <details>
-<summary>See it in action</summary>
+<summary>**See it in action**</summary>
 
 ```
 You: add user search to the dashboard
@@ -160,9 +160,9 @@ When your context window hits 75%, you get a warning. Not after it dies. Before.
 
 Claude: ⚠️ Context at 75% - Consider wrapping up soon
 
-You: use the logging agent to save our work
+You: I gotta run, lets compact and come back to this later.
 
-Claude: [Saves detailed work log with all changes]
+Claude: Cool, running context-compaction.md protocol - first, let me call the logging agent to write our task log for the session...
 
 You: [Close laptop, weekend happens]
 
@@ -186,15 +186,17 @@ Zero context rebuilding. Claude knows exactly where you left off.
 
 </details>
 
-Those subagents that were useless? Now they get context manifests. The code review agent knows your patterns. The research agent knows your stack. They run in separate threads so your main context stays clean. They come back with actual useful information instead of random shit they guessed.
+Those subagents that were useless? Now they get the entire context of your conversation so far (unless you dont need them to have it). They have strict instructions to record their findings in the appropriate sessions/ files and communicate with your main Claude Code thread when they are done. 
+
+The code review agent knows your patterns. The context gathering agent knows your stack. The logging agent is basically a copy of your current conversation. They run in separate threads so your main context stays clean. They come back with actual useful information instead of random shit they guessed.
 
 <details>
 <summary>Agents that actually work</summary>
 
 ```
-You: use the context-gathering agent to understand how our caching system works
+You: Lets start the caching upgrades 
 
-Claude: I'll use the context-gathering agent to analyze your caching system.
+Claude: No problem! Let me update current-task.json and then I'll use the context-gathering agent to analyze your caching system.
 
 [Agent runs in separate context - doesn't pollute your main thread]
 
@@ -219,7 +221,7 @@ IMPLEMENTATION LOCATIONS:
 [Full context manifest saved to task file - available forever]
 ```
 
-The agent understood your patterns because it could analyze everything without token limits.
+The agent understood your patterns because it could analyze everything without worrying about preserving the context window.
 
 </details>
 
@@ -246,20 +248,16 @@ Claude: I'll update the login validation. Let me look at the current implementat
 Run this command:
 git checkout feature/fix-auth
 
-You: git checkout feature/fix-auth
-
-You: okay now update it
+Claude: git checkout feature/fix-auth
 
 Claude: [NOW can edit the file safely on the correct branch]
 ```
 
-No more "oh fuck I edited main" at 11pm.
-
 </details>
 
-Your CLAUDE.md stays under 100 lines because the behavioral rules are in CLAUDE.sessions.md and enforced by hooks. Not suggestions Claude might follow. Actual enforcement that can't be ignored.
+Your CLAUDE.md stays under 100 lines because Claude Code no longer needs 1000 rules to try to prevent it from American Psycho-ing your server's file system. A few key behavioral rules in CLAUDE.sessions.md and the rest is enforced by programmatic hooks - not suggestions Claude might follow. Actual enforcement that can't be ignored.
 
-The statusline shows you everything in real-time. Current task. DAIC mode. Token usage. What files have been edited. You always know what's happening.
+The statusline shows you everything in real-time. Current task. DAIC mode. Token usage. Number of edited files to go in staging. Number of open tasks that need to be addressed. You always know what's happening.
 
 <details>
 <summary>Statusline keeping you informed</summary>

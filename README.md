@@ -12,41 +12,61 @@
 
 ## 🔥 The Problem
 
+<details>
+<summary><strong>How you got here</strong> <em>(click to read the painful journey)</em></summary>
+
+<br>
+
 I'm going to guess how you got here and you can tell me if I get it right:
 
 - 💭 The LLM programmer hype gave you a nerd boner  
-- 😬 The people hyping LLM programming made your boner crawl back into your body _(are you ready to 'scale your impact', dog?)_  
+- 😬 The people hyping LLM programming made your boner crawl back into your body <br> <sub>_(are you ready to 'scale your impact', dog?)_</sub> 
 - 🤮 You held your nose and downloaded Cursor/added Cline or Roo Code/npm installed Claude Code <br> <sub>_(after regretfully installing Node.js jk typescripters don't cry is just joke)_</sub>
 
 At first this was obviously novel and interesting. Some things were shitty but mostly you were enjoying not having to write a context manager or even recognize that you needed one for your dumb client wrapper.
 
-**You were scaling your impact** _(whew)_.
+**You were _scaling_ your _impact_** _(whew)_.
 
-But then Claude started doing Claude things. You asked it to add error handling to one function. It added error handling to **_every function in the file_**. And changed your error types. And your logging format. And somehow your indentation is different now?
+But then Claude started doing some concerning things. 
+
+You asked it to add error handling to **one** function. It added error handling to **_every function in the file_**. And changed your error types. And your logging format. And somehow your indentation is different now?
 
 You learned to be more specific. `'ONLY change lines 45-52.'` Claude changes lines 45-52. **Also lines 1-44.** Also creates a new file you didn't ask for. Also helpful reminder that you should add TypeScript types _(you're writing Python)_.
 
-The context window thing started getting annoying. You're explaining the same architecture for the fifth time today. Claude's like _'what database?'_ **Brother. We've been using Postgres for six hours. You were just in there.**
+The context window thing started getting annoying. You're explaining the same architecture for the fifth time today. Claude's like _'let me look for the database'_ **Brother. We've been using Postgres for six hours. You were just in there.**
 
-Your CLAUDE.md is now longer than your actual code. `'NEVER use class components.'` `'ALWAYS use the existing auth middleware.'` `'DO NOT refactor unrelated code.'` `'REMEMBER we use PostgreSQL.'` Claude reads the first line and freestyle raps the rest.
+Your CLAUDE.md is now longer than your actual code. `'NEVER use class components.'` `'ALWAYS use the existing auth middleware.'` `'DO NOT refactor unrelated code.'` `'REMEMBER we use PostgreSQL.'` Claude reads the first line and then macrodoses window pane LSD for the rest.
 
-You tried the subagents. _'Use the code review agent.'_ Cool, it's reviewing code with zero context about your application. _'Use the research agent.'_ It's researching the wrong library. **You can't even talk to these things.** They're like contractors who don't speak your language and you communicate through Google Translate and prayer.
+You tried the subagents, but quickly realized that **you can't even talk to these things.** 10 minutes into a "code review" and the agent hits some kind of API error and returns to your main thread with no explanation of what it did or what it discovered. Run it again, I guess? _This fucking sucks_.
 
-Now you're here. Your codebase is 'done' but it's held together with **string and vibes**. There's three different state management patterns. Your auth flow would make a security researcher weep. You've got utility functions that are duplicated in four files because Claude kept forgetting they exist.
+Now you're here. Your codebase is 'done' but you couldn't, in a million years, explain what that means or how it satisfies the definition. 
 
-The real kicker? You know exactly what's wrong but fixing it means understanding code you didn't write in patterns you don't recognize using approaches you wouldn't choose.
+There's three different state management patterns. 
 
-### **You're not a programmer anymore. You're a prompt engineer with a production system.**
+Your auth flow has several functions that are hard coded to give everyone the keys to your whole server. 
+
+You've got utility functions that are duplicated in four files because Claude kept forgetting they exist.
+
+You don't even know exactly what's wrong and fixing it means understanding code you didn't write in patterns you don't recognize using approaches you wouldn't choose.
+
+### **You're not a programmer anymore. You're a prompt engineer with a production system that makes you want to slam your genitalia in a drawer.**
+
+</details>
 
 ## 💊 The Solution
 
+<details>
+<summary><strong>What We Fixed</strong> <em>(what you get when you use cc-sessions)</em></summary>
+
+<br>
+
 So, now you're here. Since this is exclusively about Claude Code I'm going to assume that you are a CC user and you are looking to make that better. **Lit.**
 
-So let's talk about Claude Code.
+Let's talk about Claude Code.
 
 Of the major AI programming IDEs/scaffolds, Claude Code is probably the best and Claude models are probably the best _(though Google is kinda coming for that ass)_.
 
-But, Claude Code is not without its **major faults** and **boner-killing frustrations**.
+But, Claude Code is not without its **major faults, flaws, and flaccidity-inducing frustrations**.
 
 For instance, **it would be nice if**:
 
@@ -66,11 +86,18 @@ For instance, **it would be nice if**:
 
 ### **This is what Sessions does.**
 
-It makes all of these nice things happen. Not through more rules or documentation or prompting techniques. **Through enforcement that Claude can't ignore, state that persists, and workflows that actually work.**
+It makes all of these nice things happen. Not through more rules or documentation or prompting techniques, but through **brute authoritarian rule over the agentic loop**.
+
+</details>
 
 ## ⚙️ How It Works
 
-Here's how it works:
+**Sessions enforces discussion before implementation through hooks that Claude can't bypass.**
+
+<details>
+<summary><strong>The DAIC workflow explained</strong> <em>(see how it actually works)</em></summary>
+
+<br>
 
 You install Sessions. Five minutes, one script. It sets up hooks that Claude can't bypass, state management that persists, and a task system that actually remembers things.
 
@@ -82,6 +109,8 @@ You: 'go ahead'
 Claude: *NOW it can edit*
 
 That's it. That's the whole DAIC thing. Discussion, Alignment, Implementation, Check. Claude can't skip ahead. The hooks literally block the tools.
+
+</details>
 
 <details>
 <summary>See it in action</summary>
@@ -115,6 +144,11 @@ Claude: [NOW Claude can edit - implements exactly what was discussed]
 Without Sessions? Claude would've created a new search component, ignored your API endpoint, and used a different state pattern.
 
 </details>
+
+<details>
+<summary><strong>Key features in detail</strong> <em>(persistent context, agents, enforcement)</em></summary>
+
+<br>
 
 When your context window hits 75%, you get a warning. Not after it dies. Before. You wrap up clean, save your work, start fresh. The task file has everything - what you're building, what you've done, what's next. Claude reads it and continues exactly where you left off.
 
@@ -261,6 +295,8 @@ When Claude is done implementing, it's reminded to run 'daic' to return to discu
 This isn't complex. It's not heavy process. It's invisible rails that keep Claude from going off the cliff. You still describe what you want in natural language. Claude still writes code. But now it happens in a way that doesn't produce garbage.
 
 You code at the same speed. You just don't spend the next three hours unfucking what Claude just did.
+
+</details>
 
 ## 🚀 Installation
 

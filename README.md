@@ -1,5 +1,3 @@
-<div align="center">
-
 ```
 ███████╗███████╗███████╗███████╗██╗ ██████╗ ███╗   ██╗███████╗
 ██╔════╝██╔════╝██╔════╝██╔════╝██║██╔═══██╗████╗  ██║██╔════╝
@@ -9,8 +7,7 @@
 ╚══════╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝
 ```
 
-_A public good brought to you by GWUDCAP and Three AIrrows Capital_
-</div>
+<sub>_A public good brought to you by GWUDCAP and Three AIrrows Capital_</sub>
 
 ---
 

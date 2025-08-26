@@ -1,0 +1,57 @@
+understand your codebase0
+  "name": "cc-sessions",
+  "version": "0.1.0",
+  "description": "Claude Code Sessions Framework - Enforced methodology for AI pair programming",
+  "main": "install.js",
+  "bin": {
+    "cc-sessions": "./install.js",
+    "cc-sessions-install": "./install.js"
+  },
+  "scripts": {
+    "install": "node install.js",
+    "postinstall": "echo 'Run claude-sessions in your project directory to complete setup'"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai",
+    "pair-programming",
+    "daic",
+    "sessions",
+    "workflow",
+    "development",
+    "vibe-coding"
+  ],
+  "author": "toastx",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GWUDCAP/cc-sessions.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GWUDCAP/cc-sessions/issues"
+  },
+  "homepage": "https://github.com/GWUDCAP/cc-sessions#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "!win32"
+  ],
+  "preferGlobal": true,
+  "files": [
+    "install.js",
+    "install.sh",
+    "hooks/",
+    "protocols/",
+    "agents/",
+    "templates/",
+    "scripts/",
+    "knowledge/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ]
+}

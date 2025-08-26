@@ -41,7 +41,7 @@ def get_package_dir() -> Path:
 class SessionsInstaller:
     def __init__(self):
         self.package_dir = get_package_dir()
-        self.project_root = Path.cwd()
+        self.project_root = self.detect_project_directory()
         self.config = {
             "developer_name": "the developer",
             "trigger_phrases": ["make it so", "run that", "go ahead", "yert"],
@@ -49,6 +49,23 @@ class SessionsInstaller:
             "task_detection": {"enabled": True},
             "branch_enforcement": {"enabled": True}
         }
+    
+    def detect_project_directory(self) -> Path:
+        """Detect the correct project directory when running from pip/pipx"""
+        current_dir = Path.cwd()
+        
+        # If running from site-packages or pipx environment
+        if 'site-packages' in str(current_dir) or '.local/pipx' in str(current_dir):
+            print(color("⚠️  Running from package directory, not project directory.", Colors.YELLOW))
+            print()
+            project_path = input("Enter the path to your project directory (or press Enter for current directory): ")
+            if project_path:
+                return Path(project_path).resolve()
+            else:
+                # Default to user's current working directory before pip ran
+                return Path.cwd()
+        
+        return current_dir
     
     def check_dependencies(self) -> None:
         """Check for required dependencies"""

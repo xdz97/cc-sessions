@@ -36,7 +36,23 @@ const question = promisify(rl.question).bind(rl);
 
 // Paths
 const SCRIPT_DIR = __dirname;
-const PROJECT_ROOT = process.cwd();
+let PROJECT_ROOT = process.cwd();
+
+// Check if we're running from npx or in wrong directory
+async function detectProjectDirectory() {
+  // If running from node_modules or temp npx directory
+  if (PROJECT_ROOT.includes('node_modules') || PROJECT_ROOT.includes('.npm')) {
+    console.log(color('⚠️  Running from package directory, not project directory.', colors.yellow));
+    console.log();
+    const projectPath = await question('Enter the path to your project directory (or press Enter for current directory): ');
+    if (projectPath) {
+      PROJECT_ROOT = path.resolve(projectPath);
+    } else {
+      PROJECT_ROOT = process.cwd();
+    }
+    console.log(color(`Using project directory: ${PROJECT_ROOT}`, colors.cyan));
+  }
+}
 
 // Configuration object to build
 const config = {
@@ -383,6 +399,9 @@ async function install() {
   console.log(color('║    Claude Code Sessions Installer       ║', colors.bright));
   console.log(color('╚══════════════════════════════════════════╝', colors.bright));
   console.log();
+  
+  // Detect correct project directory
+  await detectProjectDirectory();
   
   // Check CLAUDE_PROJECT_DIR
   if (!process.env.CLAUDE_PROJECT_DIR) {

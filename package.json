@@ -8,8 +8,7 @@
     "cc-sessions-install": "./install.js"
   },
   "scripts": {
-    "install": "node install.js",
-    "postinstall": "echo 'Run claude-sessions in your project directory to complete setup'"
+    "test": "echo \"No test specified yet\""
   },
   "keywords": [
     "claude",

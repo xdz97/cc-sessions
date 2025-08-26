@@ -312,7 +312,7 @@ You need:
 
 Pick your poison:
 
-**NPM/NPX** (Node.js users):
+**NPM/NPX** (TypeScript Andys):
 ```bash
 cd your-broken-project
 npx cc-sessions                  # One-time install
@@ -321,7 +321,7 @@ npm install -g cc-sessions       # Global install
 cc-sessions                      # Run in your project
 ```
 
-**Pip/Pipx/UV** (Python users):
+**Pip/Pipx/UV** (Pythonistas):
 ```bash
 pipx install cc-sessions         # Isolated install (recommended)
 cd your-broken-project
@@ -332,7 +332,7 @@ pip install cc-sessions          # Regular pip
 uv pip install cc-sessions       # UV package manager
 ```
 
-**Direct Bash** (Old school):
+**Direct Bash** ('build from source' gigachads):
 ```bash
 git clone https://github.com/GWUDCAP/cc-sessions
 cd your-broken-project

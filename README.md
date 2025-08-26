@@ -48,19 +48,21 @@ Of the major AI programming IDEs/scaffolds, Claude Code is probably the best and
 
 But, Claude Code is not without its **major faults** and **boner-killing frustrations**.
 
-For instance, it would be nice if Claude had to talk to you before writing code so you didn't end up with 500 lines of implementation for a one-line change.
+For instance, **it would be nice if**:
 
-It would be nice if you didn't lose everything when the context window died and Claude actually remembered what you were working on tomorrow.
+- Claude had to talk to you before writing code so you didn't end up with 500 lines of implementation for a one-line change.
 
-It would be nice if you didn't have to explain your entire architecture every. single. session. and Claude actually inherited understanding from previous work.
+- you didn't lose everything when the context window died and Claude actually remembered what you were working on tomorrow.
 
-It would be nice if Claude couldn't randomly refactor working code while you're trying to add a button.
+- you didn't have to explain your entire architecture every. single. session. and Claude actually inherited understanding from previous work.
 
-It would be nice if you didn't have to manually check which branch you're on in five different repos and Claude actually stopped you before you edited the wrong one.
+- Claude couldn't randomly refactor working code while you're trying to add a button.
 
-It would be nice if Claude followed the patterns in your codebase instead of inventing new ones every time it touches a file.
+- you didn't have to manually check which branch you're on in five different repos and Claude actually stopped you before you edited the wrong one.
 
-It would be nice if you didn't have to write increasingly desperate rules in CLAUDE.md and Claude was actually forced to follow consistent behavior.
+- Claude followed the patterns in your codebase instead of inventing new ones every time it touches a file.
+
+- you didn't have to write increasingly desperate rules in CLAUDE.md and Claude was actually forced to follow consistent behavior.
 
 ### **This is what Sessions does.**
 

@@ -1,46 +1,53 @@
-<h1>## SHOCKING REPORT REVEALS:</h1>
-<br>
-## Vibe coding is shitty and confusing and produces garbage software that sucks to work on.
+<div align="center">
 
-**Claude Code makes it less shitty, but not by enough.**
+##### ⚡ SHOCKING REPORT REVEALS ⚡
 
-## The Problem
+# **Vibe coding is shitty and confusing and produces garbage software that sucks to work on.**
+
+### _Claude Code makes it less shitty, but not by enough._
+
+---
+
+</div>
+
+## 🔥 The Problem
 
 I'm going to guess how you got here and you can tell me if I get it right:
 
-- The LLM programmer hype gave you a nerd boner
-- The people hyping LLM programming made your boner crawl back into your body (are you ready to 'scale your impact', dog?)
-- You held your nose and downloaded Cursor/added Cline or Roo Code/npm installed Claude Code *(after regretfully installing Node.js jk typescripters don't cry is just joke)*
+> 💭 The LLM programmer hype gave you a nerd boner  
+> 😬 The people hyping LLM programming made your boner crawl back into your body _(are you ready to 'scale your impact', dog?)_  
+> 🫠 You held your nose and downloaded Cursor/added Cline or Roo Code/npm installed Claude Code  
+> <sub>_(after regretfully installing Node.js jk typescripters don't cry is just joke)_</sub>
 
 At first this was obviously novel and interesting. Some things were shitty but mostly you were enjoying not having to write a context manager or even recognize that you needed one for your dumb client wrapper.
 
-You were scaling your impact (whew).
+**You were scaling your impact** _(whew)_.
 
-But then Claude started doing Claude things. You asked it to add error handling to one function. It added error handling to every function in the file. And changed your error types. And your logging format. And somehow your indentation is different now?
+But then Claude started doing Claude things. You asked it to add error handling to one function. It added error handling to **_every function in the file_**. And changed your error types. And your logging format. And somehow your indentation is different now?
 
-You learned to be more specific. 'ONLY change lines 45-52.' Claude changes lines 45-52. Also lines 1-44. Also creates a new file you didn't ask for. Also helpful reminder that you should add TypeScript types (you're writing Python).
+You learned to be more specific. `'ONLY change lines 45-52.'` Claude changes lines 45-52. **Also lines 1-44.** Also creates a new file you didn't ask for. Also helpful reminder that you should add TypeScript types _(you're writing Python)_.
 
-The context window thing started getting annoying. You're explaining the same architecture for the fifth time today. Claude's like 'what database?' Brother. We've been using Postgres for six hours. You were just in there.
+The context window thing started getting annoying. You're explaining the same architecture for the fifth time today. Claude's like _'what database?'_ **Brother. We've been using Postgres for six hours. You were just in there.**
 
-Your CLAUDE.md is now longer than your actual code. 'NEVER use class components.' 'ALWAYS use the existing auth middleware.' 'DO NOT refactor unrelated code.' 'REMEMBER we use PostgreSQL.' Claude reads the first line and freestyle raps the rest.
+Your CLAUDE.md is now longer than your actual code. `'NEVER use class components.'` `'ALWAYS use the existing auth middleware.'` `'DO NOT refactor unrelated code.'` `'REMEMBER we use PostgreSQL.'` Claude reads the first line and freestyle raps the rest.
 
-You tried the subagents. 'Use the code review agent.' Cool, it's reviewing code with zero context about your application. 'Use the research agent.' It's researching the wrong library. You can't even talk to these things. They're like contractors who don't speak your language and you communicate through Google Translate and prayer.
+You tried the subagents. _'Use the code review agent.'_ Cool, it's reviewing code with zero context about your application. _'Use the research agent.'_ It's researching the wrong library. **You can't even talk to these things.** They're like contractors who don't speak your language and you communicate through Google Translate and prayer.
 
-Now you're here. Your codebase is 'done' but it's held together with string and vibes. There's three different state management patterns. Your auth flow would make a security researcher weep. You've got utility functions that are duplicated in four files because Claude kept forgetting they exist.
+Now you're here. Your codebase is 'done' but it's held together with **string and vibes**. There's three different state management patterns. Your auth flow would make a security researcher weep. You've got utility functions that are duplicated in four files because Claude kept forgetting they exist.
 
 The real kicker? You know exactly what's wrong but fixing it means understanding code you didn't write in patterns you don't recognize using approaches you wouldn't choose.
 
-You're not a programmer anymore. You're a prompt engineer with a production system.
+### **You're not a programmer anymore. You're a prompt engineer with a production system.**
 
-## The Solution
+## 💊 The Solution
 
-So, now you're here. Since this is exclusively about Claude Code I'm going to assume that you are a CC user and you are looking to make that better. Lit.
+So, now you're here. Since this is exclusively about Claude Code I'm going to assume that you are a CC user and you are looking to make that better. **Lit.**
 
 So let's talk about Claude Code.
 
-Of the major AI programming IDEs/scaffolds, Claude Code is probably the best and Claude models are probably the best (though Google is kinda coming for that ass).
+Of the major AI programming IDEs/scaffolds, Claude Code is probably the best and Claude models are probably the best _(though Google is kinda coming for that ass)_.
 
-But, Claude Code is not without its major faults and boner-killing frustrations.
+But, Claude Code is not without its **major faults** and **boner-killing frustrations**.
 
 For instance, it would be nice if Claude had to talk to you before writing code so you didn't end up with 500 lines of implementation for a one-line change.
 
@@ -70,9 +77,11 @@ It would be nice if Claude couldn't blow past your 'please stop and discuss' and
 
 It would be nice if you didn't discover three duplicate implementations of the same function and Claude actually knew what code already exists.
 
-This is what Sessions does. It makes all of these nice things happen. Not through more rules or documentation or prompting techniques. Through enforcement that Claude can't ignore, state that persists, and workflows that actually work.
+### **This is what Sessions does.**
 
-## How It Works
+It makes all of these nice things happen. Not through more rules or documentation or prompting techniques. **Through enforcement that Claude can't ignore, state that persists, and workflows that actually work.**
+
+## ⚙️ How It Works
 
 Here's how it works:
 
@@ -266,19 +275,19 @@ This isn't complex. It's not heavy process. It's invisible rails that keep Claud
 
 You code at the same speed. You just don't spend the next three hours unfucking what Claude just did.
 
-## Installation
+## 🚀 Installation
 
-Alright, you're convinced. Let's unfuck your workflow.
+Alright, you're convinced. **Let's unfuck your workflow.**
 
-### Requirements
+### ✅ Requirements
 
 You need:
-- Claude Code (you have this or you wouldn't be here)
-- Python 3 + pip (for the hooks)
-- Git (probably)
-- 5 minutes
+- **Claude Code** _(you have this or you wouldn't be here)_
+- **Python 3 + pip** _(for the hooks)_
+- **Git** _(probably)_
+- **5 minutes**
 
-### Install
+### 📦 Install
 
 Pick your poison:
 
@@ -317,7 +326,7 @@ The installer asks you:
 
 That's it. Restart Claude Code. You're done.
 
-### What Just Happened
+### ✨ What Just Happened
 
 You now have:
 - Hooks that enforce discussion before implementation
@@ -328,7 +337,7 @@ You now have:
 - Token warnings before death
 - A chance at maintaining this code in 6 months
 
-### Your First Task
+### 🎯 Your First Task
 
 Tell Claude:
 ```
@@ -344,9 +353,11 @@ Claude will:
 
 Then just say 'let's work on [task-name]' and watch Claude actually discuss before implementing.
 
-Welcome to software development with guardrails.
+### **Welcome to software development with guardrails.**
 
-## Customizing Sessions
+---
+
+## 🔧 Customizing Sessions
 
 Sessions is built to be modified. You can use Claude Code itself to improve Sessions or adapt it to your workflow.
 

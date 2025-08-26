@@ -1,4 +1,5 @@
 <center>## SHOCKING REPORT REVEALS:</center>
+<br>
 ## Vibe coding is shitty and confusing and produces garbage software that sucks to work on.
 
 **Claude Code makes it less shitty, but not by enough.**

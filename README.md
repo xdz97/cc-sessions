@@ -52,29 +52,15 @@ For instance, it would be nice if Claude had to talk to you before writing code 
 
 It would be nice if you didn't lose everything when the context window died and Claude actually remembered what you were working on tomorrow.
 
-It would be nice if your rules actually worked instead of being suggestions that Claude ignores after the first 1000 tokens.
-
 It would be nice if you didn't have to explain your entire architecture every. single. session. and Claude actually inherited understanding from previous work.
 
 It would be nice if Claude couldn't randomly refactor working code while you're trying to add a button.
 
 It would be nice if you didn't have to manually check which branch you're on in five different repos and Claude actually stopped you before you edited the wrong one.
 
-It would be nice if subagents weren't completely blind to what you're working on so they didn't gather wrong context and waste everyone's time.
-
-It would be nice if you could see your context filling up before it exploded in your face.
-
-It would be nice if you didn't have to copy-paste the same context between sessions like it's 1995 and Claude actually maintained state like a real application.
-
 It would be nice if Claude followed the patterns in your codebase instead of inventing new ones every time it touches a file.
 
 It would be nice if you didn't have to write increasingly desperate rules in CLAUDE.md and Claude was actually forced to follow consistent behavior.
-
-It would be nice if your todo lists didn't vanish into the ether and you actually had persistent task management with real context.
-
-It would be nice if Claude couldn't blow past your 'please stop and discuss' and actually had to get permission before implementing.
-
-It would be nice if you didn't discover three duplicate implementations of the same function and Claude actually knew what code already exists.
 
 ### **This is what Sessions does.**
 

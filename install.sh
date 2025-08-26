@@ -5,9 +5,21 @@
 
 set -e  # Exit on error
 
-echo "╔══════════════════════════════════════════╗"
-echo "║    Claude Code Sessions Installer       ║"
-echo "╚══════════════════════════════════════════╝"
+# Colors for terminal output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m' # No Color
+
+echo -e "${BOLD}╔════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}║            cc-sessions Installer           ║${NC}"
+echo -e "${BOLD}╚════════════════════════════════════════════╝${NC}"
 echo
 
 # Check for required dependencies
@@ -97,70 +109,85 @@ fi
 
 # Interactive configuration
 echo
-echo "═══════════════════════════════════════════"
-echo "           Configuration Setup"
-echo "═══════════════════════════════════════════"
+echo -e "${BOLD}${CYAN}╔═══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${CYAN}║                    CONFIGURATION SETUP                        ║${NC}"
+echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════════════════════════════╝${NC}"
 echo
 
-# Developer name
-read -p "Your name (for session context): " developer_name
+# Developer name section
+echo -e "${BOLD}${MAGENTA}★ DEVELOPER IDENTITY${NC}"
+echo -e "${DIM}$(printf '─%.0s' {1..60})${NC}"
+echo -e "${DIM}  Claude will use this name when addressing you in sessions${NC}"
+echo
+
+read -p "$(echo -e ${CYAN})  Your name: $(echo -e ${NC})" developer_name
 if [ -z "$developer_name" ]; then
     developer_name="the developer"
 fi
+echo -e "${GREEN}  ✓ Hello, $developer_name!${NC}"
 
-# Optional statusline installation
+# Statusline installation section
 echo
-echo "Statusline Installation:"
-echo "The sessions system includes a statusline script that shows:"
-echo "- Current task and DAIC mode"
-echo "- Token usage and warnings"
-echo "- File change counts"
+echo -e "${BOLD}${MAGENTA}★ STATUSLINE INSTALLATION${NC}"
+echo -e "${DIM}$(printf '─%.0s' {1..60})${NC}"
+echo -e "${WHITE}  Real-time status display in Claude Code showing:${NC}"
+echo -e "${CYAN}    • Current task and DAIC mode${NC}"
+echo -e "${CYAN}    • Token usage with visual progress bar${NC}"
+echo -e "${CYAN}    • Modified file counts${NC}"
+echo -e "${CYAN}    • Open task count${NC}"
 echo
-read -p "Install sessions statusline? (y/n): " -n 1 -r
+
+read -p "$(echo -e ${CYAN})  Install statusline? (y/n): $(echo -e ${NC})" -n 1 -r
 echo
 install_statusline="n"
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     install_statusline="y"
     if [ -f "$SCRIPT_DIR/scripts/statusline-script.sh" ]; then
-        echo "Installing statusline script..."
+        echo -e "${DIM}  Installing statusline script...${NC}"
         cp "$SCRIPT_DIR/scripts/statusline-script.sh" "$PROJECT_ROOT/.claude/"
         chmod +x "$PROJECT_ROOT/.claude/statusline-script.sh"
-        
-        # Create project-level settings.json with statusline config
-        echo "Configuring statusline settings..."
-        cat > "$PROJECT_ROOT/.claude/settings.json" << EOF
-{
-  "statusLine": {
-    "type": "command",
-    "command": "\$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh",
-    "padding": 0
-  }
-}
-EOF
-        echo "✅ Statusline installed and configured automatically"
-        echo "   Configuration saved to .claude/settings.json"
+        echo -e "${GREEN}  ✓ Statusline installed successfully${NC}"
     else
-        echo "⚠️  Statusline script not found in package. Skipping."
+        echo -e "${YELLOW}  ⚠ Statusline script not found in package${NC}"
     fi
 fi
 
-# DAIC trigger phrases
+# DAIC trigger phrases section
 echo
-echo "DAIC (Discussion, Alignment, Implementation, Check) System:"
-echo "By default, Claude will discuss before implementing."
-echo "Trigger phrases switch to implementation mode."
+echo -e "${BOLD}${MAGENTA}★ DAIC WORKFLOW CONFIGURATION${NC}"
+echo -e "${DIM}$(printf '─%.0s' {1..60})${NC}"
+echo -e "${WHITE}  The DAIC system enforces discussion before implementation.${NC}"
+echo -e "${WHITE}  Trigger phrases tell Claude when you're ready to proceed.${NC}"
 echo
-echo "Default triggers: 'make it so', 'run that'"
-read -p "Add custom trigger phrase (or press Enter to skip): " custom_trigger
-triggers='["make it so", "run that"'
-if [ -n "$custom_trigger" ]; then
+echo -e "${CYAN}  Default triggers:${NC}"
+echo -e "${GREEN}    → \"make it so\"${NC}"
+echo -e "${GREEN}    → \"run that\"${NC}"
+echo -e "${GREEN}    → \"go ahead\"${NC}"
+echo -e "${GREEN}    → \"yert\"${NC}"
+echo
+echo -e "${DIM}  Hint: Common additions: \"implement it\", \"do it\", \"proceed\"${NC}"
+echo
+
+# Allow adding multiple custom trigger phrases
+triggers='["make it so", "run that", "go ahead", "yert"'
+while true; do
+    read -p "$(echo -e ${CYAN})  Add custom trigger phrase (Enter to skip): $(echo -e ${NC})" custom_trigger
+    if [ -z "$custom_trigger" ]; then
+        break
+    fi
     triggers="$triggers, \"$custom_trigger\""
-fi
+    echo -e "${GREEN}  ✓ Added: \"$custom_trigger\"${NC}"
+done
 triggers="$triggers]"
 
-# Advanced configuration prompt
+# Advanced configuration
 echo
-read -p "Configure advanced options? (y/n): " -n 1 -r
+echo -e "${BOLD}${MAGENTA}★ ADVANCED OPTIONS${NC}"
+echo -e "${DIM}$(printf '─%.0s' {1..60})${NC}"
+echo -e "${WHITE}  Configure tool blocking, task prefixes, and more${NC}"
+echo
+
+read -p "$(echo -e ${CYAN})  Configure advanced options? (y/n): $(echo -e ${NC})" -n 1 -r
 echo
 advanced_config="n"
 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -171,16 +198,51 @@ fi
 blocked_tools='["Edit", "Write", "MultiEdit", "NotebookEdit"]'
 if [ "$advanced_config" = "y" ]; then
     echo
-    echo "Tool Blocking Configuration:"
-    echo "Current blocked tools in discussion mode: Edit, Write, MultiEdit, NotebookEdit"
-    echo "Available tools: Bash, Read, Grep, Glob, LS, WebSearch, WebFetch, Task"
-    read -p "Modify blocked tools list? (y/n): " -n 1 -r
+    echo -e "${CYAN}╭───────────────────────────────────────────────────────────────╮${NC}"
+    echo -e "${CYAN}│              Tool Blocking Configuration                      │${NC}"
+    echo -e "${CYAN}├───────────────────────────────────────────────────────────────┤${NC}"
+    echo -e "${DIM}│   Tools can be blocked in discussion mode to enforce DAIC     │${NC}"
+    echo -e "${DIM}│   Default: Edit, Write, MultiEdit, NotebookEdit are blocked   │${NC}"
+    echo -e "${CYAN}╰───────────────────────────────────────────────────────────────╯${NC}"
+    echo
+    echo -e "${WHITE}  Available tools:${NC}"
+    echo -e "    1. ${YELLOW}🔒${NC} Edit - Edit existing files"
+    echo -e "    2. ${YELLOW}🔒${NC} Write - Create new files"
+    echo -e "    3. ${YELLOW}🔒${NC} MultiEdit - Multiple edits in one operation"
+    echo -e "    4. ${YELLOW}🔒${NC} NotebookEdit - Edit Jupyter notebooks"
+    echo -e "    5. ${GREEN}🔓${NC} Bash - Run shell commands"
+    echo -e "    6. ${GREEN}🔓${NC} Read - Read file contents"
+    echo -e "    7. ${GREEN}🔓${NC} Grep - Search file contents"
+    echo -e "    8. ${GREEN}🔓${NC} Glob - Find files by pattern"
+    echo -e "    9. ${GREEN}🔓${NC} LS - List directory contents"
+    echo -e "   10. ${GREEN}🔓${NC} WebSearch - Search the web"
+    echo -e "   11. ${GREEN}🔓${NC} WebFetch - Fetch web content"
+    echo -e "   12. ${GREEN}🔓${NC} Task - Launch specialized agents"
+    echo
+    echo -e "${DIM}  Hint: Edit tools are typically blocked to enforce discussion-first workflow${NC}"
+    echo
+    read -p "$(echo -e ${CYAN})  Modify blocked tools list? (y/n): $(echo -e ${NC})" -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "Enter comma-separated list of tools to block: " custom_blocked
-        if [ -n "$custom_blocked" ]; then
-            # Convert to JSON array format
-            blocked_tools="[$(echo "$custom_blocked" | sed 's/\([^,]*\)/"\1"/g')]"
+        read -p "$(echo -e ${CYAN})  Enter comma-separated tool numbers to block: $(echo -e ${NC})" tool_numbers
+        if [ -n "$tool_numbers" ]; then
+            # Map numbers to tool names
+            tools_array=("Edit" "Write" "MultiEdit" "NotebookEdit" "Bash" "Read" "Grep" "Glob" "LS" "WebSearch" "WebFetch" "Task")
+            blocked_list=""
+            IFS=',' read -ra NUMS <<< "$tool_numbers"
+            for num in "${NUMS[@]}"; do
+                num=$(echo $num | tr -d ' ')
+                if [ "$num" -ge 1 ] && [ "$num" -le 12 ]; then
+                    tool_idx=$((num - 1))
+                    if [ -n "$blocked_list" ]; then
+                        blocked_list="$blocked_list, \"${tools_array[$tool_idx]}\""
+                    else
+                        blocked_list="\"${tools_array[$tool_idx]}\""
+                    fi
+                fi
+            done
+            blocked_tools="[$blocked_list]"
+            echo -e "${GREEN}  ✓ Tool blocking configuration saved${NC}"
         fi
     fi
 fi
@@ -189,15 +251,24 @@ fi
 task_prefixes_config=""
 if [ "$advanced_config" = "y" ]; then
     echo
-    echo "Task Prefix Configuration:"
-    echo "Default: h- (high), m- (medium), l- (low), ?- (investigate)"
-    read -p "Customize task prefixes? (y/n): " -n 1 -r
+    echo -e "${BOLD}${MAGENTA}★ TASK PREFIX CONFIGURATION${NC}"
+    echo -e "${DIM}$(printf '─%.0s' {1..60})${NC}"
+    echo -e "${WHITE}  Task prefixes organize work by priority and type${NC}"
+    echo
+    echo -e "${CYAN}  Current prefixes:${NC}"
+    echo -e "${WHITE}    → h- (high priority)${NC}"
+    echo -e "${WHITE}    → m- (medium priority)${NC}"
+    echo -e "${WHITE}    → l- (low priority)${NC}"
+    echo -e "${WHITE}    → ?- (investigate/research)${NC}"
+    echo
+    
+    read -p "$(echo -e ${CYAN})  Customize task prefixes? (y/n): $(echo -e ${NC})" -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "High priority prefix [h-]: " high_prefix
-        read -p "Medium priority prefix [m-]: " med_prefix
-        read -p "Low priority prefix [l-]: " low_prefix
-        read -p "Investigate prefix [?-]: " inv_prefix
+        read -p "$(echo -e ${CYAN})  High priority prefix [h-]: $(echo -e ${NC})" high_prefix
+        read -p "$(echo -e ${CYAN})  Medium priority prefix [m-]: $(echo -e ${NC})" med_prefix
+        read -p "$(echo -e ${CYAN})  Low priority prefix [l-]: $(echo -e ${NC})" low_prefix
+        read -p "$(echo -e ${CYAN})  Investigate prefix [?-]: $(echo -e ${NC})" inv_prefix
         
         high_prefix="${high_prefix:-h-}"
         med_prefix="${med_prefix:-m-}"
@@ -208,11 +279,12 @@ if [ "$advanced_config" = "y" ]; then
   "task_prefixes": {
     "priority": ["'$high_prefix'", "'$med_prefix'", "'$low_prefix'", "'$inv_prefix'"]
   }'
+        echo -e "${GREEN}  ✓ Task prefixes updated${NC}"
     fi
 fi
 
 # Create configuration file
-echo "Creating configuration..."
+echo -e "${CYAN}Creating configuration...${NC}"
 cat > "$PROJECT_ROOT/.claude/sessions-config.json" << EOF
 {
   "developer_name": "$developer_name",
@@ -226,6 +298,87 @@ cat > "$PROJECT_ROOT/.claude/sessions-config.json" << EOF
   }$task_prefixes_config
 }
 EOF
+
+# Create or update .claude/settings.json with all hooks
+echo -e "${CYAN}Configuring hooks in settings.json...${NC}"
+if [ -f "$PROJECT_ROOT/.claude/settings.json" ]; then
+    echo -e "${CYAN}Found existing settings.json, merging sessions hooks...${NC}"
+    # Backup existing settings
+    cp "$PROJECT_ROOT/.claude/settings.json" "$PROJECT_ROOT/.claude/settings.json.bak"
+fi
+
+# Create settings.json with all hooks
+settings_content='{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Task|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
+          }
+        ]
+      }
+    ]
+  }'
+
+# Add statusline if requested
+if [ "$install_statusline" = "y" ]; then
+    settings_content="${settings_content%\}},
+  \"statusLine\": {
+    \"type\": \"command\",
+    \"command\": \"\$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh\",
+    \"padding\": 0
+  }
+}"
+else
+    settings_content="${settings_content%\}}
+}"
+fi
+
+echo "$settings_content" > "$PROJECT_ROOT/.claude/settings.json"
+echo -e "${GREEN}✓ Sessions hooks configured in settings.json${NC}"
 
 # Initialize DAIC state
 echo '{"mode": "discussion"}' > "$PROJECT_ROOT/.claude/state/daic-mode.json"
@@ -285,35 +438,54 @@ else
     fi
 fi
 
-# Final checks
+# Final success message
 echo
-echo "═══════════════════════════════════════════"
-echo "          Installation Complete!"
-echo "═══════════════════════════════════════════"
 echo
-echo "✅ Directory structure created"
-echo "✅ Hooks installed"
-echo "✅ Protocols and agents installed"
-echo "✅ daic command available"
-echo "✅ Configuration saved"
-echo "✅ DAIC state initialized (Discussion mode)"
+echo -e "${BOLD}${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${GREEN}║                 🎉 INSTALLATION COMPLETE! 🎉                  ║${NC}"
+echo -e "${BOLD}${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
+echo
+
+echo -e "${BOLD}${CYAN}  Installation Summary:${NC}"
+echo -e "${DIM}  ─────────────────────${NC}"
+echo -e "${GREEN}  ✓ Directory structure created${NC}"
+echo -e "${GREEN}  ✓ Hooks installed and configured${NC}"
+echo -e "${GREEN}  ✓ Protocols and agents deployed${NC}"
+echo -e "${GREEN}  ✓ daic command available globally${NC}"
+echo -e "${GREEN}  ✓ Configuration saved${NC}"
+echo -e "${GREEN}  ✓ DAIC state initialized (Discussion mode)${NC}"
+
+if [ "$install_statusline" = "y" ]; then
+    echo -e "${GREEN}  ✓ Statusline configured${NC}"
+fi
+
 echo
 
 # Test daic command
 if command -v daic &> /dev/null; then
-    echo "Testing daic command..."
-    daic > /dev/null 2>&1
-    echo "✅ daic command working"
+    echo -e "${GREEN}  ✓ daic command verified and working${NC}"
 else
-    echo "⚠️  daic command not in PATH. Add /usr/local/bin to your PATH."
+    echo -e "${YELLOW}  ⚠ daic command not in PATH${NC}"
+    echo -e "${DIM}       Add /usr/local/bin to your PATH${NC}"
 fi
 
 echo
-echo "Next steps:"
-echo "1. Restart Claude Code to load the hooks"
-echo "2. Create your first task: cp sessions/tasks/TEMPLATE.md sessions/tasks/m-my-first-task.md"
-echo "3. Start working with DAIC workflow!"
+echo -e "${BOLD}${MAGENTA}  ★ NEXT STEPS${NC}"
+echo -e "${DIM}  ─────────────${NC}"
 echo
-echo "Documentation: sessions/protocols/README.md"
-echo "Developer: $developer_name"
+echo -e "${WHITE}  1. Restart Claude Code to activate the sessions hooks${NC}"
+echo -e "${DIM}     → Close and reopen Claude Code${NC}"
+echo
+echo -e "${WHITE}  2. Create your first task:${NC}"
+echo -e "${CYAN}     → Tell Claude: \"Create a new task\"${NC}"
+echo -e "${CYAN}     → Or: \"Create a task for implementing feature X\"${NC}"
+echo
+echo -e "${WHITE}  3. Start working with the DAIC workflow:${NC}"
+echo -e "${DIM}     → Discuss approach first${NC}"
+echo -e "${DIM}     → Say \"make it so\" to implement${NC}"
+echo -e "${DIM}     → Run \"daic\" to return to discussion${NC}"
+echo
+echo -e "${DIM}  ──────────────────────────────────────────────────────${NC}"
+echo
+echo -e "${BOLD}${CYAN}  Welcome aboard, $developer_name! 🚀${NC}"
 echo

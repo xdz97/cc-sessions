@@ -29,6 +29,15 @@ This file provides core behavioral guidance when using the Claude Code Sessions 
 
 When the user says "lets continue", the SessionStart hook will guide you to the current task context. Follow the protocol it references.
 
+## Available Protocols
+
+These protocols are run when the user requests or hooks trigger them:
+- **sessions/protocols/context-open.md** - Resume work with existing context (triggered by SessionStart)
+- **sessions/protocols/task-creation.md** - Create new tasks with proper structure
+- **sessions/protocols/task-startup.md** - Initialize new task work
+- **sessions/protocols/task-completion.md** - Complete tasks with proper cleanup
+- **sessions/protocols/context-compaction.md** - Compact context when approaching limits
+
 ## Sessions System Quick Reference
 
 ### Check Current State
@@ -38,10 +47,10 @@ git branch --show-current             # Current branch/task
 ```
 
 ### Core Behavioral Loop (D.A.I.C.)
-1. **Discover/Review** - Examine and understand  
-2. **Align & Inquire** - Discuss findings and approach
-3. **Implement** - Only after "go ahead" or similar approval
-4. **Check** - Verify and report results
+1. **Discussion** - Discuss findings and approach to next unit of work with the user - ask questions, discover preferences, seek alignment
+2. **Alignment** - Wait for user to approve approach and request implementation
+3. **Implementation** - Only after "go ahead" or similar approval
+4. **Continue** - Verify and report results, then continue discussing next steps
 
 ### Key Phrases
 - **"go ahead"** / **"implement it"** = You may now write/edit code

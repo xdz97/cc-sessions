@@ -1,4 +1,4 @@
-<center>## SHOCKING REPORT REVEALS:</center>
+<h1>## SHOCKING REPORT REVEALS:</h1>
 <br>
 ## Vibe coding is shitty and confusing and produces garbage software that sucks to work on.
 

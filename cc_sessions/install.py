@@ -498,25 +498,20 @@ class SessionsInstaller:
         print(color("═══════════════════════════════════════════", Colors.BRIGHT))
         print()
         
-        print("The sessions system is designed to preserve context by loading only")
-        print("what's needed for the current task. Keep your root CLAUDE.md minimal")
-        print("with project overview and behavioral rules. Task-specific context is")
-        print("loaded dynamically through the sessions system.")
-        print()
-        print("Your CLAUDE.md should be < 100 lines. Detailed documentation belongs")
-        print("in task context manifests, not the root file.")
-        print()
-        
-        # Copy CLAUDE.sessions.md to project root
-        print(color("Installing CLAUDE.sessions.md...", Colors.CYAN))
-        sessions_md = self.package_dir / "templates/CLAUDE.sessions.md"
-        if sessions_md.exists():
-            dest = self.project_root / "CLAUDE.sessions.md"
-            shutil.copy2(sessions_md, dest)
-        
         # Check for existing CLAUDE.md
+        sessions_md = self.package_dir / "templates/CLAUDE.sessions.md"
         claude_md = self.project_root / "CLAUDE.md"
+        
         if claude_md.exists():
+            # File exists, preserve it and add sessions as separate file
+            print(color("CLAUDE.md already exists, preserving your project-specific rules...", Colors.CYAN))
+            
+            # Copy CLAUDE.sessions.md as separate file
+            if sessions_md.exists():
+                dest = self.project_root / "CLAUDE.sessions.md"
+                shutil.copy2(sessions_md, dest)
+            
+            # Check if it already includes sessions
             content = claude_md.read_text()
             if "@CLAUDE.sessions.md" not in content:
                 print(color("Adding sessions include to existing CLAUDE.md...", Colors.CYAN))
@@ -526,21 +521,14 @@ class SessionsInstaller:
                     f.write(addition)
                 
                 print(color("✅ Added @CLAUDE.sessions.md include to your CLAUDE.md", Colors.GREEN))
-                print()
-                print(color("⚠️  Please review your CLAUDE.md and consider:", Colors.YELLOW))
-                print("   - Moving detailed documentation to task context manifests")
-                print("   - Keeping only project overview and core rules")
-                print("   - See CLAUDE.example.md for best practices")
             else:
                 print(color("✅ CLAUDE.md already includes sessions behaviors", Colors.GREEN))
         else:
-            # Create from template
-            print(color("Creating CLAUDE.md from template...", Colors.CYAN))
-            example_md = self.package_dir / "templates/CLAUDE.example.md"
-            if example_md.exists():
-                shutil.copy2(example_md, claude_md)
-                print(color("✅ CLAUDE.md created from best practice template", Colors.GREEN))
-                print("   Please customize the project overview section")
+            # File doesn't exist, use sessions as CLAUDE.md
+            print(color("No existing CLAUDE.md found, installing sessions as your CLAUDE.md...", Colors.CYAN))
+            if sessions_md.exists():
+                shutil.copy2(sessions_md, claude_md)
+                print(color("✅ CLAUDE.md created with complete sessions behaviors", Colors.GREEN))
     
     def run(self) -> None:
         """Run the full installation process"""

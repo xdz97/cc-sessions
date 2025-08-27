@@ -482,27 +482,17 @@ echo "════════════════════════�
 echo "         CLAUDE.md Integration"
 echo "═══════════════════════════════════════════"
 echo
-echo "The sessions system is designed to preserve context by loading only"
-echo "what's needed for the current task. Keep your root CLAUDE.md minimal"
-echo "with project overview and behavioral rules. Task-specific context is"
-echo "loaded dynamically through the sessions system."
-echo
-echo "Your CLAUDE.md should be < 100 lines. Detailed documentation belongs"
-echo "in task context manifests, not the root file."
-echo
-
-# Copy CLAUDE.sessions.md to project root
-echo "Installing CLAUDE.sessions.md..."
-cp "$SCRIPT_DIR/cc_sessions/templates/CLAUDE.sessions.md" "$PROJECT_ROOT/"
 
 # Create or update CLAUDE.md
 if [ ! -f "$PROJECT_ROOT/CLAUDE.md" ]; then
-    echo "Creating CLAUDE.md from template..."
-    cp "$SCRIPT_DIR/cc_sessions/templates/CLAUDE.example.md" "$PROJECT_ROOT/CLAUDE.md"
-    echo "✅ CLAUDE.md created from best practice template"
-    echo "   Please customize the project overview section"
+    echo "No existing CLAUDE.md found, installing sessions as your CLAUDE.md..."
+    cp "$SCRIPT_DIR/cc_sessions/templates/CLAUDE.sessions.md" "$PROJECT_ROOT/CLAUDE.md"
+    echo "✅ CLAUDE.md created with complete sessions behaviors"
 else
-    echo "CLAUDE.md already exists, checking for sessions include..."
+    echo "CLAUDE.md already exists, preserving your project-specific rules..."
+    # Copy CLAUDE.sessions.md as separate file
+    cp "$SCRIPT_DIR/cc_sessions/templates/CLAUDE.sessions.md" "$PROJECT_ROOT/CLAUDE.sessions.md"
+    
     # Check if the include already exists
     if grep -q "@CLAUDE.sessions.md" "$PROJECT_ROOT/CLAUDE.md"; then
         echo "✅ CLAUDE.md already includes sessions behaviors"
@@ -513,11 +503,6 @@ else
         echo "" >> "$PROJECT_ROOT/CLAUDE.md"
         echo "@CLAUDE.sessions.md" >> "$PROJECT_ROOT/CLAUDE.md"
         echo "✅ Added @CLAUDE.sessions.md include to your CLAUDE.md"
-        echo
-        echo "⚠️  Please review your CLAUDE.md and consider:"
-        echo "   - Moving detailed documentation to task context manifests"
-        echo "   - Keeping only project overview and core rules"
-        echo "   - See CLAUDE.example.md for best practices"
     fi
 fi
 

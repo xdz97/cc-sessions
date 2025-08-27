@@ -677,27 +677,20 @@ async function setupClaudeMd() {
   console.log(color('═══════════════════════════════════════════', colors.bright));
   console.log();
   
-  console.log('The sessions system is designed to preserve context by loading only');
-  console.log('what\'s needed for the current task. Keep your root CLAUDE.md minimal');
-  console.log('with project overview and behavioral rules. Task-specific context is');
-  console.log('loaded dynamically through the sessions system.');
-  console.log();
-  console.log('Your CLAUDE.md should be < 100 lines. Detailed documentation belongs');
-  console.log('in task context manifests, not the root file.');
-  console.log();
-  
-  // Copy CLAUDE.sessions.md to project root
-  console.log(color('Installing CLAUDE.sessions.md...', colors.cyan));
-  await fs.copyFile(
-    path.join(SCRIPT_DIR, 'cc_sessions/templates/CLAUDE.sessions.md'),
-    path.join(PROJECT_ROOT, 'CLAUDE.sessions.md')
-  );
-  
   // Check for existing CLAUDE.md
   try {
     await fs.access(path.join(PROJECT_ROOT, 'CLAUDE.md'));
     
-    // File exists, check if it already includes sessions
+    // File exists, preserve it and add sessions as separate file
+    console.log(color('CLAUDE.md already exists, preserving your project-specific rules...', colors.cyan));
+    
+    // Copy CLAUDE.sessions.md as separate file
+    await fs.copyFile(
+      path.join(SCRIPT_DIR, 'cc_sessions/templates/CLAUDE.sessions.md'),
+      path.join(PROJECT_ROOT, 'CLAUDE.sessions.md')
+    );
+    
+    // Check if it already includes sessions
     const content = await fs.readFile(path.join(PROJECT_ROOT, 'CLAUDE.md'), 'utf-8');
     if (!content.includes('@CLAUDE.sessions.md')) {
       console.log(color('Adding sessions include to existing CLAUDE.md...', colors.cyan));
@@ -706,23 +699,17 @@ async function setupClaudeMd() {
       await fs.appendFile(path.join(PROJECT_ROOT, 'CLAUDE.md'), addition);
       
       console.log(color('✅ Added @CLAUDE.sessions.md include to your CLAUDE.md', colors.green));
-      console.log();
-      console.log(color('⚠️  Please review your CLAUDE.md and consider:', colors.yellow));
-      console.log('   - Moving detailed documentation to task context manifests');
-      console.log('   - Keeping only project overview and core rules');
-      console.log('   - See CLAUDE.example.md for best practices');
     } else {
       console.log(color('✅ CLAUDE.md already includes sessions behaviors', colors.green));
     }
   } catch {
-    // File doesn't exist, create from template
-    console.log(color('Creating CLAUDE.md from template...', colors.cyan));
+    // File doesn't exist, use sessions as CLAUDE.md
+    console.log(color('No existing CLAUDE.md found, installing sessions as your CLAUDE.md...', colors.cyan));
     await fs.copyFile(
-      path.join(SCRIPT_DIR, 'cc_sessions/templates/CLAUDE.example.md'),
+      path.join(SCRIPT_DIR, 'cc_sessions/templates/CLAUDE.sessions.md'),
       path.join(PROJECT_ROOT, 'CLAUDE.md')
     );
-    console.log(color('✅ CLAUDE.md created from best practice template', colors.green));
-    console.log('   Please customize the project overview section');
+    console.log(color('✅ CLAUDE.md created with complete sessions behaviors', colors.green));
   }
 }
 

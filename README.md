@@ -45,25 +45,33 @@ But then Claude started doing some concerning things.
 
 You asked it to add error handling to **one** function. It added error handling to **_every function in the file_**. And changed your error types. And your logging format. And somehow your indentation is different now?
 
-You learned to be more specific. `'ONLY change lines 45-52.'` Claude changes lines 45-52. **Also lines 1-44.** Also creates a new file you didn't ask for. Also helpful reminder that you should add TypeScript types _(you're writing Python)_.
-
 The context window thing started getting annoying. You're explaining the same architecture for the fifth time today. Claude's like _'let me look for the database'_ **Brother. We've been using Postgres for six hours. You were just in there.**
 
-Your CLAUDE.md is now longer than your actual code. `'NEVER use class components.'` `'ALWAYS use the existing auth middleware.'` `'DO NOT refactor unrelated code.'` `'REMEMBER we use PostgreSQL.'` Claude reads the first line and then macrodoses window pane LSD for the rest.
+Your CLAUDE.md is now longer than your actual code. 
+- `'NEVER use class components.'` 
+- `'ALWAYS use the existing auth middleware.'` 
+- `'DO NOT refactor unrelated code.'` 
+- `'REMEMBER we use PostgreSQL.'` 
 
-You tried the subagents, but quickly realized that **you can't even talk to these things.** 10 minutes into a "code review" and the agent hits some kind of API error and returns to your main thread with no explanation of what it did or what it discovered. Run it again, I guess? _This fucking sucks_.
+Claude reads the first line and then macrodoses window pane LSD for the rest.
+
+You tried the subagents, but quickly realized that **you can't even talk to these things.** 10 minutes into a "code review" and the agent hits some kind of API error and returns to your main thread with no explanation of what it did or what it discovered. 
+
+Run it again, I guess? 
+
+_This fucking sucks_.
 
 Now you're here. Your codebase is 'done' but you couldn't, in a million years, explain what that means or how it satisfies the definition. 
 
-There's three different state management patterns. 
-
-Your auth flow has several functions that are hard coded to give everyone the keys to your whole server. 
+There's three different global clients for the same database connection and two of them use hallucinated environment variables (the other just yeets your client secret into the service code). 
 
 You've got utility functions that are duplicated in four files because Claude kept forgetting they exist.
 
+20% of your code lines are comments explaining why something *isn't* there and *is* somewhere else.
+
 You don't even know exactly what's wrong and fixing it means understanding code you didn't write in patterns you don't recognize using approaches you wouldn't choose.
 
-### **You're not a programmer anymore. You're a prompt engineer with a production system that makes you want to slam your genitalia in a drawer.**
+### **Are you scaling your impact yet?**
 
 </details>
 

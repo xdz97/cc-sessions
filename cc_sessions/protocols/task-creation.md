@@ -1,12 +1,12 @@
 # Task Creation Protocol
 
 ## Configuration
-Task naming conventions can be customized in `.claude/sessions-config.json`.
+Task naming conventions can be customized in `sessions/sessions-config.json`.
 If no config exists, the defaults below are used.
 
 ## Priority Prefix System
 
-Check `.claude/sessions-config.json` for configured prefixes.
+Check `sessions/sessions-config.json` for configured prefixes.
 Default prefixes:
 - `h-` → High priority
 - `m-` → Medium priority  
@@ -21,7 +21,7 @@ Examples:
 
 ## Task Type Prefix Enum
 
-Task type comes after priority prefix. Check `.claude/sessions-config.json` for branch mappings.
+Task type comes after priority prefix. Check `sessions/sessions-config.json` for branch mappings.
 Default mappings:
 
 - `implement-` → Creates feature/ branch
@@ -116,7 +116,7 @@ If a file task needs subtasks during work:
 ## For Agents Creating Tasks
 
 When programmatically creating tasks:
-1. Read `.claude/sessions-config.json` for:
+1. Read `sessions/sessions-config.json` for:
    - Priority prefixes from `config.task_prefixes.priority`
    - Type-to-branch mappings from `config.task_prefixes.types`
 2. If config doesn't exist, use defaults documented above

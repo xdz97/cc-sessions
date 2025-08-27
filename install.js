@@ -130,9 +130,9 @@ async function createDirectories() {
     '.claude/hooks',
     '.claude/state',
     '.claude/agents',
+    '.claude/commands',
     'sessions/tasks/done',
     'sessions/protocols',
-    'sessions/agents',
     'sessions/knowledge'
   ];
   
@@ -155,11 +155,11 @@ async function installPythonDeps() {
 // Copy files with proper permissions
 async function copyFiles() {
   console.log(color('Installing hooks...', colors.cyan));
-  const hookFiles = await fs.readdir(path.join(SCRIPT_DIR, 'hooks'));
+  const hookFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/hooks'));
   for (const file of hookFiles) {
     if (file.endsWith('.py')) {
       await fs.copyFile(
-        path.join(SCRIPT_DIR, 'hooks', file),
+        path.join(SCRIPT_DIR, 'cc_sessions/hooks', file),
         path.join(PROJECT_ROOT, '.claude/hooks', file)
       );
       await fs.chmod(path.join(PROJECT_ROOT, '.claude/hooks', file), 0o755);
@@ -167,22 +167,22 @@ async function copyFiles() {
   }
   
   console.log(color('Installing protocols...', colors.cyan));
-  const protocolFiles = await fs.readdir(path.join(SCRIPT_DIR, 'protocols'));
+  const protocolFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/protocols'));
   for (const file of protocolFiles) {
     if (file.endsWith('.md')) {
       await fs.copyFile(
-        path.join(SCRIPT_DIR, 'protocols', file),
+        path.join(SCRIPT_DIR, 'cc_sessions/protocols', file),
         path.join(PROJECT_ROOT, 'sessions/protocols', file)
       );
     }
   }
   
   console.log(color('Installing agent definitions...', colors.cyan));
-  const agentFiles = await fs.readdir(path.join(SCRIPT_DIR, 'agents'));
+  const agentFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/agents'));
   for (const file of agentFiles) {
     if (file.endsWith('.md')) {
       await fs.copyFile(
-        path.join(SCRIPT_DIR, 'agents', file),
+        path.join(SCRIPT_DIR, 'cc_sessions/agents', file),
         path.join(PROJECT_ROOT, '.claude/agents', file)
       );
     }
@@ -190,12 +190,23 @@ async function copyFiles() {
   
   console.log(color('Installing templates...', colors.cyan));
   await fs.copyFile(
-    path.join(SCRIPT_DIR, 'templates/TEMPLATE.md'),
+    path.join(SCRIPT_DIR, 'cc_sessions/templates/TEMPLATE.md'),
     path.join(PROJECT_ROOT, 'sessions/tasks/TEMPLATE.md')
   );
   
+  console.log(color('Installing commands...', colors.cyan));
+  const commandFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/commands'));
+  for (const file of commandFiles) {
+    if (file.endsWith('.md')) {
+      await fs.copyFile(
+        path.join(SCRIPT_DIR, 'cc_sessions/commands', file),
+        path.join(PROJECT_ROOT, '.claude/commands', file)
+      );
+    }
+  }
+  
   // Copy knowledge files if they exist
-  const knowledgePath = path.join(SCRIPT_DIR, 'knowledge/claude-code');
+  const knowledgePath = path.join(SCRIPT_DIR, 'cc_sessions/knowledge/claude-code');
   try {
     await fs.access(knowledgePath);
     console.log(color('Installing Claude Code knowledge base...', colors.cyan));
@@ -226,7 +237,7 @@ async function copyDir(src, dest) {
 async function installDaicCommand() {
   console.log(color('Installing daic command...', colors.cyan));
   
-  const daicSource = path.join(SCRIPT_DIR, 'scripts/daic');
+  const daicSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic');
   const daicDest = '/usr/local/bin/daic';
   
   try {
@@ -428,7 +439,7 @@ async function configure() {
   const installStatusline = await question(color('  Install statusline? (y/n): ', colors.cyan));
   
   if (installStatusline.toLowerCase() === 'y') {
-    const statuslineSource = path.join(SCRIPT_DIR, 'scripts/statusline-script.sh');
+    const statuslineSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/statusline-script.sh');
     try {
       await fs.access(statuslineSource);
       console.log(color('  Installing statusline script...', colors.dim));
@@ -465,6 +476,32 @@ async function configure() {
     } else {
       addingTriggers = false;
     }
+  }
+  
+  // API Mode configuration
+  console.log(color(`\n\n${icons.star} THINKING BUDGET CONFIGURATION`, colors.bright + colors.magenta));
+  console.log(color('─'.repeat(60), colors.dim));
+  console.log(color('  Token usage is not much of a concern with Claude Code Max', colors.white));
+  console.log(color('  plans, especially the $200 tier. But API users are often', colors.white));
+  console.log(color('  budget-conscious and want manual control.', colors.white));
+  console.log();
+  console.log(color('  Sessions was built to preserve tokens across context windows', colors.cyan));
+  console.log(color('  but uses saved tokens to enable \'ultrathink\' - Claude\'s', colors.cyan));
+  console.log(color('  maximum thinking budget - on every interaction for best results.', colors.cyan));
+  console.log();
+  console.log(color('  • Max users (recommended): Automatic ultrathink every message', colors.dim));
+  console.log(color('  • API users: Manual control with [[ ultrathink ]] when needed', colors.dim));
+  console.log();
+  console.log(color('  You can toggle this anytime with: /api-mode', colors.dim));
+  console.log();
+  
+  const enableUltrathink = await question(color('  Enable automatic ultrathink for best performance? (y/n): ', colors.cyan));
+  if (enableUltrathink.toLowerCase() === 'y' || enableUltrathink.toLowerCase() === 'yes') {
+    config.api_mode = false;
+    console.log(color(`  ${icons.check} Max mode - ultrathink enabled for best performance`, colors.green));
+  } else {
+    config.api_mode = true;
+    console.log(color(`  ${icons.check} API mode - manual ultrathink control (use [[ ultrathink ]])`, colors.green));
   }
   
   // Advanced configuration
@@ -513,7 +550,7 @@ async function saveConfig(installStatusline = false) {
   console.log(color('Creating configuration...', colors.cyan));
   
   await fs.writeFile(
-    path.join(PROJECT_ROOT, '.claude/sessions-config.json'),
+    path.join(PROJECT_ROOT, 'sessions/sessions-config.json'),
     JSON.stringify(config, null, 2)
   );
   
@@ -652,7 +689,7 @@ async function setupClaudeMd() {
   // Copy CLAUDE.sessions.md to project root
   console.log(color('Installing CLAUDE.sessions.md...', colors.cyan));
   await fs.copyFile(
-    path.join(SCRIPT_DIR, 'templates/CLAUDE.sessions.md'),
+    path.join(SCRIPT_DIR, 'cc_sessions/templates/CLAUDE.sessions.md'),
     path.join(PROJECT_ROOT, 'CLAUDE.sessions.md')
   );
   
@@ -681,7 +718,7 @@ async function setupClaudeMd() {
     // File doesn't exist, create from template
     console.log(color('Creating CLAUDE.md from template...', colors.cyan));
     await fs.copyFile(
-      path.join(SCRIPT_DIR, 'templates/CLAUDE.example.md'),
+      path.join(SCRIPT_DIR, 'cc_sessions/templates/CLAUDE.example.md'),
       path.join(PROJECT_ROOT, 'CLAUDE.md')
     );
     console.log(color('✅ CLAUDE.md created from best practice template', colors.green));

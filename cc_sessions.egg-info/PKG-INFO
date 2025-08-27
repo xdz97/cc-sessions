@@ -1,3 +1,31 @@
+Metadata-Version: 2.4
+Name: cc-sessions
+Version: 0.1.6
+Summary: Claude Code Sessions Framework - Enforced methodology for AI pair programming
+Author-email: toast <toast_x@bytebot.site>
+License: MIT
+Project-URL: Homepage, https://github.com/GWUDCAP/cc-sessions
+Project-URL: Documentation, https://github.com/GWUDCAP/cc-sessions#readme
+Project-URL: Repository, https://github.com/GWUDCAP/cc-sessions.git
+Project-URL: Issues, https://github.com/GWUDCAP/cc-sessions/issues
+Keywords: claude,claude-code,ai,pair-programming,daic,workflow,development
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Quality Assurance
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: tiktoken>=0.5.0
+
 ```
 ███████╗███████╗███████╗███████╗██╗ ██████╗ ███╗   ██╗███████╗
 ██╔════╝██╔════╝██╔════╝██╔════╝██║██╔═══██╗████╗  ██║██╔════╝

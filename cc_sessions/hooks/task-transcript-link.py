@@ -30,7 +30,7 @@ with open(transcript_path, 'r') as f:
 
 # Remove any pre-work transcript entries
 start_found = False
-while not start_found:
+while not start_found and transcript:
     entry = transcript.pop(0)
     message = entry.get('message')
     if message:

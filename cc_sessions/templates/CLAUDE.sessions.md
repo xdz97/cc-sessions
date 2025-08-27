@@ -32,7 +32,7 @@ When the user says "lets continue", the SessionStart hook will guide you to the 
 ## Available Protocols
 
 These protocols are run when the user requests or hooks trigger them:
-- **sessions/protocols/context-open.md** - Resume work with existing context (triggered by SessionStart)
+- **SessionStart hook** - Automatically loads context and task (no protocol needed)
 - **sessions/protocols/task-creation.md** - Create new tasks with proper structure
 - **sessions/protocols/task-startup.md** - Initialize new task work
 - **sessions/protocols/task-completion.md** - Complete tasks with proper cleanup

@@ -8,7 +8,7 @@ from shared_state import check_daic_mode_bool, get_task_state, get_project_root
 
 # Load configuration from project's .claude directory
 PROJECT_ROOT = get_project_root()
-CONFIG_FILE = PROJECT_ROOT / ".claude" / "sessions-config.json"
+CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
 
 # Default configuration (used if config file doesn't exist)
 DEFAULT_CONFIG = {

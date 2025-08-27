@@ -374,7 +374,7 @@ Claude: [Makes all changes in implementation mode]
 Check you're using correct trigger phrases:
 ```bash
 # See configured phrases
-cat .claude/sessions-config.json | grep trigger_phrases
+cat sessions/sessions-config.json | grep trigger_phrases
 ```
 
 ### "Can't find my work"
@@ -397,6 +397,69 @@ You: The context manifest seems outdated. Use the context-refinement
 
 Claude: [Updates context manifest via agent]
 ```
+
+## API Mode vs Max Mode
+
+### Understanding Token Economics
+
+The Sessions framework actually **SAVES tokens** for most users through:
+- **Context persistence**: No need to re-explain tasks across sessions
+- **Auto-loading**: Eliminates "what are we working on?" cycles
+- **DAIC enforcement**: Prevents wasteful failed implementation attempts
+- **Specialized agents**: Work in minimal contexts, return structured results
+
+However, it uses these saved tokens to enable **ultrathink** - Claude's maximum thinking budget - on every interaction for consistently better results.
+
+### When to Use API Mode
+
+**Max Mode (Default):**
+- You have a Claude Code Max subscription ($20-200/month)
+- Token usage is not a concern
+- You want the best possible performance
+- Ultrathink is automatically enabled on every message
+
+**API Mode:**
+- You're using Claude Code with API keys
+- You're budget-conscious about token usage
+- You want manual control over thinking budget
+- Ultrathink is disabled (but can be triggered with `[[ ultrathink ]]`)
+
+### Configuring API Mode
+
+**During Installation:**
+```bash
+# You'll be prompted during setup:
+Enable API mode? (y/n): y
+```
+
+**After Installation:**
+```bash
+# Use the slash command to toggle
+/api-mode
+
+# Or edit directly
+jq '.api_mode = true' sessions/sessions-config.json > tmp && mv tmp sessions/sessions-config.json
+```
+
+### Manual Ultrathink Control
+
+In API mode, you can still trigger maximum thinking when needed:
+```
+[[ ultrathink ]]
+How should we architect this complex system?
+```
+
+### Token Savings Breakdown
+
+| Feature | Tokens Saved | How |
+|---------|--------------|-----|
+| SessionStart | 200-500/session | Auto-loads task context |
+| Context Manifests | 1000-5000/task | Front-loads exploration |
+| DAIC Enforcement | 500-2000/task | Prevents wrong implementations |
+| Work Logs | 500-1000/session | Maintains continuity |
+| Warning Systems | Variable | Prevents context overflow |
+
+**Bottom Line:** Sessions saves more tokens than it uses, even with ultrathink enabled. API mode is for those who want maximum control.
 
 ## Getting Help
 

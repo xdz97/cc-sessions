@@ -44,6 +44,7 @@ def command_exists(command: str) -> bool:
 def get_package_dir() -> Path:
     """Get the directory where the package is installed"""
     import cc_sessions
+    # All data files are now inside cc_sessions/
     return Path(cc_sessions.__file__).parent
 
 class SessionsInstaller:
@@ -104,9 +105,10 @@ class SessionsInstaller:
             ".claude/hooks",
             ".claude/state", 
             ".claude/agents",
+            ".claude/commands",
+            "sessions/tasks",
             "sessions/tasks/done",
             "sessions/protocols",
-            "sessions/agents",
             "sessions/knowledge"
         ]
         
@@ -156,6 +158,14 @@ class SessionsInstaller:
         if template_file.exists():
             dest = self.project_root / "sessions/tasks/TEMPLATE.md"
             shutil.copy2(template_file, dest)
+        
+        # Copy commands
+        print(color("Installing commands...", Colors.CYAN))
+        commands_dir = self.package_dir / "commands"
+        if commands_dir.exists():
+            for command_file in commands_dir.glob("*.md"):
+                dest = self.project_root / ".claude/commands" / command_file.name
+                shutil.copy2(command_file, dest)
         
         # Copy knowledge files
         knowledge_dir = self.package_dir / "knowledge/claude-code"
@@ -254,6 +264,31 @@ class SessionsInstaller:
             self.config["trigger_phrases"].append(custom_trigger)
             print(color(f'  ✓ Added: "{custom_trigger}"', Colors.GREEN))
         
+        # API Mode configuration
+        print(color(f"\n\n★ THINKING BUDGET CONFIGURATION", Colors.BRIGHT + Colors.MAGENTA))
+        print(color("─" * 60, Colors.DIM))
+        print(color("  Token usage is not much of a concern with Claude Code Max", Colors.WHITE))
+        print(color("  plans, especially the $200 tier. But API users are often", Colors.WHITE))
+        print(color("  budget-conscious and want manual control.", Colors.WHITE))
+        print()
+        print(color("  Sessions was built to preserve tokens across context windows", Colors.CYAN))
+        print(color("  but uses saved tokens to enable 'ultrathink' - Claude's", Colors.CYAN))
+        print(color("  maximum thinking budget - on every interaction for best results.", Colors.CYAN))
+        print()
+        print(color("  • Max users (recommended): Automatic ultrathink every message", Colors.DIM))
+        print(color("  • API users: Manual control with [[ ultrathink ]] when needed", Colors.DIM))
+        print()
+        print(color("  You can toggle this anytime with: /api-mode", Colors.DIM))
+        print()
+        
+        enable_ultrathink = input(color("  Enable automatic ultrathink for best performance? (y/n): ", Colors.CYAN))
+        if enable_ultrathink.lower() == 'y':
+            self.config["api_mode"] = False
+            print(color("  ✓ Max mode - ultrathink enabled for best performance", Colors.GREEN))
+        else:
+            self.config["api_mode"] = True
+            print(color("  ✓ API mode - manual ultrathink control (use [[ ultrathink ]])", Colors.GREEN))
+        
         # Advanced configuration
         print(color(f"\n\n★ ADVANCED OPTIONS", Colors.BRIGHT + Colors.MAGENTA))
         print(color("─" * 60, Colors.DIM))
@@ -314,13 +349,38 @@ class SessionsInstaller:
                     if blocked_list:
                         self.config["blocked_tools"] = blocked_list
                         print(color("  ✓ Tool blocking configuration saved", Colors.GREEN))
+            
+            # Task prefix configuration
+            print(color(f"\n\n★ TASK PREFIX CONFIGURATION", Colors.BRIGHT + Colors.MAGENTA))
+            print(color("─" * 60, Colors.DIM))
+            print(color("  Task prefixes organize work by priority and type", Colors.WHITE))
+            print()
+            print(color("  Current prefixes:", Colors.CYAN))
+            print(color("    → h- (high priority)", Colors.WHITE))
+            print(color("    → m- (medium priority)", Colors.WHITE))
+            print(color("    → l- (low priority)", Colors.WHITE))
+            print(color("    → ?- (investigate/research)", Colors.WHITE))
+            print()
+            
+            customize_prefixes = input(color("  Customize task prefixes? (y/n): ", Colors.CYAN))
+            if customize_prefixes.lower() == 'y':
+                high = input(color("  High priority prefix [h-]: ", Colors.CYAN)) or 'h-'
+                med = input(color("  Medium priority prefix [m-]: ", Colors.CYAN)) or 'm-'
+                low = input(color("  Low priority prefix [l-]: ", Colors.CYAN)) or 'l-'
+                inv = input(color("  Investigate prefix [?-]: ", Colors.CYAN)) or '?-'
+                
+                self.config["task_prefixes"] = {
+                    "priority": [high, med, low, inv]
+                }
+                
+                print(color("  ✓ Task prefixes updated", Colors.GREEN))
     
     def save_config(self) -> None:
         """Save configuration files"""
         print(color("Creating configuration...", Colors.CYAN))
         
         # Save sessions config
-        config_file = self.project_root / ".claude/sessions-config.json"
+        config_file = self.project_root / "sessions/sessions-config.json"
         config_file.write_text(json.dumps(self.config, indent=2))
         
         # Create or update .claude/settings.json with all hooks

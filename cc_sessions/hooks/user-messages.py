@@ -3,6 +3,11 @@
 import json
 import sys
 import re
+import os
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
 from shared_state import check_daic_mode_bool, set_daic_mode
 
 # Load input
@@ -16,7 +21,7 @@ try:
     from pathlib import Path
     from shared_state import get_project_root
     PROJECT_ROOT = get_project_root()
-    CONFIG_FILE = PROJECT_ROOT / ".claude" / "sessions-config.json"
+    CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
     
     if CONFIG_FILE.exists():
         with open(CONFIG_FILE, 'r') as f:
@@ -27,8 +32,15 @@ except:
     config = {}
 
 # Default trigger phrases if not configured
-DEFAULT_TRIGGER_PHRASES = ["make it so", "run that"]
+DEFAULT_TRIGGER_PHRASES = ["make it so", "run that", "yert"]
 trigger_phrases = config.get("trigger_phrases", DEFAULT_TRIGGER_PHRASES)
+
+# Check if this is an /add-trigger command
+is_add_trigger_command = prompt.strip().startswith('/add-trigger')
+
+# Check API mode and add ultrathink if not in API mode (skip for /add-trigger)
+if not config.get("api_mode", False) and not is_add_trigger_command:
+    context = "[[ ultrathink ]]\n"
 
 # Token monitoring
 def get_context_length_from_transcript(transcript_path):
@@ -74,8 +86,8 @@ def get_context_length_from_transcript(transcript_path):
         pass
     return 0
 
-# Check context usage and warn if needed
-if transcript_path:
+# Check context usage and warn if needed (only if tiktoken is available)
+if transcript_path and tiktoken and os.path.exists(transcript_path):
     context_length = get_context_length_from_transcript(transcript_path)
     
     if context_length > 0:
@@ -101,8 +113,8 @@ if transcript_path:
 # DAIC keyword detection
 current_mode = check_daic_mode_bool()
 
-# Implementation triggers (only work in discussion mode)
-if current_mode and any(phrase in prompt.lower() for phrase in trigger_phrases):
+# Implementation triggers (only work in discussion mode, skip for /add-trigger)
+if not is_add_trigger_command and current_mode and any(phrase in prompt.lower() for phrase in trigger_phrases):
     set_daic_mode(False)  # Switch to implementation
     context += "[DAIC: Implementation Mode Activated] You may now implement ONLY the immediately discussed steps. When you're done, run the bash command: daic\n"
 

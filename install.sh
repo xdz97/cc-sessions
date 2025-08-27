@@ -52,11 +52,17 @@ fi
 # Check if we're in a git repository (recommended)
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
     echo "⚠️  Warning: Not in a git repository. Sessions works best with git."
-    read -p "Continue anyway? (y/n): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
+    while true; do
+        read -p "Continue anyway? (y/n): " -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            break
+        elif [[ $REPLY =~ ^[Nn]$ ]]; then
+            exit 1
+        else
+            echo -e "${YELLOW}Please enter y or n${NC}"
+        fi
+    done
 fi
 
 # Create necessary directories
@@ -64,9 +70,9 @@ echo "Creating directory structure..."
 mkdir -p "$PROJECT_ROOT/.claude/hooks"
 mkdir -p "$PROJECT_ROOT/.claude/state"
 mkdir -p "$PROJECT_ROOT/.claude/agents"
+mkdir -p "$PROJECT_ROOT/.claude/commands"
 mkdir -p "$PROJECT_ROOT/sessions/tasks/done"
 mkdir -p "$PROJECT_ROOT/sessions/protocols"
-mkdir -p "$PROJECT_ROOT/sessions/agents"
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
@@ -74,36 +80,42 @@ pip3 install tiktoken --quiet || pip install tiktoken --quiet
 
 # Copy hooks
 echo "Installing hooks..."
-cp "$SCRIPT_DIR/hooks/"*.py "$PROJECT_ROOT/.claude/hooks/"
+cp "$SCRIPT_DIR/cc_sessions/hooks/"*.py "$PROJECT_ROOT/.claude/hooks/"
 chmod +x "$PROJECT_ROOT/.claude/hooks/"*.py
 
 # Copy protocols
 echo "Installing protocols..."
-cp "$SCRIPT_DIR/protocols/"*.md "$PROJECT_ROOT/sessions/protocols/"
+cp "$SCRIPT_DIR/cc_sessions/protocols/"*.md "$PROJECT_ROOT/sessions/protocols/"
 
 # Copy agents
 echo "Installing agent definitions..."
-cp "$SCRIPT_DIR/agents/"*.md "$PROJECT_ROOT/.claude/agents/"
+cp "$SCRIPT_DIR/cc_sessions/agents/"*.md "$PROJECT_ROOT/.claude/agents/"
 
 # Copy templates
 echo "Installing templates..."
-cp "$SCRIPT_DIR/templates/TEMPLATE.md" "$PROJECT_ROOT/sessions/tasks/"
+cp "$SCRIPT_DIR/cc_sessions/templates/TEMPLATE.md" "$PROJECT_ROOT/sessions/tasks/"
+
+# Copy commands
+echo "Installing commands..."
+for file in "$SCRIPT_DIR/cc_sessions/commands"/*.md; do
+    [ -e "$file" ] && cp "$file" "$PROJECT_ROOT/.claude/commands/"
+done
 
 # Copy knowledge files
 echo "Installing Claude Code knowledge base..."
 mkdir -p "$PROJECT_ROOT/sessions/knowledge"
-if [ -d "$SCRIPT_DIR/knowledge/claude-code" ]; then
-    cp -r "$SCRIPT_DIR/knowledge/claude-code" "$PROJECT_ROOT/sessions/knowledge/"
+if [ -d "$SCRIPT_DIR/cc_sessions/knowledge/claude-code" ]; then
+    cp -r "$SCRIPT_DIR/cc_sessions/knowledge/claude-code" "$PROJECT_ROOT/sessions/knowledge/"
 fi
 
 # Install daic command
 echo "Installing daic command..."
 if [ -w "/usr/local/bin" ]; then
-    cp "$SCRIPT_DIR/scripts/daic" "/usr/local/bin/"
+    cp "$SCRIPT_DIR/cc_sessions/scripts/daic" "/usr/local/bin/"
     chmod +x "/usr/local/bin/daic"
 else
     echo "⚠️  Cannot write to /usr/local/bin. Trying with sudo..."
-    sudo cp "$SCRIPT_DIR/scripts/daic" "/usr/local/bin/"
+    sudo cp "$SCRIPT_DIR/cc_sessions/scripts/daic" "/usr/local/bin/"
     sudo chmod +x "/usr/local/bin/daic"
 fi
 
@@ -137,14 +149,23 @@ echo -e "${CYAN}    • Modified file counts${NC}"
 echo -e "${CYAN}    • Open task count${NC}"
 echo
 
-read -p "$(echo -e ${CYAN})  Install statusline? (y/n): $(echo -e ${NC})" -n 1 -r
-echo
-install_statusline="n"
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    install_statusline="y"
-    if [ -f "$SCRIPT_DIR/scripts/statusline-script.sh" ]; then
+while true; do
+    read -p "$(echo -e ${CYAN})  Install statusline? (y/n): $(echo -e ${NC})" -r
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        install_statusline="y"
+        break
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        install_statusline="n"
+        break
+    else
+        echo -e "${YELLOW}  Please enter y or n${NC}"
+    fi
+done
+
+if [[ $install_statusline == "y" ]]; then
+    if [ -f "$SCRIPT_DIR/cc_sessions/scripts/statusline-script.sh" ]; then
         echo -e "${DIM}  Installing statusline script...${NC}"
-        cp "$SCRIPT_DIR/scripts/statusline-script.sh" "$PROJECT_ROOT/.claude/"
+        cp "$SCRIPT_DIR/cc_sessions/scripts/statusline-script.sh" "$PROJECT_ROOT/.claude/"
         chmod +x "$PROJECT_ROOT/.claude/statusline-script.sh"
         echo -e "${GREEN}  ✓ Statusline installed successfully${NC}"
     else
@@ -180,6 +201,38 @@ while true; do
 done
 triggers="$triggers]"
 
+# API Mode configuration
+echo
+echo -e "${BOLD}${MAGENTA}★ THINKING BUDGET CONFIGURATION${NC}"
+echo -e "${DIM}$(printf '─%.0s' {1..60})${NC}"
+echo -e "${WHITE}  Token usage is not much of a concern with Claude Code Max${NC}"
+echo -e "${WHITE}  plans, especially the \$200 tier. But API users are often${NC}"
+echo -e "${WHITE}  budget-conscious and want manual control.${NC}"
+echo
+echo -e "${CYAN}  Sessions was built to preserve tokens across context windows${NC}"
+echo -e "${CYAN}  but uses saved tokens to enable 'ultrathink' - Claude's${NC}"
+echo -e "${CYAN}  maximum thinking budget - on every interaction for best results.${NC}"
+echo
+echo -e "${DIM}  • Max users (recommended): Automatic ultrathink every message${NC}"
+echo -e "${DIM}  • API users: Manual control with [[ ultrathink ]] when needed${NC}"
+echo
+echo -e "${DIM}  You can toggle this anytime with: /api-mode${NC}"
+echo
+while true; do
+    read -p "$(echo -e ${CYAN})  Enable automatic ultrathink for best performance? (y/n): $(echo -e ${NC})" -r
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        api_mode="false"
+        echo -e "${GREEN}  ✓ Max mode - ultrathink enabled for best performance${NC}"
+        break
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        api_mode="true"
+        echo -e "${GREEN}  ✓ API mode - manual ultrathink control (use [[ ultrathink ]])${NC}"
+        break
+    else
+        echo -e "${YELLOW}  Please enter y or n${NC}"
+    fi
+done
+
 # Advanced configuration
 echo
 echo -e "${BOLD}${MAGENTA}★ ADVANCED OPTIONS${NC}"
@@ -187,12 +240,18 @@ echo -e "${DIM}$(printf '─%.0s' {1..60})${NC}"
 echo -e "${WHITE}  Configure tool blocking, task prefixes, and more${NC}"
 echo
 
-read -p "$(echo -e ${CYAN})  Configure advanced options? (y/n): $(echo -e ${NC})" -n 1 -r
-echo
-advanced_config="n"
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    advanced_config="y"
-fi
+while true; do
+    read -p "$(echo -e ${CYAN})  Configure advanced options? (y/n): $(echo -e ${NC})" -r
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        advanced_config="y"
+        break
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        advanced_config="n"
+        break
+    else
+        echo -e "${YELLOW}  Please enter y or n${NC}"
+    fi
+done
 
 # Tool blocking configuration (advanced)
 blocked_tools='["Edit", "Write", "MultiEdit", "NotebookEdit"]'
@@ -221,9 +280,20 @@ if [ "$advanced_config" = "y" ]; then
     echo
     echo -e "${DIM}  Hint: Edit tools are typically blocked to enforce discussion-first workflow${NC}"
     echo
-    read -p "$(echo -e ${CYAN})  Modify blocked tools list? (y/n): $(echo -e ${NC})" -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    while true; do
+        read -p "$(echo -e ${CYAN})  Modify blocked tools list? (y/n): $(echo -e ${NC})" -r
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            modify_tools="y"
+            break
+        elif [[ $REPLY =~ ^[Nn]$ ]]; then
+            modify_tools="n"
+            break
+        else
+            echo -e "${YELLOW}  Please enter y or n${NC}"
+        fi
+    done
+    
+    if [[ $modify_tools == "y" ]]; then
         read -p "$(echo -e ${CYAN})  Enter comma-separated tool numbers to block: $(echo -e ${NC})" tool_numbers
         if [ -n "$tool_numbers" ]; then
             # Map numbers to tool names
@@ -262,9 +332,20 @@ if [ "$advanced_config" = "y" ]; then
     echo -e "${WHITE}    → ?- (investigate/research)${NC}"
     echo
     
-    read -p "$(echo -e ${CYAN})  Customize task prefixes? (y/n): $(echo -e ${NC})" -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    while true; do
+        read -p "$(echo -e ${CYAN})  Customize task prefixes? (y/n): $(echo -e ${NC})" -r
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            customize_prefixes="y"
+            break
+        elif [[ $REPLY =~ ^[Nn]$ ]]; then
+            customize_prefixes="n"
+            break
+        else
+            echo -e "${YELLOW}  Please enter y or n${NC}"
+        fi
+    done
+    
+    if [[ $customize_prefixes == "y" ]]; then
         read -p "$(echo -e ${CYAN})  High priority prefix [h-]: $(echo -e ${NC})" high_prefix
         read -p "$(echo -e ${CYAN})  Medium priority prefix [m-]: $(echo -e ${NC})" med_prefix
         read -p "$(echo -e ${CYAN})  Low priority prefix [l-]: $(echo -e ${NC})" low_prefix
@@ -285,9 +366,10 @@ fi
 
 # Create configuration file
 echo -e "${CYAN}Creating configuration...${NC}"
-cat > "$PROJECT_ROOT/.claude/sessions-config.json" << EOF
+cat > "$PROJECT_ROOT/sessions/sessions-config.json" << EOF
 {
   "developer_name": "$developer_name",
+  "api_mode": $api_mode,
   "trigger_phrases": $triggers,
   "blocked_tools": $blocked_tools,
   "task_detection": {
@@ -411,12 +493,12 @@ echo
 
 # Copy CLAUDE.sessions.md to project root
 echo "Installing CLAUDE.sessions.md..."
-cp "$SCRIPT_DIR/templates/CLAUDE.sessions.md" "$PROJECT_ROOT/"
+cp "$SCRIPT_DIR/cc_sessions/templates/CLAUDE.sessions.md" "$PROJECT_ROOT/"
 
 # Create or update CLAUDE.md
 if [ ! -f "$PROJECT_ROOT/CLAUDE.md" ]; then
     echo "Creating CLAUDE.md from template..."
-    cp "$SCRIPT_DIR/templates/CLAUDE.example.md" "$PROJECT_ROOT/CLAUDE.md"
+    cp "$SCRIPT_DIR/cc_sessions/templates/CLAUDE.example.md" "$PROJECT_ROOT/CLAUDE.md"
     echo "✅ CLAUDE.md created from best practice template"
     echo "   Please customize the project overview section"
 else

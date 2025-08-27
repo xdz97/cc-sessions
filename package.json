@@ -1,11 +1,11 @@
 {
   "name": "cc-sessions",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "description": "Claude Code Sessions Framework - Enforced methodology for AI pair programming",
   "main": "install.js",
   "bin": {
-    "cc-sessions": "./install.js",
-    "cc-sessions-install": "./install.js"
+    "cc-sessions": "install.js",
+    "cc-sessions-install": "install.js"
   },
   "scripts": {
     "test": "echo \"No test specified yet\""
@@ -25,7 +25,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GWUDCAP/cc-sessions.git"
+    "url": "git+https://github.com/GWUDCAP/cc-sessions.git"
   },
   "bugs": {
     "url": "https://github.com/GWUDCAP/cc-sessions/issues"
@@ -43,12 +43,7 @@
   "files": [
     "install.js",
     "install.sh",
-    "hooks/",
-    "protocols/",
-    "agents/",
-    "templates/",
-    "scripts/",
-    "knowledge/",
+    "cc_sessions/",
     "docs/",
     "README.md",
     "LICENSE"

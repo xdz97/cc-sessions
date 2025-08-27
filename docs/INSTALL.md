@@ -103,7 +103,7 @@ During installation, you'll set:
 
 ### Manual Configuration
 
-Edit `.claude/sessions-config.json`:
+Edit `sessions/sessions-config.json`:
 
 ```json
 {

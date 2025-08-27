@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-sessions"
-version = "0.1.0"
+version = "0.1.6"
 description = "Claude Code Sessions Framework - Enforced methodology for AI pair programming"
 readme = "README.md"
 license = {text = "MIT"}
@@ -55,11 +55,13 @@ packages = ["cc_sessions"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-cc_sessions = [
+"*" = [
     "hooks/*.py",
-    "protocols/*.md",
+    "protocols/*.md", 
     "agents/*.md",
+    "commands/*.md",
     "templates/*.md",
+    "templates/*.py",
     "scripts/*",
     "knowledge/**/*",
 ]

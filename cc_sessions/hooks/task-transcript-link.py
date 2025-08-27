@@ -75,6 +75,11 @@ for item in target_dir.iterdir():
     if item.is_file():
         item.unlink()
 
+# Set flag indicating we're entering a subagent context
+# This prevents DAIC reminders from the subagent's tool calls
+subagent_flag = PROJECT_ROOT / '.claude' / 'state' / 'in_subagent_context.flag'
+subagent_flag.touch()
+
 # Set up token counting
 enc = tiktoken.get_encoding('cl100k_base')
 def n_tokens(s: str) -> int:

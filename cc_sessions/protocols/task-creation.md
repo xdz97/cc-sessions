@@ -94,7 +94,12 @@ Default mappings:
 # When ready to start:
 git checkout -b feature/implement-cool-thing
 
-# Update task state
+# Update task state with CORRECT format
+# IMPORTANT: Use exactly these field names:
+#   - "task" (NOT "task_file") - just the task name without path or .md extension  
+#   - "branch" (NOT "branch_name") - the Git branch name
+#   - "services" - array of affected services/modules
+#   - "updated" - current date in YYYY-MM-DD format
 cat > .claude/state/current_task.json << EOF
 {
   "task": "m-implement-cool-thing",

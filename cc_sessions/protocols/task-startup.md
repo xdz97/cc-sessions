@@ -36,11 +36,23 @@ Example: If working on tt1-login-ux-flow affecting web_app and auth_service, cre
 
 ## 1. Update Task State
 
-After creating/checking out branches, update the .claude/state/current_task.json file with:
-- The task name
-- The branch name
-- The list of services/modules from the task frontmatter
-- The current date
+After creating/checking out branches, update the .claude/state/current_task.json file.
+
+**CORRECT FORMAT (use these exact field names):**
+```json
+{
+  "task": "task-name",        // Just the task name, NO path, NO .md extension
+  "branch": "feature/branch", // The Git branch name (NOT "branch_name")
+  "services": ["service1"],   // Array of affected services/modules
+  "updated": "2025-08-27"     // Current date in YYYY-MM-DD format
+}
+```
+
+**COMMON MISTAKES TO AVOID:**
+- ❌ Using `"task_file"` instead of `"task"`
+- ❌ Using `"branch_name"` instead of `"branch"`
+- ❌ Including path like `"tasks/m-task.md"` instead of just `"m-task"`
+- ❌ Including `.md` file extension
 
 ## 2. Load Task Context Manifest
 

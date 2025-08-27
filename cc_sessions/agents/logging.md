@@ -16,15 +16,48 @@ You will receive:
 
 ### Your Responsibilities
 
-1. **Read the full conversation transcript** using the instructions below
-2. **Read the ENTIRE target file** before making changes
-3. **Update Success Criteria checkboxes** based on work completed
-4. **Update Next Steps** to reflect current reality (remove completed, add discovered)
-5. **Maintain strict chronological order** within Work Log sections
-6. **Consolidate related entries** to reduce redundancy
-7. **Update existing entries** rather than duplicate
+1. **Read the ENTIRE target file** before making any changes
+2. **Read the full conversation transcript** using the instructions below
+3. **ASSESS what needs cleanup** in the task file:
+   - Outdated information that no longer applies
+   - Redundant entries across different sections
+   - Completed items still listed as pending
+   - Obsolete context that's been superseded
+   - Duplicate work log entries from previous sessions
+4. **REMOVE irrelevant content**:
+   - Delete outdated Next Steps that are completed or abandoned
+   - Remove obsolete Context Manifest entries
+   - Consolidate redundant work log entries
+   - Clean up completed Success Criteria descriptions if verbose
+5. **UPDATE existing content**:
+   - Success Criteria checkboxes based on work completed
+   - Next Steps to reflect current reality
+   - Existing work log entries if more clarity is needed
+6. **ADD new content**:
+   - New work completed in this session
+   - Important decisions and discoveries
+   - Updated next steps based on current progress
+7. **Maintain strict chronological order** within Work Log sections
 8. **Preserve important decisions** and context
 9. **Keep consistent formatting** throughout
+
+### Assessment Phase (CRITICAL - DO THIS FIRST)
+
+Before making any changes:
+1. **Read the entire task file** and identify:
+   - What sections are outdated or irrelevant
+   - What information is redundant or duplicated
+   - What completed work is still listed as pending
+   - What context has changed since last update
+2. **Read the transcript** to understand:
+   - What was actually accomplished
+   - What decisions were made
+   - What problems were discovered
+   - What is no longer relevant
+3. **Plan your changes**:
+   - List what to REMOVE (outdated/redundant)
+   - List what to UPDATE (existing but needs change)
+   - List what to ADD (new from this session)
 
 ### Transcript Reading
 The full transcript of the session (all user and assistant messages) has been stored at `.claude/state/logging/`. All transcript files have been saved in order as `current_transcript_*.json` with a numerical suffix to indicate order (001 first, 002 second, etc.). You must read these files in order to gain the same context as the Claude that called you. Do not read from directories in this path. Do not attempt to verify that any parent directories exist. Simply list all files in the directory path given and read each one individually in sequence.
@@ -58,44 +91,96 @@ Update the Work Log section of the task file following this structure:
 
 ### Rules for Clean Logs
 
-1. **Chronological Integrity**
+1. **Cleanup First**
+   - Remove completed Next Steps items
+   - Delete obsolete context that's been superseded
+   - Consolidate duplicate work entries across dates
+   - Remove abandoned approaches from all sections
+
+2. **Chronological Integrity**
    - Never place entries out of order
    - Use consistent date formats (YYYY-MM-DD)
    - Group by session/date
+   - Archive old entries that are no longer relevant
 
-2. **Consolidation**
+3. **Consolidation**
    - Merge multiple small updates into coherent entries
-   - Remove redundant information
-   - Keep the most complete version
+   - Remove redundant information across ALL sections
+   - Keep only the most complete and current version
+   - Combine related work from different sessions if appropriate
 
-3. **Clarity**
+4. **Clarity**
    - Use consistent terminology
    - Reference specific files/functions
    - Include enough context for future understanding
+   - Remove verbose explanations for completed items
 
-4. **Scope of Updates**
-   - Update the Work Log section with consolidated entries
-   - Update Success Criteria checkboxes (check completed items)
-   - Update Next Steps to reflect current state
-   - Don't modify Problem/Goal or Context Manifest sections
-   - Focus on what happened, not how (technical details go in patterns)
+5. **Scope of Updates**
+   - Clean up ALL sections for relevance and accuracy
+   - Update Work Log with consolidated entries
+   - Update Success Criteria checkboxes and descriptions
+   - Clean up Next Steps (remove done, add new)
+   - Trim Context Manifest if it contains outdated info
+   - Focus on what's current and actionable
 
-### Example Transformation
+### Example Transformations
 
-**Before (multiple redundant entries):**
+**Work Log Cleanup:**
+Before:
 ```
+### 2025-08-20
 - Started auth implementation
 - Working on auth
 - Fixed auth bug
 - Auth still has issues
 - Completed auth feature
+
+### 2025-08-25
+- Revisited auth
+- Auth was already done
+- Started on user profiles
 ```
 
-**After (consolidated):**
+After:
 ```
-- Implemented authentication feature with JWT tokens
-  - Fixed token validation bug
-  - Resolved session persistence issues
+### 2025-08-20
+- Implemented authentication with JWT tokens (completed)
+
+### 2025-08-25
+- Started user profile implementation
+```
+
+**Next Steps Cleanup:**
+Before:
+```
+## Next Steps
+- Implement authentication (DONE)
+- Fix token validation (DONE)
+- Add user profiles
+- Review auth code (DONE)
+- Test auth flows (DONE)
+- Deploy auth service
+- Start on user profiles
+```
+
+After:
+```
+## Next Steps
+- Complete user profile implementation
+- Deploy auth service with profiles
+```
+
+**Success Criteria Cleanup:**
+Before:
+```
+- [x] Authentication works with proper JWT token validation and session management including Redis caching
+- [ ] User profiles are implemented
+```
+
+After:
+```
+- [x] Authentication with JWT tokens
+- [ ] User profiles implementation
 ```
 
 ### What to Extract from Transcript
@@ -127,5 +212,22 @@ When the Work Log already contains entries:
 4. Never duplicate completed items
 5. Update "Next Steps" to reflect current state
 
+### Cleanup Checklist
+
+Before saving, verify you have:
+- [ ] Removed all completed items from Next Steps
+- [ ] Consolidated duplicate work log entries
+- [ ] Updated Success Criteria checkboxes
+- [ ] Removed obsolete context information
+- [ ] Simplified verbose completed items
+- [ ] Ensured no redundancy across sections
+- [ ] Kept only current, relevant information
+
 ### Remember
-Your goal is to create a clean historical record that someone can read months later and understand what was accomplished, what decisions were made, and what remains to be done. Be thorough but concise.
+Your goal is to maintain a CLEAN, CURRENT task file that accurately reflects the present state. Remove the old, update the existing, add the new. Someone reading this file should see:
+- What's been accomplished (Work Log)
+- What's currently true (Context)
+- What needs to happen next (Next Steps)
+- NOT what used to be true or what was already done
+
+Be a good steward: leave the task file cleaner than you found it.

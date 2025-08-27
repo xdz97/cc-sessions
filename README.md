@@ -116,66 +116,69 @@ It makes all of these nice things happen. Not through more rules or documentatio
 
 **Sessions enforces discussion before implementation through hooks that Claude can't bypass.**
 
-<details>
-<summary><strong>The DAIC workflow explained</strong> <em>(see how it actually works)</em></summary>
-
-<br>
-
 You install Sessions. Five minutes, one script. It sets up hooks that Claude can't bypass, state management that persists, and a task system that actually remembers things.
 
-Now when you start working, Claude is in Discussion Mode by default. It can read files, search code, analyze patterns. But it can't edit anything. Can't write. Can't even create a file. It HAS to talk to you first.
-
-You: 'Add error handling to the auth flow'
-Claude: *reads the auth code, understands the patterns, explains what it found and what it plans to do*
-You: 'go ahead'
-Claude: *NOW it can edit*
-
-That's it. That's the whole DAIC thing. Discussion, Alignment, Implementation, Check. Claude can't skip ahead. The hooks literally block the tools.
-
-</details>
+If you want to get acquainted you can read about individual features below:
 
 <details>
-<summary>**See it in action**</summary>
-
-```
-You: add user search to the dashboard
-
-Claude: I'll help add user search to the dashboard. Let me first examine the current implementation.
-
-[reads dashboard components, existing search patterns, API structure]
-
-Looking at your codebase:
-- Dashboard uses /components/Dashboard/index.tsx
-- You have a SearchBar component already in /components/common/
-- API has a users.search endpoint that's not being used
-- Your other searches use debouncing with 300ms delay
-
-I can add user search by:
-1. Importing the existing SearchBar component
-2. Adding state management with your existing useQueryState hook
-3. Connecting to the users.search endpoint
-4. Following your debounce pattern from products search
-
-Should I implement this?
-
-You: yep go ahead
-
-Claude: [NOW Claude can edit - implements exactly what was discussed]
-```
-
-Without Sessions? Claude would've created a new search component, ignored your API endpoint, and used a different state pattern.
-
-</details>
-
-<details>
-<summary><strong>Key features in detail</strong> <em>(persistent context, agents, enforcement)</em></summary>
-
+<summary><strong>Claude waits for alignment</strong></summary>
 <br>
 
-When your context window hits 75%, you get a warning. Not after it dies. Before. You wrap up clean, save your work, start fresh. The task file has everything - what you're building, what you've done, what's next. Claude reads it and continues exactly where you left off.
+Before Sessions, this was your life:
+
+```
+You: Add error handling to the auth flow
+
+Claude: I'll add comprehensive error handling!
+[IMMEDIATELY STARTS EDITING 15 FILES]
+[ADDS TRY-CATCH TO EVERY FUNCTION]
+[CHANGES YOUR ERROR MESSAGE FORMAT]
+[REFACTORS YOUR LOGGING LIBRARY]
+
+You: wait no stop STOP
+
+Claude: I've updated the error handling across your entire codebase!
+
+You: [muffled screaming]
+```
+
+With Sessions:
+
+```
+You: Add error handling to the auth flow
+
+Claude: Let me analyze your current error patterns first...
+
+[Claude reads auth code, examines existing error handling]
+
+Claude: I found your error handling pattern:
+- You're using custom AppError classes
+- Errors bubble to middleware/errorHandler.ts  
+- Auth errors specifically use 401/403 status codes
+- You log errors to Sentry in production
+
+I'll add error handling to the login and refresh token endpoints
+following your existing AppError pattern. Ready?
+
+You: perfect, go ahead
+
+Claude: [NOW edits exactly 2 files with correct patterns]
+```
+
+The hooks literally block Write/Edit tools until you approve. Claude HAS to discuss first. No exceptions. No workarounds. No surprise refactors.
+
+</details>
 
 <details>
-<summary>Context persistence demo</summary>
+<summary><strong>OP automatic compaction</strong></summary>
+  # NOTE: This is also a pretty good feature section/fold
+<br>
+
+When Claude's context window hits 75%, a hook will tell Claude to start wrapping shid up. At 90%, the hook will be more aggressive about it. 
+
+When you okay (i.e. "let's compact"), Claude will use a protocol and several sub-agents to record all important info from your session to the current task file, along with next steps to begin immediately after you clear context.
+
+You just type `/clear` and another hook will automatically yeet the current task file into Claude's context window and you can continue as if you never left.
 
 ```
 [Friday, 4pm - deep in implementing a payment system]
@@ -189,6 +192,8 @@ Claude: Cool, running context-compaction.md protocol - first, let me call the lo
 You: [Close laptop, weekend happens]
 
 [Monday, 9am]
+
+You: /clear
 
 You: lets continue
 
@@ -208,15 +213,25 @@ Zero context rebuilding. Claude knows exactly where you left off.
 
 </details>
 
-Those subagents that were useless? Now they get the entire context of your conversation so far (unless you dont need them to have it). They have strict instructions to record their findings in the appropriate sessions/ files and communicate with your main Claude Code thread when they are done. 
-
-The code review agent knows your patterns. The context gathering agent knows your stack. The logging agent is basically a copy of your current conversation. They run in separate threads so your main context stays clean. They come back with actual useful information instead of random shit they guessed.
-
 <details>
-<summary>Agents that actually work</summary>
+<summary><strong>Better subagents</strong></summary>
+<br>
 
+There's no obvious way to get Claude to call subagents with all of the necessary context. There's also not great visiblity into how Claude prompts them, or even what the subagents do (or why they fail when they fail).
+
+To deal with this, we've designated specific agents for specific tasks in the sessions system.
+
+These are (currently):
+  - Context Gathering Agent | Digs through whole files at a time in your codebase to get all the right context for a task, then writes it to a context manifest in the task file so Claude doesn't have to re-learn it.
+  - Code Review Agent | Reviews code changes before they are committed to ensure they follow your patterns
+  - Logging Agent | Writes a log of what was done in a session to the task file
+
+To make this a lot easier, the logging agent gets the entire conversation history - instead of relying on Claude to re-output everything important that happened in this session, the logging agent just branches off from your conversation, writes the logs, and passes it back to the main thread.
+
+In the background, any call to a subagent copies the current conversation into a set of conversation history logs in a dedicated directory for the agent. If you ever want an agent to load the full conversation context before following their prompt, you can just adjust their agent prompt to tell them to read all of the files in .claude/state/{agent-name}/.
+  
 ```
-You: Lets start the caching upgrades 
+You: Lets start the caching upgrades                                                                                                                                                                                                                                                                  e
 
 Claude: No problem! Let me update current-task.json and then I'll use the context-gathering agent to analyze your caching system.
 
@@ -247,13 +262,104 @@ The agent understood your patterns because it could analyze everything without w
 
 </details>
 
-Your tasks aren't todos that disappear. They're persistent files with context manifests that explain how everything works, work logs that track what's been done, and success criteria that define done. Forever. You can leave for a month and come back to perfect context.
+<details>
+<summary><strong>Tasks and Branches Is All You Need</strong></summary>
+<br>
 
-Branch enforcement means Claude checks what branch you're on before every edit. Wrong branch? Blocked. Here's the command to fix it. No more accidentally editing main. No more git archaeology.
+Every piece of work is a task. Every task has its own branch. Sessions enforces both.
+
+```
+You: Let's fix the payment webhooks
+
+Claude: I'll create a task for that. What priority?
+- h- (high): Critical/blocking issues
+- m- (medium): Normal features/fixes  
+- l- (low): Nice-to-haves
+- ?- (investigate): Not sure if needed
+
+You: high priority
+
+Claude: Creating h-fix-payment-webhooks
+[Creates task file]
+[Runs context-gathering agent]
+[Sets up feature/fix-payment-webhooks branch]
+
+Context manifest created:
+- Stripe webhooks configured in /api/webhooks/stripe.ts
+- Events: payment_intent.succeeded, charge.failed
+- Current issue: signature verification failing
+- Webhook secret in STRIPE_WEBHOOK_SECRET env var
+
+Ready to start work on feature/fix-payment-webhooks?
+```
+
+Now your task has:
+- **Permanent context** that survives session restarts
+- **Its own branch** that Sessions enforces
+- **Work logs** tracking everything done
+- **Clear scope** preventing scope creep
+
+When you come back tomorrow:
+
+```
+You: /clear
+
+SessionStart: Loading task h-fix-payment-webhooks
+Branch: feature/fix-payment-webhooks
+Last work: Fixed signature verification
+Next: Add retry logic for failed events
+
+You: continue
+
+Claude: Picking up where we left off - implementing retry logic for failed webhook events...
+```
+
+No context rebuilding. No confusion about what branch. No losing work.
+
+</details>
 
 <details>
-<summary>Branch enforcement in action</summary>
+<summary><strong>Ultrathink & API Mode</strong></summary>
+<br>
 
+Sessions automatically enables Claude's deep thinking mode on every message. But if you're paying per token, that gets expensive fast.
+
+**Max Mode (Default):**
+```
+You: [any message]
+
+[Claude automatically uses maximum thinking budget]
+[2-3x more tokens but better reasoning]
+[$20-200/month flat rate - use all you want]
+```
+
+**API Mode (Token Saver):**
+```bash
+# During installation:
+"Enable API mode to save tokens? (y/n)"
+
+# Or toggle later:
+/api-mode
+```
+
+In API mode:
+- Ultrathink disabled by default (saves ~50-67% tokens)
+- You control when to use it: `[[ ultrathink ]] solve this hard problem`
+- All other Sessions features still save tokens through context preservation
+- Shorter hook messages ("Run: daic" vs paragraphs)
+
+The truth? Sessions **saves** tokens for API users:
+- Context persistence: -2000 tokens/task (no re-explaining)
+- Auto-loading: -500 tokens/session (no "what are we doing?")
+- DAIC enforcement: -1000 tokens/task (no failed attempts)
+- Specialized agents: -3000 tokens (work in minimal contexts)
+
+You lose ultrathink but gain 5-10x token efficiency everywhere else.
+
+</details>
+
+<details>
+<summary><strong>Branch Enforcement</strong></summary>
 ```
 [Working on task m-fix-auth, supposed to be on feature/fix-auth branch]
 
@@ -277,12 +383,72 @@ Claude: [NOW can edit the file safely on the correct branch]
 
 </details>
 
-Your CLAUDE.md stays under 100 lines because Claude Code no longer needs 1000 rules to try to prevent it from American Psycho-ing your server's file system. A few key behavioral rules in CLAUDE.sessions.md and the rest is enforced by programmatic hooks - not suggestions Claude might follow. Actual enforcement that can't be ignored.
+<details>
+<summary><strong>Code Not Claude</strong></summary>
+<br>
 
-The statusline shows you everything in real-time. Current task. DAIC mode. Token usage. Number of edited files to go in staging. Number of open tasks that need to be addressed. You always know what's happening.
+Before Sessions, your CLAUDE.md looked like this:
+
+```markdown
+# CLAUDE.md (1,247 lines)
+
+## CRITICAL RULES (PLEASE FOLLOW)
+
+### NEVER DO THESE THINGS
+- NEVER use require() we use import
+- NEVER use callbacks we use async/await  
+- NEVER use class components
+- NEVER refactor working code
+- NEVER change the database schema
+- NEVER modify the auth middleware
+- NEVER use var, always const/let
+- NEVER commit directly to main
+[... 200 more NEVER rules ...]
+
+### ALWAYS DO THESE THINGS  
+- ALWAYS use the existing error handler
+- ALWAYS follow our naming conventions
+- ALWAYS use PostgreSQL not MySQL
+- ALWAYS check if a utility exists first
+[... 200 more ALWAYS rules ...]
+
+### REMEMBER
+- We use Tailwind not CSS modules
+- The database is PostgreSQL
+- Yes, still PostgreSQL
+- I SAID POSTGRESQL
+[... 500 lines of context ...]
+```
+
+Claude reads line 1 and forgets the rest.
+
+With Sessions:
+
+```markdown
+# CLAUDE.md (< 100 lines)
+
+## Project Overview
+Music marketing platform. Node + React + PostgreSQL.
+
+## Behavioral Rules
+@CLAUDE.sessions.md
+
+That's it. The rest is enforced by hooks.
+```
+
+Rules aren't suggestions anymore. They're **enforced by code**:
+- Can't edit without permission? Hook blocks the tools
+- Wrong branch? Hook blocks the edit
+- Need to follow patterns? Context manifest has them documented
+- Must remember PostgreSQL? It's in the task context that auto-loads
+
+Your documentation describes your project. The hooks enforce behavior. Claude can't ignore hooks.
+
+</details>
+
 
 <details>
-<summary>Statusline keeping you informed</summary>
+<summary><strong>Statusline keeping you informed</strong></summary>
 
 ```
 [Bottom of your Claude Code window - two lines]

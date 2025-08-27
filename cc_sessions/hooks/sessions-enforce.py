@@ -166,13 +166,32 @@ if branch_config.get("enabled", True) and tool_name in ["Write", "Edit", "MultiE
                         # We're in a submodule
                         service_name = repo_path.name
                         
-                        if current_branch != expected_branch:
-                            if service_name in affected_services:
-                                print(f"[Branch Mismatch] Service '{service_name}' is on branch '{current_branch}' but should be on '{expected_branch}'. Please checkout the correct branch.", file=sys.stderr)
-                                sys.exit(2)
-                            else:
-                                print(f"[New Service Detected] Service '{service_name}' isn't in the task's affected services. Please update the task file if this service should be included.", file=sys.stderr)
-                                sys.exit(2)
+                        # Check both conditions: branch status and task inclusion
+                        branch_correct = (current_branch == expected_branch)
+                        in_task = (service_name in affected_services)
+                        
+                        # Handle all four scenarios with clear, specific error messages
+                        if in_task and branch_correct:
+                            # Scenario 1: Everything is correct - allow to proceed
+                            pass
+                        elif in_task and not branch_correct:
+                            # Scenario 2: Service is in task but on wrong branch
+                            print(f"[Branch Mismatch] Service '{service_name}' is part of this task but is on branch '{current_branch}' instead of '{expected_branch}'.", file=sys.stderr)
+                            print(f"Please run: cd {repo_path.relative_to(project_root)} && git checkout {expected_branch}", file=sys.stderr)
+                            sys.exit(2)
+                        elif not in_task and branch_correct:
+                            # Scenario 3: Service not in task but already on correct branch
+                            print(f"[Service Not in Task] Service '{service_name}' is on the correct branch '{expected_branch}' but is not listed in the task file.", file=sys.stderr)
+                            print(f"Please update the task file to include '{service_name}' in the services list.", file=sys.stderr)
+                            sys.exit(2)
+                        else:  # not in_task and not branch_correct
+                            # Scenario 4: Service not in task AND on wrong branch
+                            print(f"[Service Not in Task + Wrong Branch] Service '{service_name}' has two issues:", file=sys.stderr)
+                            print(f"  1. Not listed in the task file's services", file=sys.stderr)
+                            print(f"  2. On branch '{current_branch}' instead of '{expected_branch}'", file=sys.stderr)
+                            print(f"To fix: cd {repo_path.relative_to(project_root)} && git checkout -b {expected_branch}", file=sys.stderr)
+                            print(f"Then update the task file to include '{service_name}' in the services list.", file=sys.stderr)
+                            sys.exit(2)
                     else:
                         # Single repo or main repo
                         if current_branch != expected_branch:

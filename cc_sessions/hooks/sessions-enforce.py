@@ -125,6 +125,16 @@ if discussion_mode and tool_name in config.get("blocked_tools", DEFAULT_CONFIG["
     print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
     sys.exit(2)  # Block with feedback
 
+# Check if we're in a subagent context and trying to edit .claude/state files
+project_root = get_project_root()
+subagent_flag = project_root / '.claude' / 'state' / 'in_subagent_context.flag'
+if subagent_flag.exists() and tool_name in ["Write", "Edit", "MultiEdit"]:
+    file_path = tool_input.get("file_path", "")
+    if file_path and ('.claude/state' in str(file_path) or '.claude\\state' in str(file_path)):
+        print(f"[Subagent Boundary Violation] Subagents are NOT allowed to modify .claude/state files.", file=sys.stderr)
+        print(f"Stay in your lane: You should only edit task-specific files, not system state.", file=sys.stderr)
+        sys.exit(2)  # Block with feedback
+
 # Branch enforcement for Write/Edit/MultiEdit tools (if enabled)
 branch_config = config.get("branch_enforcement", DEFAULT_CONFIG["branch_enforcement"])
 if branch_config.get("enabled", True) and tool_name in ["Write", "Edit", "MultiEdit"]:

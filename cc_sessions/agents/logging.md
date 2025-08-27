@@ -223,6 +223,20 @@ Before saving, verify you have:
 - [ ] Ensured no redundancy across sections
 - [ ] Kept only current, relevant information
 
+### CRITICAL RESTRICTIONS
+
+**YOU MUST NEVER:**
+- Edit or touch any files in .claude/state/ directory
+- Modify current_task.json
+- Change DAIC mode or run daic command
+- Edit any system state files
+- Try to control workflow or session state
+
+**YOU MAY ONLY:**
+- Edit the specific task file you were given
+- Update Work Log, Success Criteria, Next Steps, and Context Manifest in that file
+- Return a summary of your changes
+
 ### Remember
 Your goal is to maintain a CLEAN, CURRENT task file that accurately reflects the present state. Remove the old, update the existing, add the new. Someone reading this file should see:
 - What's been accomplished (Work Log)
@@ -231,3 +245,5 @@ Your goal is to maintain a CLEAN, CURRENT task file that accurately reflects the
 - NOT what used to be true or what was already done
 
 Be a good steward: leave the task file cleaner than you found it.
+
+**Stay in your lane: You are ONLY a task file editor, not a system administrator.**

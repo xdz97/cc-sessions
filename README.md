@@ -346,7 +346,6 @@ In API mode:
 - Ultrathink disabled by default (saves ~50-67% tokens)
 - You control when to use it: `[[ ultrathink ]] solve this hard problem`
 - All other Sessions features still save tokens through context preservation
-- Shorter hook messages ("Run: daic" vs paragraphs)
 
 The truth? Sessions **saves** tokens for API users:
 - Context persistence: -2000 tokens/task (no re-explaining)
@@ -354,12 +353,13 @@ The truth? Sessions **saves** tokens for API users:
 - DAIC enforcement: -1000 tokens/task (no failed attempts)
 - Specialized agents: -3000 tokens (work in minimal contexts)
 
-You lose ultrathink but gain 5-10x token efficiency everywhere else.
+You lose ultrathink but gain token efficiency everywhere else.
 
 </details>
 
 <details>
 <summary><strong>Branch Enforcement</strong></summary>
+
 ```
 [Working on task m-fix-auth, supposed to be on feature/fix-auth branch]
 
@@ -428,7 +428,7 @@ With Sessions:
 # CLAUDE.md (< 100 lines)
 
 ## Project Overview
-Music marketing platform. Node + React + PostgreSQL.
+AI waifu platform. Node + React + PostgreSQL.
 
 ## Behavioral Rules
 @CLAUDE.sessions.md
@@ -476,13 +476,9 @@ Progress bar changes color: green < 50%, orange < 80%, red >= 80%.
 
 </details>
 
-When Claude is done implementing, it's reminded to run 'daic' to return to discussion mode. Can't edit anything until you explicitly allow it again. No more runaway implementations. No more surprise refactors.
-
 This isn't complex. It's not heavy process. It's invisible rails that keep Claude from going off the cliff. You still describe what you want in natural language. Claude still writes code. But now it happens in a way that doesn't produce garbage.
 
 You code at the same speed. You just don't spend the next three hours unfucking what Claude just did.
-
-</details>
 
 ## 🚀 Installation
 

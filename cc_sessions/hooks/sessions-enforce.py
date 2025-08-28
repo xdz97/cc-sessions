@@ -124,6 +124,14 @@ if tool_name == "Bash":
 # Check current mode
 discussion_mode = check_daic_mode_bool()
 
+# Block 'daic' command in discussion mode
+if discussion_mode and tool_name == "Bash":
+    command = tool_input.get("command", "").strip()
+    if 'daic' in command:
+        print(f"[DAIC: Command Blocked] The 'daic' command is not allowed in discussion mode.", file=sys.stderr)
+        print(f"You're already in discussion mode. Be sure to propose your intended edits/plans to the user and seek their explicit approval, which will unlock implementation mode.", file=sys.stderr)
+        sys.exit(2)  # Block with feedback
+
 # Block configured tools in discussion mode
 if discussion_mode and tool_name in config.get("blocked_tools", DEFAULT_CONFIG["blocked_tools"]):
     print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)

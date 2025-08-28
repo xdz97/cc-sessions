@@ -36,11 +36,7 @@ DEFAULT_CONFIG = {
         "git remote", "git fetch", "git describe", "git rev-parse", "git blame",
         "docker ps", "docker images", "docker logs", "npm list", "npm ls",
         "pip list", "pip show", "yarn list", "curl", "wget", "jq", "awk",
-        "sed -n", "tar -t", "unzip -l",
-        # Windows equivalents
-        "dir", "where", "findstr", "fc", "comp", "certutil -hashfile",
-        "Get-ChildItem", "Get-Location", "Get-Content", "Select-String",
-        "Get-Command", "Get-Process", "Get-Date", "Get-Item"
+        "sed -n", "tar -t", "unzip -l"
     ]
 }
 
@@ -133,20 +129,11 @@ if discussion_mode and tool_name in config.get("blocked_tools", DEFAULT_CONFIG["
 project_root = get_project_root()
 subagent_flag = project_root / '.claude' / 'state' / 'in_subagent_context.flag'
 if subagent_flag.exists() and tool_name in ["Write", "Edit", "MultiEdit"]:
-    file_path_str = tool_input.get("file_path", "")
-    if file_path_str:
-        file_path = Path(file_path_str)
-        state_dir = project_root / '.claude' / 'state'
-        try:
-            # Check if file_path is under the state directory
-            file_path.resolve().relative_to(state_dir.resolve())
-            # If we get here, the file is under .claude/state
-            print(f"[Subagent Boundary Violation] Subagents are NOT allowed to modify .claude/state files.", file=sys.stderr)
-            print(f"Stay in your lane: You should only edit task-specific files, not system state.", file=sys.stderr)
-            sys.exit(2)  # Block with feedback
-        except ValueError:
-            # Not under .claude/state, which is fine
-            pass
+    file_path = tool_input.get("file_path", "")
+    if file_path and ('.claude/state' in str(file_path) or '.claude\\state' in str(file_path)):
+        print(f"[Subagent Boundary Violation] Subagents are NOT allowed to modify .claude/state files.", file=sys.stderr)
+        print(f"Stay in your lane: You should only edit task-specific files, not system state.", file=sys.stderr)
+        sys.exit(2)  # Block with feedback
 
 # Branch enforcement for Write/Edit/MultiEdit tools (if enabled)
 branch_config = config.get("branch_enforcement", DEFAULT_CONFIG["branch_enforcement"])
@@ -185,15 +172,7 @@ if branch_config.get("enabled", True) and tool_name in ["Write", "Edit", "MultiE
                         project_root = project_root.parent
                     
                     # Check if we're in a submodule
-                    try:
-                        # Try to make repo_path relative to project_root
-                        repo_path.relative_to(project_root)
-                        is_submodule = (repo_path != project_root)
-                    except ValueError:
-                        # Not a subdirectory
-                        is_submodule = False
-                    
-                    if is_submodule:
+                    if repo_path != project_root and repo_path.is_relative_to(project_root):
                         # We're in a submodule
                         service_name = repo_path.name
                         

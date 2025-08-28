@@ -155,3 +155,7 @@ State files in `.claude/state/`:
 - cc_sessions/knowledge/ - Internal architecture documentation
 - README.md - Marketing-focused feature overview
 - sessions/protocols/ - Workflow protocol specifications (in installed projects)
+
+## Sessions System Behaviors
+
+@CLAUDE.sessions.md

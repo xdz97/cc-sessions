@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-sessions"
-version = "0.2.0"
+version = "0.2.1"
 description = "Claude Code Sessions Framework - Enforced methodology for AI pair programming"
 readme = "README.md"
 license = {text = "MIT"}
@@ -32,6 +32,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
     "Topic :: Software Development",
     "Topic :: Software Development :: Quality Assurance",
 ]

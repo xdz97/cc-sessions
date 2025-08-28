@@ -87,8 +87,15 @@ const config = {
 // Check if command exists
 function commandExists(command) {
   try {
-    execSync(`which ${command}`, { stdio: 'ignore' });
-    return true;
+    if (process.platform === 'win32') {
+      // Windows - use 'where' command
+      execSync(`where ${command}`, { stdio: 'ignore' });
+      return true;
+    } else {
+      // Unix/Mac - use 'which' command
+      execSync(`which ${command}`, { stdio: 'ignore' });
+      return true;
+    }
   } catch {
     return false;
   }
@@ -162,7 +169,9 @@ async function copyFiles() {
         path.join(SCRIPT_DIR, 'cc_sessions/hooks', file),
         path.join(PROJECT_ROOT, '.claude/hooks', file)
       );
-      await fs.chmod(path.join(PROJECT_ROOT, '.claude/hooks', file), 0o755);
+      if (process.platform !== 'win32') {
+        await fs.chmod(path.join(PROJECT_ROOT, '.claude/hooks', file), 0o755);
+      }
     }
   }
   
@@ -237,20 +246,53 @@ async function copyDir(src, dest) {
 async function installDaicCommand() {
   console.log(color('Installing daic command...', colors.cyan));
   
-  const daicSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic');
-  const daicDest = '/usr/local/bin/daic';
-  
-  try {
-    await fs.copyFile(daicSource, daicDest);
-    await fs.chmod(daicDest, 0o755);
-  } catch (error) {
-    if (error.code === 'EACCES') {
-      console.log(color('⚠️  Cannot write to /usr/local/bin. Trying with sudo...', colors.yellow));
-      try {
-        execSync(`sudo cp ${daicSource} ${daicDest}`, { stdio: 'inherit' });
-        execSync(`sudo chmod +x ${daicDest}`, { stdio: 'inherit' });
-      } catch {
-        console.log(color('⚠️  Could not install daic command globally. You can run it locally from .claude/scripts/', colors.yellow));
+  if (process.platform === 'win32') {
+    // Windows installation
+    const daicCmdSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.cmd');
+    const daicPs1Source = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.ps1');
+    
+    // Install to user's local directory
+    const localBin = path.join(process.env.USERPROFILE || process.env.HOME, 'AppData', 'Local', 'cc-sessions', 'bin');
+    await fs.mkdir(localBin, { recursive: true });
+    
+    try {
+      // Copy .cmd script
+      await fs.access(daicCmdSource);
+      const daicCmdDest = path.join(localBin, 'daic.cmd');
+      await fs.copyFile(daicCmdSource, daicCmdDest);
+      console.log(color(`  ✓ Installed daic.cmd to ${localBin}`, colors.green));
+    } catch {
+      console.log(color('  ⚠️ daic.cmd script not found', colors.yellow));
+    }
+    
+    try {
+      // Copy .ps1 script
+      await fs.access(daicPs1Source);
+      const daicPs1Dest = path.join(localBin, 'daic.ps1');
+      await fs.copyFile(daicPs1Source, daicPs1Dest);
+      console.log(color(`  ✓ Installed daic.ps1 to ${localBin}`, colors.green));
+    } catch {
+      console.log(color('  ⚠️ daic.ps1 script not found', colors.yellow));
+    }
+    
+    console.log(color(`  ℹ Add ${localBin} to your PATH to use 'daic' command`, colors.yellow));
+  } else {
+    // Unix/Mac installation
+    const daicSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic');
+    const daicDest = '/usr/local/bin/daic';
+    
+    try {
+      await fs.copyFile(daicSource, daicDest);
+      await fs.chmod(daicDest, 0o755);
+    } catch (error) {
+      if (error.code === 'EACCES') {
+        console.log(color('⚠️  Cannot write to /usr/local/bin. Trying with sudo...', colors.yellow));
+        try {
+          execSync(`sudo cp ${daicSource} ${daicDest}`, { stdio: 'inherit' });
+          execSync(`sudo chmod +x ${daicDest}`, { stdio: 'inherit' });
+        } catch {
+          console.log(color('⚠️  Could not install daic command globally. You can run it locally from .claude/scripts/', colors.yellow));
+        }
       }
     }
   }

@@ -116,7 +116,7 @@ current_mode = check_daic_mode_bool()
 # Implementation triggers (only work in discussion mode, skip for /add-trigger)
 if not is_add_trigger_command and current_mode and any(phrase in prompt.lower() for phrase in trigger_phrases):
     set_daic_mode(False)  # Switch to implementation
-    context += "[DAIC: Implementation Mode Activated] You may now implement ONLY the immediately discussed steps. DO NOT take **any** actions beyond what was explicitly agreed upon. If instructions were vague, consider the bounds of what was requested and *DO NOT* cross them. When you're done, run the command: daic\n"
+    context += "[DAIC: Implementation Mode Activated] You may now implement ONLY the immediately discussed steps. DO NOT take **any** actions beyond what was explicitly agreed upon. If instructions were vague, consider the bounds of what was requested and *DO NOT* cross them. When you're done, run the bash command: daic\n"
 
 # Emergency stop (works in any mode)
 if any(word in prompt for word in ["SILENCE", "STOP"]):  # Case sensitive

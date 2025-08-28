@@ -1,36 +1,29 @@
 # Context Compaction Protocol
 
-Use when context window is ~75% full or when switching to a new major section of work.
+When you are instructed to compact context:
 
-## 1. Complete Current Work
+## 1. Run Maintenance Agents
 
-Before compacting:
-- Finish any in-progress implementation
-- Ensure all tests pass
-- Commit any uncommitted changes
+Before compacting, delegate to agents:
 
-## 2. Run Logging Agent
+1. **logging agent** - Update work logs in task file
+   - Automatically receives full conversation context
+   - Logs work progress and updates task status
 
-Use the logging agent to consolidate work logs:
-```
-Use logging agent to organize and consolidate the work log for [task]
-```
+2. **context-refinement agent** - Check for discoveries/drift
+   - Reads transcript files automatically  
+   - Will update context ONLY if changes found
+   - Skip if task is complete
 
-## 3. Run Context Refinement Agent  
+3. **service-documentation agent** - Update CLAUDE.md files
+   - Only if service interfaces changed significantly
+   - Include list of modified services
 
-Update the context manifest with discoveries:
-```
-Use context-refinement agent to update the context manifest with discoveries from this session
-```
+## 2. Verify/Update Task State
 
-## 4. Run Code Review Agent (if applicable)
+Ensure that .claude/state/current_task.json contains the correct current task, branch, and services.
 
-If significant code was written:
-```
-Use code-review agent to review changes made in this session for [task]
-```
-
-## 5. Create Checkpoint
+## 3. Create Checkpoint
 
 Document the current state:
 - What was accomplished
@@ -38,25 +31,10 @@ Document the current state:
 - Any blockers or considerations
 - Next concrete steps
 
-## 6. Start Fresh Context
+## 4. Announce Readiness
 
-Begin new context window with:
-- Updated task file (with refined context and logs)
-- Clear starting point
-- Specific next steps
+Announce to the user that the agents have completed their work, the task state is updated, and we are ready to clear context.
 
-## When to Compact
+## Note on Context Refinement
 
-Compact context when:
-- Token usage exceeds 75%
-- Switching between major sections of work
-- Before starting complex new features
-- After completing significant milestones
-- When conversation becomes sluggish
-
-## Benefits
-
-- Maintains performance
-- Preserves important discoveries
-- Keeps clean work logs
-- Ensures knowledge transfer between contexts
+The context-refinement agent is speculative - it will only update the context manifest if genuine drift or new discoveries occurred. This prevents unnecessary updates while ensuring important findings are captured.

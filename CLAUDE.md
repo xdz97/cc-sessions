@@ -12,11 +12,14 @@ The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enfo
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/install.py` - Cross-platform installer with UI and configuration
+- `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
+- `install.js` - Node.js installer wrapper with Windows command detection and path handling
 - `cc_sessions/hooks/sessions-enforce.py` - Core DAIC enforcement and branch protection
 - `cc_sessions/hooks/session-start.py` - Automatic task context loading
 - `cc_sessions/hooks/user-messages.py` - Trigger phrase detection and mode switching
 - `cc_sessions/hooks/post-tool-use.py` - Implementation mode reminders
+- `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
+- `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
 - `cc_sessions/agents/logging.md` - Session work log consolidation agent
 - `cc_sessions/protocols/task-creation.md` - Structured task creation workflow
 - `cc_sessions/templates/CLAUDE.sessions.md` - Behavioral guidance template
@@ -66,7 +69,7 @@ The framework includes persistent task management with git branch enforcement, c
 - Claude Code hooks system for behavioral enforcement
 - Git for branch management and enforcement
 - Python 3.8+ with tiktoken for token counting
-- Bash shell environment for command execution
+- Shell environment for command execution (Bash/PowerShell/Command Prompt)
 
 ### Provides
 - `/add-trigger` - Dynamic trigger phrase configuration
@@ -88,6 +91,11 @@ State files in `.claude/state/`:
 - `current_task.json` - Active task metadata
 - `daic-mode.json` - Current discussion/implementation mode
 
+Windows-specific configuration in `.claude/settings.json`:
+- Hook commands use Windows-style paths with `%CLAUDE_PROJECT_DIR%`
+- Python interpreter explicitly specified for `.py` hook execution
+- Native `.cmd` and `.ps1` script support for daic command
+
 ## Key Patterns
 
 ### Hook Architecture
@@ -96,6 +104,8 @@ State files in `.claude/state/`:
 - User message hooks for trigger detection (user-messages.py)
 - Session start hooks for context loading (session-start.py)
 - Shared state management across all hooks (shared_state.py)
+- Cross-platform path handling using pathlib.Path throughout
+- Windows-specific command prefixing with explicit python interpreter
 
 ### Agent Delegation
 - Heavy file operations delegated to specialized agents
@@ -114,13 +124,21 @@ State files in `.claude/state/`:
 - Subagents blocked from editing .claude/state files
 - Strict separation between main thread and agent operations
 
+### Windows Compatibility
+- Platform detection using `os.name == 'nt'` (Python) and `process.platform === 'win32'` (Node.js)
+- File operations skip Unix permissions on Windows (no chmod calls)
+- Command detection handles Windows executable extensions (.exe, .bat, .cmd)
+- Global command installation to `%USERPROFILE%\AppData\Local\cc-sessions\bin`
+- Hook commands use explicit `python` prefix and Windows environment variable format
+- Native Windows scripts: daic.cmd (Command Prompt) and daic.ps1 (PowerShell)
+
 ## Package Structure
 
 ### Installation Variants
 - Python package with pip/pipx/uv support
 - NPM package wrapper for JavaScript environments
 - Direct bash script for build-from-source installations
-- Cross-platform compatibility (macOS, Linux, WSL)
+- Cross-platform compatibility (macOS, Linux, Windows 10/11)
 
 ### Template System
 - Task templates for consistent structure

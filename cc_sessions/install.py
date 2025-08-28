@@ -1,7 +1,32 @@
 #!/usr/bin/env python3
 """
-Claude Code Sessions Framework - Python Installer
-Cross-platform installation script for the Sessions framework
+Claude Code Sessions Framework - Cross-Platform Python Installer
+
+Complete installation system for the Claude Code Sessions framework with native
+Windows, macOS, and Linux support. Handles platform-specific path handling,
+command installation, and shell compatibility.
+
+Key Features:
+    - Windows compatibility with native .cmd and .ps1 script support
+    - Cross-platform path handling using pathlib
+    - Platform-aware file permission management
+    - Interactive configuration with terminal UI
+    - Global daic command installation with PATH integration
+    
+Platform Support:
+    - Windows 10/11 (Command Prompt, PowerShell, Git Bash)
+    - macOS (Bash, Zsh)
+    - Linux distributions (Bash, other shells)
+
+Installation Locations:
+    - Windows: %USERPROFILE%\\AppData\\Local\\cc-sessions\\bin
+    - Unix/Mac: /usr/local/bin
+
+See Also:
+    - install.js: Node.js installer wrapper with same functionality
+    - cc_sessions.scripts.daic: Unix bash implementation
+    - cc_sessions.scripts.daic.cmd: Windows Command Prompt implementation
+    - cc_sessions.scripts.daic.ps1: Windows PowerShell implementation
 """
 
 import os
@@ -433,7 +458,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py" if os.name != 'nt' else "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user-messages.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user-messages.py\""
                         }
                     ]
                 }
@@ -444,7 +469,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py" if os.name != 'nt' else "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py\""
                         }
                     ]
                 },
@@ -453,7 +478,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py" if os.name != 'nt' else "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py\""
                         }
                     ]
                 }
@@ -463,7 +488,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py" if os.name != 'nt' else "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\post-tool-use.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\post-tool-use.py\""
                         }
                     ]
                 }
@@ -474,7 +499,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py" if os.name != 'nt' else "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-start.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-start.py\""
                         }
                     ]
                 }

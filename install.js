@@ -1,8 +1,39 @@
 #!/usr/bin/env node
 
 /**
- * Claude Code Sessions Framework - Node.js Installer
- * Cross-platform installation script for the Sessions framework
+ * Claude Code Sessions Framework - Cross-Platform Node.js Installer
+ * 
+ * NPM wrapper installer providing identical functionality to the Python installer
+ * with native Windows, macOS, and Linux support. Features interactive terminal
+ * UI, platform-aware command detection, and cross-platform file operations.
+ * 
+ * Key Features:
+ *   - Windows compatibility with .cmd and .ps1 script installation
+ *   - Cross-platform command detection (where/which)
+ *   - Platform-aware path handling and file permissions
+ *   - Interactive menu system with keyboard navigation
+ *   - Global daic command installation with PATH integration
+ * 
+ * Platform Support:
+ *   - Windows 10/11 (Command Prompt, PowerShell, Git Bash)
+ *   - macOS (Terminal, iTerm2 with Bash/Zsh)
+ *   - Linux distributions (various terminals and shells)
+ * 
+ * Installation Methods:
+ *   - npm install -g cc-sessions (global installation)
+ *   - npx cc-sessions (temporary installation)
+ * 
+ * Windows Integration:
+ *   - Creates %USERPROFILE%\AppData\Local\cc-sessions\bin directory
+ *   - Installs both daic.cmd and daic.ps1 for shell compatibility
+ *   - Uses Windows-style environment variables (%VAR%)
+ *   - Platform-specific hook command generation
+ * 
+ * @module install
+ * @requires fs
+ * @requires path
+ * @requires child_process
+ * @requires readline
  */
 
 const fs = require('fs').promises;
@@ -616,7 +647,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user-messages.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
           }
         ]
       }
@@ -627,7 +658,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
           }
         ]
       },
@@ -636,7 +667,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
           }
         ]
       }
@@ -646,7 +677,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\post-tool-use.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
           }
         ]
       }
@@ -657,7 +688,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-start.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
           }
         ]
       }
@@ -683,7 +714,7 @@ async function saveConfig(installStatusline = false) {
   if (installStatusline) {
     settings.statusLine = {
       type: "command",
-      command: "$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh",
+      command: process.platform === 'win32' ? "%CLAUDE_PROJECT_DIR%\\.claude\\statusline-script.sh" : "$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh",
       padding: 0
     };
   }

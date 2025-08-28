@@ -1,7 +1,7 @@
 ---
 name: logging
 description: Use only during context compaction or task completion. Consolidates and organizes work logs into the task's Work Log section.
-tools: Read, Edit, MultiEdit, LS
+tools: Read, Edit, MultiEdit, LS, Glob
 ---
 
 # Logging Agent
@@ -60,7 +60,13 @@ Before making any changes:
    - List what to ADD (new from this session)
 
 ### Transcript Reading
-The full transcript of the session (all user and assistant messages) has been stored at `.claude/state/logging/`. All transcript files have been saved in order as `current_transcript_*.json` with a numerical suffix to indicate order (001 first, 002 second, etc.). You must read these files in order to gain the same context as the Claude that called you. Do not read from directories in this path. Do not attempt to verify that any parent directories exist. Simply list all files in the directory path given and read each one individually in sequence.
+Follow these steps to find and read the transcript files:
+
+1. **Determine the parent directory** of the sessions/ directory in which the task file is stored
+2. **List all files** in `[parent directory]/.claude/state/logging/`
+3. **Read every file** in that directory
+
+The transcript files contain the full conversation history that led to this point.
 
 ### Work Log Format
 

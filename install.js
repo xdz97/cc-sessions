@@ -1,8 +1,39 @@
 #!/usr/bin/env node
 
 /**
- * Claude Code Sessions Framework - Node.js Installer
- * Cross-platform installation script for the Sessions framework
+ * Claude Code Sessions Framework - Cross-Platform Node.js Installer
+ * 
+ * NPM wrapper installer providing identical functionality to the Python installer
+ * with native Windows, macOS, and Linux support. Features interactive terminal
+ * UI, platform-aware command detection, and cross-platform file operations.
+ * 
+ * Key Features:
+ *   - Windows compatibility with .cmd and .ps1 script installation
+ *   - Cross-platform command detection (where/which)
+ *   - Platform-aware path handling and file permissions
+ *   - Interactive menu system with keyboard navigation
+ *   - Global daic command installation with PATH integration
+ * 
+ * Platform Support:
+ *   - Windows 10/11 (Command Prompt, PowerShell, Git Bash)
+ *   - macOS (Terminal, iTerm2 with Bash/Zsh)
+ *   - Linux distributions (various terminals and shells)
+ * 
+ * Installation Methods:
+ *   - npm install -g cc-sessions (global installation)
+ *   - npx cc-sessions (temporary installation)
+ * 
+ * Windows Integration:
+ *   - Creates %USERPROFILE%\AppData\Local\cc-sessions\bin directory
+ *   - Installs both daic.cmd and daic.ps1 for shell compatibility
+ *   - Uses Windows-style environment variables (%VAR%)
+ *   - Platform-specific hook command generation
+ * 
+ * @module install
+ * @requires fs
+ * @requires path
+ * @requires child_process
+ * @requires readline
  */
 
 const fs = require('fs').promises;
@@ -87,8 +118,15 @@ const config = {
 // Check if command exists
 function commandExists(command) {
   try {
-    execSync(`which ${command}`, { stdio: 'ignore' });
-    return true;
+    if (process.platform === 'win32') {
+      // Windows - use 'where' command
+      execSync(`where ${command}`, { stdio: 'ignore' });
+      return true;
+    } else {
+      // Unix/Mac - use 'which' command
+      execSync(`which ${command}`, { stdio: 'ignore' });
+      return true;
+    }
   } catch {
     return false;
   }
@@ -162,7 +200,9 @@ async function copyFiles() {
         path.join(SCRIPT_DIR, 'cc_sessions/hooks', file),
         path.join(PROJECT_ROOT, '.claude/hooks', file)
       );
-      await fs.chmod(path.join(PROJECT_ROOT, '.claude/hooks', file), 0o755);
+      if (process.platform !== 'win32') {
+        await fs.chmod(path.join(PROJECT_ROOT, '.claude/hooks', file), 0o755);
+      }
     }
   }
   
@@ -237,20 +277,53 @@ async function copyDir(src, dest) {
 async function installDaicCommand() {
   console.log(color('Installing daic command...', colors.cyan));
   
-  const daicSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic');
-  const daicDest = '/usr/local/bin/daic';
-  
-  try {
-    await fs.copyFile(daicSource, daicDest);
-    await fs.chmod(daicDest, 0o755);
-  } catch (error) {
-    if (error.code === 'EACCES') {
-      console.log(color('⚠️  Cannot write to /usr/local/bin. Trying with sudo...', colors.yellow));
-      try {
-        execSync(`sudo cp ${daicSource} ${daicDest}`, { stdio: 'inherit' });
-        execSync(`sudo chmod +x ${daicDest}`, { stdio: 'inherit' });
-      } catch {
-        console.log(color('⚠️  Could not install daic command globally. You can run it locally from .claude/scripts/', colors.yellow));
+  if (process.platform === 'win32') {
+    // Windows installation
+    const daicCmdSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.cmd');
+    const daicPs1Source = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.ps1');
+    
+    // Install to user's local directory
+    const localBin = path.join(process.env.USERPROFILE || process.env.HOME, 'AppData', 'Local', 'cc-sessions', 'bin');
+    await fs.mkdir(localBin, { recursive: true });
+    
+    try {
+      // Copy .cmd script
+      await fs.access(daicCmdSource);
+      const daicCmdDest = path.join(localBin, 'daic.cmd');
+      await fs.copyFile(daicCmdSource, daicCmdDest);
+      console.log(color(`  ✓ Installed daic.cmd to ${localBin}`, colors.green));
+    } catch {
+      console.log(color('  ⚠️ daic.cmd script not found', colors.yellow));
+    }
+    
+    try {
+      // Copy .ps1 script
+      await fs.access(daicPs1Source);
+      const daicPs1Dest = path.join(localBin, 'daic.ps1');
+      await fs.copyFile(daicPs1Source, daicPs1Dest);
+      console.log(color(`  ✓ Installed daic.ps1 to ${localBin}`, colors.green));
+    } catch {
+      console.log(color('  ⚠️ daic.ps1 script not found', colors.yellow));
+    }
+    
+    console.log(color(`  ℹ Add ${localBin} to your PATH to use 'daic' command`, colors.yellow));
+  } else {
+    // Unix/Mac installation
+    const daicSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic');
+    const daicDest = '/usr/local/bin/daic';
+    
+    try {
+      await fs.copyFile(daicSource, daicDest);
+      await fs.chmod(daicDest, 0o755);
+    } catch (error) {
+      if (error.code === 'EACCES') {
+        console.log(color('⚠️  Cannot write to /usr/local/bin. Trying with sudo...', colors.yellow));
+        try {
+          execSync(`sudo cp ${daicSource} ${daicDest}`, { stdio: 'inherit' });
+          execSync(`sudo chmod +x ${daicDest}`, { stdio: 'inherit' });
+        } catch {
+          console.log(color('⚠️  Could not install daic command globally. You can run it locally from .claude/scripts/', colors.yellow));
+        }
       }
     }
   }
@@ -574,7 +647,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user-messages.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
           }
         ]
       }
@@ -585,7 +658,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
           }
         ]
       },
@@ -594,7 +667,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
           }
         ]
       }
@@ -604,7 +677,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\post-tool-use.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
           }
         ]
       }
@@ -615,7 +688,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-start.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
           }
         ]
       }
@@ -641,7 +714,7 @@ async function saveConfig(installStatusline = false) {
   if (installStatusline) {
     settings.statusLine = {
       type: "command",
-      command: "$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh",
+      command: process.platform === 'win32' ? "%CLAUDE_PROJECT_DIR%\\.claude\\statusline-script.sh" : "$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh",
       padding: 0
     };
   }

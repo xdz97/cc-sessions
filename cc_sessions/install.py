@@ -1,7 +1,32 @@
 #!/usr/bin/env python3
 """
-Claude Code Sessions Framework - Python Installer
-Cross-platform installation script for the Sessions framework
+Claude Code Sessions Framework - Cross-Platform Python Installer
+
+Complete installation system for the Claude Code Sessions framework with native
+Windows, macOS, and Linux support. Handles platform-specific path handling,
+command installation, and shell compatibility.
+
+Key Features:
+    - Windows compatibility with native .cmd and .ps1 script support
+    - Cross-platform path handling using pathlib
+    - Platform-aware file permission management
+    - Interactive configuration with terminal UI
+    - Global daic command installation with PATH integration
+    
+Platform Support:
+    - Windows 10/11 (Command Prompt, PowerShell, Git Bash)
+    - macOS (Bash, Zsh)
+    - Linux distributions (Bash, other shells)
+
+Installation Locations:
+    - Windows: %USERPROFILE%\\AppData\\Local\\cc-sessions\\bin
+    - Unix/Mac: /usr/local/bin
+
+See Also:
+    - install.js: Node.js installer wrapper with same functionality
+    - cc_sessions.scripts.daic: Unix bash implementation
+    - cc_sessions.scripts.daic.cmd: Windows Command Prompt implementation
+    - cc_sessions.scripts.daic.ps1: Windows PowerShell implementation
 """
 
 import os
@@ -39,6 +64,12 @@ def color(text: str, color_code: str) -> str:
 
 def command_exists(command: str) -> bool:
     """Check if a command exists in the system"""
+    if os.name == 'nt':
+        # Windows - try with common extensions
+        for ext in ['', '.exe', '.bat', '.cmd']:
+            if shutil.which(command + ext):
+                return True
+        return False
     return shutil.which(command) is not None
 
 def get_package_dir() -> Path:
@@ -134,7 +165,8 @@ class SessionsInstaller:
             for hook_file in hooks_dir.glob("*.py"):
                 dest = self.project_root / ".claude/hooks" / hook_file.name
                 shutil.copy2(hook_file, dest)
-                dest.chmod(0o755)
+                if os.name != 'nt':
+                    dest.chmod(0o755)
         
         # Copy protocols
         print(color("Installing protocols...", Colors.CYAN))
@@ -180,23 +212,45 @@ class SessionsInstaller:
         """Install the daic command globally"""
         print(color("Installing daic command...", Colors.CYAN))
         
-        daic_source = self.package_dir / "scripts/daic"
-        if not daic_source.exists():
-            print(color("⚠️  daic script not found in package.", Colors.YELLOW))
-            return
-        
-        daic_dest = Path("/usr/local/bin/daic")
-        
-        try:
-            shutil.copy2(daic_source, daic_dest)
-            daic_dest.chmod(0o755)
-        except PermissionError:
-            print(color("⚠️  Cannot write to /usr/local/bin. Trying with sudo...", Colors.YELLOW))
+        if os.name == 'nt':  # Windows
+            # Install Windows scripts (.cmd and .ps1)
+            daic_cmd_source = self.package_dir / "scripts/daic.cmd"
+            daic_ps1_source = self.package_dir / "scripts/daic.ps1"
+            
+            # Try to install to user's local directory
+            local_bin = Path.home() / "AppData" / "Local" / "cc-sessions" / "bin"
+            local_bin.mkdir(parents=True, exist_ok=True)
+            
+            if daic_cmd_source.exists():
+                daic_cmd_dest = local_bin / "daic.cmd"
+                shutil.copy2(daic_cmd_source, daic_cmd_dest)
+                print(color(f"  ✓ Installed daic.cmd to {local_bin}", Colors.GREEN))
+            
+            if daic_ps1_source.exists():
+                daic_ps1_dest = local_bin / "daic.ps1"
+                shutil.copy2(daic_ps1_source, daic_ps1_dest)
+                print(color(f"  ✓ Installed daic.ps1 to {local_bin}", Colors.GREEN))
+            
+            print(color(f"  ℹ Add {local_bin} to your PATH to use 'daic' command", Colors.YELLOW))
+        else:
+            # Unix/Mac installation
+            daic_source = self.package_dir / "scripts/daic"
+            if not daic_source.exists():
+                print(color("⚠️  daic script not found in package.", Colors.YELLOW))
+                return
+            
+            daic_dest = Path("/usr/local/bin/daic")
+            
             try:
-                subprocess.run(["sudo", "cp", str(daic_source), str(daic_dest)], check=True)
-                subprocess.run(["sudo", "chmod", "+x", str(daic_dest)], check=True)
-            except subprocess.CalledProcessError:
-                print(color("⚠️  Could not install daic command globally.", Colors.YELLOW))
+                shutil.copy2(daic_source, daic_dest)
+                daic_dest.chmod(0o755)
+            except PermissionError:
+                print(color("⚠️  Cannot write to /usr/local/bin. Trying with sudo...", Colors.YELLOW))
+                try:
+                    subprocess.run(["sudo", "cp", str(daic_source), str(daic_dest)], check=True)
+                    subprocess.run(["sudo", "chmod", "+x", str(daic_dest)], check=True)
+                except subprocess.CalledProcessError:
+                    print(color("⚠️  Could not install daic command globally.", Colors.YELLOW))
     
     def configure(self) -> None:
         """Interactive configuration"""
@@ -404,7 +458,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user-messages.py\""
                         }
                     ]
                 }
@@ -415,7 +469,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py\""
                         }
                     ]
                 },
@@ -424,7 +478,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py\""
                         }
                     ]
                 }
@@ -434,7 +488,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\post-tool-use.py\""
                         }
                     ]
                 }
@@ -445,7 +499,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-start.py\""
                         }
                     ]
                 }
@@ -468,7 +522,7 @@ class SessionsInstaller:
         if hasattr(self, 'statusline_installed') and self.statusline_installed:
             settings["statusLine"] = {
                 "type": "command",
-                "command": "$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh",
+                "command": "$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh" if os.name != 'nt' else "%CLAUDE_PROJECT_DIR%\\.claude\\statusline-script.sh",
                 "padding": 0
             }
         

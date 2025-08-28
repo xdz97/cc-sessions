@@ -33,19 +33,10 @@ quick_checks = []
 
 # 1. Check if daic command exists
 try:
-    import shutil
-    import os
-    # Cross-platform command detection
-    if os.name == 'nt':
-        # Windows - check for .cmd or .ps1 versions
-        if not (shutil.which('daic.cmd') or shutil.which('daic.ps1') or shutil.which('daic')):
-            needs_setup = True
-            quick_checks.append("daic command")
-    else:
-        # Unix/Mac - use which command
-        if not shutil.which('daic'):
-            needs_setup = True
-            quick_checks.append("daic command")
+    result = subprocess.run(['which', 'daic'], capture_output=True, text=True, timeout=1)
+    if result.returncode != 0:
+        needs_setup = True
+        quick_checks.append("daic command")
 except:
     needs_setup = True
     quick_checks.append("daic command")
@@ -176,8 +167,8 @@ if needs_setup:
 Missing components: {', '.join(quick_checks)}
 
 To complete setup:
-1. Run the cc-sessions installer
-2. Ensure the daic command is in your PATH
+1. Run: .claude/sessions-setup.sh
+2. Or manually install the daic command to /usr/local/bin/
 
 The sessions system helps manage tasks and maintain discussion/implementation workflow discipline.
 """

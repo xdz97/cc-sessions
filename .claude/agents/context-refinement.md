@@ -1,7 +1,7 @@
 ---
 name: context-refinement
 description: Updates task context manifest with discoveries from current work session. Reads transcript to understand what was learned. Only updates if drift or new discoveries found.
-tools: Read, Edit, MultiEdit, LS, Glob
+tools: Read, Edit, MultiEdit
 ---
 
 # Context Refinement Agent
@@ -17,13 +17,9 @@ You've been called at the end of a work session to check if any new context was 
 ## Process
 
 1. **Read Transcript Files**
-   Follow these steps to find and read the transcript files:
-   
-   a. **Determine the parent directory** of the sessions/ directory in which the task file is stored
-   b. **List all files** in `[parent directory]/.claude/state/context-refinement/`
-   c. **Read every file** in that directory
-   
-   The transcript files contain the full conversation history that led to this point.
+   - Read ALL files from `.claude/state/context-refinement/`
+   - These contain the full conversation transcript
+   - The task file and context manifest will be in there
 
 2. **Analyze for Drift or Discoveries**
    Identify if any of these occurred:

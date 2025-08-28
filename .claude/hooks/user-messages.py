@@ -116,7 +116,7 @@ current_mode = check_daic_mode_bool()
 # Implementation triggers (only work in discussion mode, skip for /add-trigger)
 if not is_add_trigger_command and current_mode and any(phrase in prompt.lower() for phrase in trigger_phrases):
     set_daic_mode(False)  # Switch to implementation
-    context += "[DAIC: Implementation Mode Activated] You may now implement ONLY the immediately discussed steps. DO NOT take **any** actions beyond what was explicitly agreed upon. If instructions were vague, consider the bounds of what was requested and *DO NOT* cross them. When you're done, run the command: daic\n"
+    context += "[DAIC: Implementation Mode Activated] You may now implement ONLY the immediately discussed steps. DO NOT take **any** actions beyond what was explicitly agreed upon. If instructions were vague, consider the bounds of what was requested and *DO NOT* cross them. When you're done, run the bash command: daic\n"
 
 # Emergency stop (works in any mode)
 if any(word in prompt for word in ["SILENCE", "STOP"]):  # Case sensitive
@@ -126,27 +126,6 @@ if any(word in prompt for word in ["SILENCE", "STOP"]):  # Case sensitive
 # Iterloop detection
 if "iterloop" in prompt.lower():
     context += "You have been instructed to iteratively loop over a list. Identify what list the user is referring to, then follow this loop: present one item, wait for the user to respond with questions and discussion points, only continue to the next item when the user explicitly says 'continue' or something similar\n"
-
-# Protocol detection - explicit phrases that trigger protocol reading
-prompt_lower = prompt.lower()
-
-# Context compaction detection
-if any(phrase in prompt_lower for phrase in ["compact", "restart session", "context compaction"]):
-    context += "If the user is asking to compact context, read and follow sessions/protocols/context-compaction.md protocol.\n"
-
-# Task completion detection
-if any(phrase in prompt_lower for phrase in ["complete the task", "finish the task", "task is done", 
-                                               "mark as complete", "close the task", "wrap up the task"]):
-    context += "If the user is asking to complete the task, read and follow sessions/protocols/task-completion.md protocol.\n"
-
-# Task creation detection
-if any(phrase in prompt_lower for phrase in ["create a new task", "create a task", "make a task",
-                                               "new task for", "add a task"]):
-    context += "If the user is asking to create a task, read and follow sessions/protocols/task-creation.md protocol.\n"
-
-# Task switching detection
-if any(phrase in prompt_lower for phrase in ["switch to task", "work on task", "change to task"]):
-    context += "If the user is asking to switch tasks, read and follow sessions/protocols/task-startup.md protocol.\n"
 
 # Task detection patterns (optional feature)
 if config.get("task_detection", {}).get("enabled", True):

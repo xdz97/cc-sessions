@@ -1,6 +1,0 @@
-{
-  "task": "h-windows-installer-support",
-  "branch": "fix/windows-installer-support",
-  "services": ["cc_sessions/install.py", "npm-installer.js"],
-  "updated": "2025-08-28"
-}

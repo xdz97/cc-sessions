@@ -171,7 +171,6 @@ The hooks literally block Write/Edit tools until you approve. Claude HAS to disc
 
 <details>
 <summary><strong>OP automatic compaction</strong></summary>
-  # NOTE: This is also a pretty good feature section/fold
 <br>
 
 When Claude's context window hits 75%, a hook will tell Claude to start wrapping shid up. At 90%, the hook will be more aggressive about it. 

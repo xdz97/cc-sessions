@@ -21,8 +21,10 @@
 ### _Claude Code makes it less shitty, but not by enough._
 
 ---
-
 </div>
+explainer: coming soon...
+<br>
+working demo: https://www.youtube.com/watch?v=B-sIBb-XvO4
 
 ## 🔥 The Problem
 

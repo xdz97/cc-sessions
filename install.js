@@ -287,18 +287,18 @@ async function copyDir(src, dest) {
   }
 }
 
-// Install daic command
+// Install daic command as local fallback
 async function installDaicCommand() {
-  console.log(color('Installing daic command...', colors.cyan));
+  console.log(color('Installing daic command fallback...', colors.cyan));
+  
+  // Create local bin directory in sessions folder
+  const localBin = path.join(PROJECT_ROOT, 'sessions', 'bin');
+  await fs.mkdir(localBin, { recursive: true });
   
   if (process.platform === 'win32') {
     // Windows installation
     const daicCmdSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.cmd');
     const daicPs1Source = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.ps1');
-    
-    // Install to user's local directory
-    const localBin = path.join(process.env.USERPROFILE || process.env.HOME, 'AppData', 'Local', 'cc-sessions', 'bin');
-    await fs.mkdir(localBin, { recursive: true });
     
     try {
       // Copy .cmd script
@@ -319,27 +319,27 @@ async function installDaicCommand() {
     } catch {
       console.log(color('  ⚠️ daic.ps1 script not found', colors.yellow));
     }
-    
-    console.log(color(`  ℹ Add ${localBin} to your PATH to use 'daic' command`, colors.yellow));
   } else {
     // Unix/Mac installation
     const daicSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic');
-    const daicDest = '/usr/local/bin/daic';
     
     try {
+      await fs.access(daicSource);
+      const daicDest = path.join(localBin, 'daic');
       await fs.copyFile(daicSource, daicDest);
       await fs.chmod(daicDest, 0o755);
-    } catch (error) {
-      if (error.code === 'EACCES') {
-        console.log(color('⚠️  Cannot write to /usr/local/bin. Trying with sudo...', colors.yellow));
-        try {
-          execSync(`sudo cp ${daicSource} ${daicDest}`, { stdio: 'inherit' });
-          execSync(`sudo chmod +x ${daicDest}`, { stdio: 'inherit' });
-        } catch {
-          console.log(color('⚠️  Could not install daic command globally. You can run it locally from .claude/scripts/', colors.yellow));
-        }
-      }
+      console.log(color(`  ✓ Installed daic to ${localBin}`, colors.green));
+    } catch {
+      console.log(color('  ⚠️ daic script not found in package.', colors.yellow));
     }
+  }
+  
+  // Check if daic is available as a package command
+  const daicExists = await commandExists('daic');
+  if (daicExists) {
+    console.log(color("  ✓ The 'daic' command is available globally from package installation", colors.green));
+  } else {
+    console.log(color(`  ℹ To use daic: './sessions/bin/daic' or add ${localBin} to your PATH`, colors.yellow));
   }
 }
 

@@ -219,17 +219,17 @@ class SessionsInstaller:
             shutil.copytree(knowledge_dir, dest_dir)
     
     def install_daic_command(self) -> None:
-        """Install the daic command globally"""
-        print(color("Installing daic command...", Colors.CYAN))
+        """Install the daic command as a local fallback"""
+        print(color("Installing daic command fallback...", Colors.CYAN))
+        
+        # Create local bin directory in sessions folder
+        local_bin = self.project_root / "sessions" / "bin"
+        local_bin.mkdir(parents=True, exist_ok=True)
         
         if os.name == 'nt':  # Windows
             # Install Windows scripts (.cmd and .ps1)
             daic_cmd_source = self.package_dir / "scripts/daic.cmd"
             daic_ps1_source = self.package_dir / "scripts/daic.ps1"
-            
-            # Try to install to user's local directory
-            local_bin = Path.home() / "AppData" / "Local" / "cc-sessions" / "bin"
-            local_bin.mkdir(parents=True, exist_ok=True)
             
             if daic_cmd_source.exists():
                 daic_cmd_dest = local_bin / "daic.cmd"
@@ -240,8 +240,6 @@ class SessionsInstaller:
                 daic_ps1_dest = local_bin / "daic.ps1"
                 shutil.copy2(daic_ps1_source, daic_ps1_dest)
                 print(color(f"  ✓ Installed daic.ps1 to {local_bin}", Colors.GREEN))
-            
-            print(color(f"  ℹ Add {local_bin} to your PATH to use 'daic' command", Colors.YELLOW))
         else:
             # Unix/Mac installation
             daic_source = self.package_dir / "scripts/daic"
@@ -249,18 +247,16 @@ class SessionsInstaller:
                 print(color("⚠️  daic script not found in package.", Colors.YELLOW))
                 return
             
-            daic_dest = Path("/usr/local/bin/daic")
-            
-            try:
-                shutil.copy2(daic_source, daic_dest)
-                daic_dest.chmod(0o755)
-            except PermissionError:
-                print(color("⚠️  Cannot write to /usr/local/bin. Trying with sudo...", Colors.YELLOW))
-                try:
-                    subprocess.run(["sudo", "cp", str(daic_source), str(daic_dest)], check=True)
-                    subprocess.run(["sudo", "chmod", "+x", str(daic_dest)], check=True)
-                except subprocess.CalledProcessError:
-                    print(color("⚠️  Could not install daic command globally.", Colors.YELLOW))
+            daic_dest = local_bin / "daic"
+            shutil.copy2(daic_source, daic_dest)
+            daic_dest.chmod(0o755)
+            print(color(f"  ✓ Installed daic to {local_bin}", Colors.GREEN))
+        
+        # Check if daic is available as a package command
+        if command_exists("daic"):
+            print(color("  ✓ The 'daic' command is available globally from package installation", Colors.GREEN))
+        else:
+            print(color(f"  ℹ To use daic: './sessions/bin/daic' or add {local_bin} to your PATH", Colors.YELLOW))
     
     def configure(self) -> None:
         """Interactive configuration"""
@@ -299,7 +295,7 @@ class SessionsInstaller:
             statusline_source = self.package_dir / "scripts/statusline-script.sh"
             if statusline_source.exists():
                 print(color("  Installing statusline script...", Colors.DIM))
-                statusline_dest = self.project_root / ".claude/statusline-script.sh"
+                statusline_dest = self.project_root / "sessions/bin/statusline-script.sh"
                 shutil.copy2(statusline_source, statusline_dest)
                 statusline_dest.chmod(0o755)
                 self.statusline_installed = True

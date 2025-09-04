@@ -97,35 +97,165 @@ def set_daic_mode(value: str|bool):
     return name
 
 # Task and branch state management
-def get_task_state() -> dict:
-    """Get current task state including branch and affected services."""
+
+def parse_task_frontmatter(content: str) -> dict:
+    """Parse YAML frontmatter from task file content."""
+    if not content.startswith('---'):
+        return {}
+    
+    lines = content.split('\n')
+    frontmatter_lines = []
+    in_frontmatter = False
+    
+    for i, line in enumerate(lines):
+        if i == 0 and line == '---':
+            in_frontmatter = True
+            continue
+        if in_frontmatter and line == '---':
+            break
+        if in_frontmatter:
+            frontmatter_lines.append(line)
+    
+    # Parse the frontmatter
+    frontmatter = {}
+    for line in frontmatter_lines:
+        if ':' in line:
+            key, value = line.split(':', 1)
+            key = key.strip()
+            value = value.strip()
+            
+            # Handle list values [item1, item2]
+            if value.startswith('[') and value.endswith(']'):
+                # Parse as list
+                items = value[1:-1].split(',')
+                value = [item.strip() for item in items]
+            
+            frontmatter[key] = value
+    
+    return frontmatter
+
+def update_task_frontmatter(file_path: Path, updates: dict) -> None:
+    """Update frontmatter fields in a task file."""
+    content = file_path.read_text()
+    lines = content.split('\n')
+    
+    if not content.startswith('---'):
+        return
+    
+    # Find frontmatter boundaries
+    end_idx = 0
+    for i, line in enumerate(lines[1:], 1):
+        if line == '---':
+            end_idx = i
+            break
+    
+    # Update frontmatter lines
+    for i in range(1, end_idx):
+        for key, value in updates.items():
+            if lines[i].startswith(f"{key}:"):
+                if isinstance(value, list):
+                    lines[i] = f"{key}: [{', '.join(value)}]"
+                else:
+                    lines[i] = f"{key}: {value}"
+    
+    # Write back
+    file_path.write_text('\n'.join(lines))
+
+def get_active_task_name() -> str:
+    """Get the currently active task name from minimal current_task.json."""
     try:
         with open(TASK_STATE_FILE, 'r') as f:
-            return json.load(f)
+            data = json.load(f)
+            # Support both old format (full state) and new format (just task name)
+            if isinstance(data, dict):
+                return data.get("task", None)
+            return None
     except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+def get_task_state() -> dict:
+    """Get current task state including branch and affected services.
+    
+    Reads task name from current_task.json, then loads full state from task file frontmatter.
+    """
+    # Get the active task name
+    task_name = get_active_task_name()
+    if not task_name:
         return {"task": None, "branch": None, "services": [], "updated": None}
+    
+    # Find the task file
+    tasks_dir = PROJECT_ROOT / "sessions" / "tasks"
+    task_file = tasks_dir / f"{task_name}.md"
+    
+    # Check if it's a directory task
+    task_dir = tasks_dir / task_name
+    if task_dir.is_dir():
+        task_file = task_dir / "README.md"
+    
+    if not task_file.exists():
+        # Task file not found, return just the name
+        return {"task": task_name, "branch": None, "services": [], "updated": None}
+    
+    # Parse frontmatter
+    content = task_file.read_text()
+    frontmatter = parse_task_frontmatter(content)
+    
+    # Normalize to expected format (modules -> services)
+    return {
+        "task": task_name,
+        "branch": frontmatter.get("branch", None),
+        "services": frontmatter.get("modules", []),  # Map modules to services
+        "updated": frontmatter.get("updated", frontmatter.get("created", None))
+    }
 
 def set_task_state(task: str, branch: str, services: list):
-    """Set current task state."""
-    state = {
+    """Set current task state.
+    
+    Updates both the current_task.json pointer and the task file frontmatter.
+    """
+    ensure_state_dir()
+    
+    # Update the pointer file (now minimal)
+    with open(TASK_STATE_FILE, 'w') as f:
+        json.dump({"task": task}, f, indent=2)
+    
+    # Update the task file frontmatter
+    if task:
+        tasks_dir = PROJECT_ROOT / "sessions" / "tasks"
+        task_file = tasks_dir / f"{task}.md"
+        
+        # Check if it's a directory task
+        task_dir = tasks_dir / task
+        if task_dir.is_dir():
+            task_file = task_dir / "README.md"
+        
+        if task_file.exists():
+            updates = {
+                "branch": branch,
+                "modules": services,
+                "updated": datetime.now().strftime("%Y-%m-%d")
+            }
+            update_task_frontmatter(task_file, updates)
+    
+    return {
         "task": task,
         "branch": branch,
         "services": services,
         "updated": datetime.now().strftime("%Y-%m-%d")
     }
-    ensure_state_dir()
-    with open(TASK_STATE_FILE, 'w') as f:
-        json.dump(state, f, indent=2)
-    return state
 
 def add_service_to_task(service: str):
     """Add a service to the current task's affected services list."""
     state = get_task_state()
     if service not in state.get("services", []):
-        state["services"].append(service)
-        ensure_state_dir()
-        with open(TASK_STATE_FILE, 'w') as f:
-            json.dump(state, f, indent=2)
+        services = state.get("services", [])
+        services.append(service)
+        
+        # Update using set_task_state to maintain consistency
+        task_name = state.get("task")
+        branch = state.get("branch")
+        if task_name:
+            return set_task_state(task_name, branch, services)
     return state
 
 # Todo state management for DAIC enforcement

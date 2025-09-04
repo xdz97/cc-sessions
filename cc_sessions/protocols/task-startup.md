@@ -68,21 +68,18 @@ Example: If working on tt1-login-ux-flow affecting io_web and io_user_model, cre
 
 After creating/checking out branches, update the .claude/state/current_task.json file.
 
-**CORRECT FORMAT (use these exact field names):**
 ```json
 {
-  "task": "task-name",        // Just the task name, NO path, NO .md extension
-  "branch": "feature/branch", // The Git branch name (NOT "branch_name")
-  "services": ["service1"],   // Array of affected services/modules
-  "updated": "2025-08-27"     // Current date in YYYY-MM-DD format
+  "task": "task-name"  // Just the task name, NO path, NO .md extension
 }
 ```
 
+The full task state (branch, modules, status) is read from the task file frontmatter.
+
 **COMMON MISTAKES TO AVOID:**
-- ❌ Using `"task_file"` instead of `"task"`
-- ❌ Using `"branch_name"` instead of `"branch"`
 - ❌ Including path like `"tasks/m-task.md"` instead of just `"m-task"`
 - ❌ Including `.md` file extension
+- ❌ Adding branch or services fields (these come from frontmatter now)
 
 ## 2. Load Task Context Manifest
 
@@ -103,15 +100,7 @@ Based on the manifest:
 - Add "started: YYYY-MM-DD" to the front matter
 
 **IF SUPER-REPO: Verify All Module Branches**
-Before starting work, confirm all modules are on correct branches:
-```bash
-# For each submodule in the task
-for module in $(cat .claude/state/current_task.json | jq -r '.services[]'); do
-  cd $module
-  echo "$module is on branch: $(git branch --show-current)"
-  cd ..
-done
-```
+Before starting work, confirm all modules are on correct branches. Check the task file frontmatter for the list of modules/services affected.
 
 If any module that will be edited is not on the task branch, STOP and fix it first.
 

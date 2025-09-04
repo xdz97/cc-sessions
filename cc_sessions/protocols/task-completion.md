@@ -45,10 +45,7 @@ mv sessions/tasks/[priority]-[task-name]/ sessions/tasks/done/
 # Clear task state (but keep file)
 cat > .claude/state/current_task.json << 'EOF'
 {
-  "task": null,
-  "branch": null,
-  "services": [],
-  "updated": "$(date +%Y-%m-%d)"
+  "task": null
 }
 EOF
 ```
@@ -154,7 +151,7 @@ echo "Task complete! Here are the remaining tasks:"
 
 User selects next task:
 - Switch to task branch: `git checkout [branch-name]`
-- Update task state: Edit `.claude/state/current_task.json` with new task, branch, and services
+- Update task state: Edit `.claude/state/current_task.json` with new task name only
 - Follow task-startup.md protocol
 
 If no tasks remain:

@@ -87,28 +87,6 @@ Default mappings:
    - Can be deferred to task-startup if preferred
    - Context manifest helps prevent confusion and rework
 
-## Branch Creation
-
-**DO NOT** create branch until starting work:
-```bash
-# When ready to start:
-git checkout -b feature/implement-cool-thing
-
-# Update task state with CORRECT format
-# IMPORTANT: Use exactly these field names:
-#   - "task" (NOT "task_file") - just the task name without path or .md extension  
-#   - "branch" (NOT "branch_name") - the Git branch name
-#   - "services" - array of affected services/modules
-#   - "updated" - current date in YYYY-MM-DD format
-cat > .claude/state/current_task.json << EOF
-{
-  "task": "m-implement-cool-thing",
-  "branch": "feature/implement-cool-thing",
-  "services": ["service1", "service2"],
-  "updated": "$(date +%Y-%m-%d)"
-}
-EOF
-```
 
 ## Task Evolution
 
@@ -127,3 +105,15 @@ When programmatically creating tasks:
 2. If config doesn't exist, use defaults documented above
 3. Always use the template structure from `sessions/tasks/TEMPLATE.md`
 4. Strongly encourage running context-gathering agent after creation
+
+## Protocol Completion
+
+Once the task file has been created and the context-gathering agent has populated the context manifest:
+
+1. Inform the user that the task has been successfully created
+2. Show the task file path: `sessions/tasks/[priority]-[task-name].md`
+3. **DO NOT start working on the task** - The task has been created but will remain in 'pending' status
+4. The task will not be started now unless the user explicitly asks to begin work on it
+5. If the user wants to start the task, they should use the task startup protocol
+
+This completes the task creation protocol. The task is now ready to be started at a future time.

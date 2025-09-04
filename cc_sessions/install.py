@@ -199,6 +199,16 @@ class SessionsInstaller:
                 dest = self.project_root / ".claude/commands" / command_file.name
                 shutil.copy2(command_file, dest)
         
+        # Copy scripts
+        print(color("Installing scripts...", Colors.CYAN))
+        scripts_dir = self.package_dir / "scripts"
+        sessions_scripts_dir = self.project_root / "sessions/scripts"
+        sessions_scripts_dir.mkdir(parents=True, exist_ok=True)
+        if scripts_dir.exists():
+            for script_file in scripts_dir.glob("*.py"):
+                dest = sessions_scripts_dir / script_file.name
+                shutil.copy2(script_file, dest)
+        
         # Copy knowledge files
         knowledge_dir = self.package_dir / "knowledge/claude-code"
         if knowledge_dir.exists():
@@ -303,19 +313,85 @@ class SessionsInstaller:
         print(color("  The DAIC system enforces discussion before implementation.", Colors.WHITE))
         print(color("  Trigger phrases tell Claude when you're ready to proceed.", Colors.WHITE))
         print()
-        print(color("  Default triggers:", Colors.CYAN))
+        print(color("  Default DAIC triggers (switch to implementation mode):", Colors.CYAN))
         for phrase in self.config['trigger_phrases']:
             print(color(f'    → "{phrase}"', Colors.GREEN))
         print()
         print(color('  Hint: Common additions: "implement it", "do it", "proceed"', Colors.DIM))
         print()
         
-        # Allow adding multiple custom trigger phrases
+        # Allow adding multiple custom DAIC trigger phrases
         while True:
-            custom_trigger = input(color("  Add custom trigger phrase (Enter to skip): ", Colors.CYAN))
+            custom_trigger = input(color("  Add custom DAIC trigger phrase (Enter to skip): ", Colors.CYAN))
             if not custom_trigger:
                 break
             self.config["trigger_phrases"].append(custom_trigger)
+            print(color(f'  ✓ Added: "{custom_trigger}"', Colors.GREEN))
+        
+        # Initialize other trigger categories if not present
+        if "task_start_phrases" not in self.config:
+            self.config["task_start_phrases"] = ["start the task", "begin the task", "let's start the task"]
+        if "task_completion_phrases" not in self.config:
+            self.config["task_completion_phrases"] = ["complete the task", "are we done here", "is the task complete"]
+        if "task_creation_phrases" not in self.config:
+            self.config["task_creation_phrases"] = ["create a task", "create a new task", "write a task"]
+        if "compaction_phrases" not in self.config:
+            self.config["compaction_phrases"] = ["let's compact", "compact context", "run compaction"]
+        
+        # Task Start trigger phrases
+        print()
+        print(color("  Default task start triggers:", Colors.CYAN))
+        for phrase in self.config['task_start_phrases']:
+            print(color(f'    → "{phrase}"', Colors.GREEN))
+        print()
+        
+        while True:
+            custom_trigger = input(color("  Add custom task start trigger phrase (Enter to skip): ", Colors.CYAN))
+            if not custom_trigger:
+                break
+            self.config["task_start_phrases"].append(custom_trigger)
+            print(color(f'  ✓ Added: "{custom_trigger}"', Colors.GREEN))
+        
+        # Task Completion trigger phrases
+        print()
+        print(color("  Default task completion triggers:", Colors.CYAN))
+        for phrase in self.config['task_completion_phrases']:
+            print(color(f'    → "{phrase}"', Colors.GREEN))
+        print()
+        
+        while True:
+            custom_trigger = input(color("  Add custom task completion trigger phrase (Enter to skip): ", Colors.CYAN))
+            if not custom_trigger:
+                break
+            self.config["task_completion_phrases"].append(custom_trigger)
+            print(color(f'  ✓ Added: "{custom_trigger}"', Colors.GREEN))
+        
+        # Task Creation trigger phrases
+        print()
+        print(color("  Default task creation triggers:", Colors.CYAN))
+        for phrase in self.config['task_creation_phrases']:
+            print(color(f'    → "{phrase}"', Colors.GREEN))
+        print()
+        
+        while True:
+            custom_trigger = input(color("  Add custom task creation trigger phrase (Enter to skip): ", Colors.CYAN))
+            if not custom_trigger:
+                break
+            self.config["task_creation_phrases"].append(custom_trigger)
+            print(color(f'  ✓ Added: "{custom_trigger}"', Colors.GREEN))
+        
+        # Context Compaction trigger phrases  
+        print()
+        print(color("  Default context compaction triggers:", Colors.CYAN))
+        for phrase in self.config['compaction_phrases']:
+            print(color(f'    → "{phrase}"', Colors.GREEN))
+        print()
+        
+        while True:
+            custom_trigger = input(color("  Add custom compaction trigger phrase (Enter to skip): ", Colors.CYAN))
+            if not custom_trigger:
+                break
+            self.config["compaction_phrases"].append(custom_trigger)
             print(color(f'  ✓ Added: "{custom_trigger}"', Colors.GREEN))
         
         # API Mode configuration

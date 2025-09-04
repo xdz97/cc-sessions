@@ -171,7 +171,8 @@ async function createDirectories() {
     '.claude/commands',
     'sessions/tasks/done',
     'sessions/protocols',
-    'sessions/knowledge'
+    'sessions/knowledge',
+    'sessions/scripts'
   ];
   
   for (const dir of dirs) {
@@ -241,6 +242,19 @@ async function copyFiles() {
       await fs.copyFile(
         path.join(SCRIPT_DIR, 'cc_sessions/commands', file),
         path.join(PROJECT_ROOT, '.claude/commands', file)
+      );
+    }
+  }
+  
+  console.log(color('Installing scripts...', colors.cyan));
+  const sessionsScriptsDir = path.join(PROJECT_ROOT, 'sessions/scripts');
+  await fs.mkdir(sessionsScriptsDir, { recursive: true });
+  const scriptFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/scripts'));
+  for (const file of scriptFiles) {
+    if (file.endsWith('.py')) {
+      await fs.copyFile(
+        path.join(SCRIPT_DIR, 'cc_sessions/scripts', file),
+        path.join(sessionsScriptsDir, file)
       );
     }
   }
@@ -531,7 +545,7 @@ async function configure() {
   console.log(color('  The DAIC system enforces discussion before implementation.', colors.white));
   console.log(color('  Trigger phrases tell Claude when you\'re ready to proceed.', colors.white));
   console.log();
-  console.log(color('  Default triggers:', colors.cyan));
+  console.log(color('  Default DAIC triggers (switch to implementation mode):', colors.cyan));
   config.trigger_phrases.forEach(phrase => {
     console.log(color(`    ${icons.arrow} "${phrase}"`, colors.green));
   });
@@ -539,15 +553,105 @@ async function configure() {
   console.log(color('  Hint: Common additions: "implement it", "do it", "proceed"', colors.dim));
   console.log();
   
-  // Allow adding multiple custom trigger phrases
+  // Allow adding multiple custom DAIC trigger phrases
   let addingTriggers = true;
   while (addingTriggers) {
-    const customTrigger = await question(color('  Add custom trigger phrase (Enter to skip): ', colors.cyan));
+    const customTrigger = await question(color('  Add custom DAIC trigger phrase (Enter to skip): ', colors.cyan));
     if (customTrigger) {
       config.trigger_phrases.push(customTrigger);
       console.log(color(`  ${icons.check} Added: "${customTrigger}"`, colors.green));
     } else {
       addingTriggers = false;
+    }
+  }
+  
+  // Initialize other trigger categories if not present
+  if (!config.task_start_phrases) {
+    config.task_start_phrases = ["start the task", "begin the task", "let's start the task"];
+  }
+  if (!config.task_completion_phrases) {
+    config.task_completion_phrases = ["complete the task", "are we done here", "is the task complete"];
+  }
+  if (!config.task_creation_phrases) {
+    config.task_creation_phrases = ["create a task", "create a new task", "write a task"];
+  }
+  if (!config.compaction_phrases) {
+    config.compaction_phrases = ["let's compact", "compact context", "run compaction"];
+  }
+  
+  // Task Start trigger phrases
+  console.log();
+  console.log(color('  Default task start triggers:', colors.cyan));
+  config.task_start_phrases.forEach(phrase => {
+    console.log(color(`    ${icons.arrow} "${phrase}"`, colors.green));
+  });
+  console.log();
+  
+  let addingStartTriggers = true;
+  while (addingStartTriggers) {
+    const customTrigger = await question(color('  Add custom task start trigger phrase (Enter to skip): ', colors.cyan));
+    if (customTrigger) {
+      config.task_start_phrases.push(customTrigger);
+      console.log(color(`  ${icons.check} Added: "${customTrigger}"`, colors.green));
+    } else {
+      addingStartTriggers = false;
+    }
+  }
+  
+  // Task Completion trigger phrases
+  console.log();
+  console.log(color('  Default task completion triggers:', colors.cyan));
+  config.task_completion_phrases.forEach(phrase => {
+    console.log(color(`    ${icons.arrow} "${phrase}"`, colors.green));
+  });
+  console.log();
+  
+  let addingCompletionTriggers = true;
+  while (addingCompletionTriggers) {
+    const customTrigger = await question(color('  Add custom task completion trigger phrase (Enter to skip): ', colors.cyan));
+    if (customTrigger) {
+      config.task_completion_phrases.push(customTrigger);
+      console.log(color(`  ${icons.check} Added: "${customTrigger}"`, colors.green));
+    } else {
+      addingCompletionTriggers = false;
+    }
+  }
+  
+  // Task Creation trigger phrases
+  console.log();
+  console.log(color('  Default task creation triggers:', colors.cyan));
+  config.task_creation_phrases.forEach(phrase => {
+    console.log(color(`    ${icons.arrow} "${phrase}"`, colors.green));
+  });
+  console.log();
+  
+  let addingCreationTriggers = true;
+  while (addingCreationTriggers) {
+    const customTrigger = await question(color('  Add custom task creation trigger phrase (Enter to skip): ', colors.cyan));
+    if (customTrigger) {
+      config.task_creation_phrases.push(customTrigger);
+      console.log(color(`  ${icons.check} Added: "${customTrigger}"`, colors.green));
+    } else {
+      addingCreationTriggers = false;
+    }
+  }
+  
+  // Context Compaction trigger phrases
+  console.log();
+  console.log(color('  Default context compaction triggers:', colors.cyan));
+  config.compaction_phrases.forEach(phrase => {
+    console.log(color(`    ${icons.arrow} "${phrase}"`, colors.green));
+  });
+  console.log();
+  
+  let addingCompactionTriggers = true;
+  while (addingCompactionTriggers) {
+    const customTrigger = await question(color('  Add custom compaction trigger phrase (Enter to skip): ', colors.cyan));
+    if (customTrigger) {
+      config.compaction_phrases.push(customTrigger);
+      console.log(color(`  ${icons.check} Added: "${customTrigger}"`, colors.green));
+    } else {
+      addingCompactionTriggers = false;
     }
   }
   

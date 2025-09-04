@@ -5,7 +5,8 @@
   "main": "install.js",
   "bin": {
     "cc-sessions": "install.js",
-    "cc-sessions-install": "install.js"
+    "cc-sessions-install": "install.js",
+    "daic": "daic.js"
   },
   "scripts": {
     "test": "echo \"No test specified yet\""

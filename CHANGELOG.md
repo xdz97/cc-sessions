@@ -1,0 +1,24 @@
+# Changelog
+
+## [0.2.8] - 2025-09-04
+
+### Changed
+- **No More Sudo Required**: The `daic` command no longer requires sudo for installation
+- **Package Manager Integration**: `daic` is now installed as a package command:
+  - Python: Automatically available when installed via pip/pipx
+  - Node.js: Automatically available when installed via npm  
+- **Fallback Location**: Local fallback moved from `.claude/bin` to `sessions/bin`
+- **Cleaner Directory Structure**: cc-sessions specific files moved out of `.claude/` to keep it clean for Claude Code
+
+### Added
+- `cc_sessions/daic.py` - Python entry point for pip installations
+- `daic.js` - Node.js entry point for npm installations
+- Console scripts entry in `pyproject.toml`
+- Bin entry in `package.json`
+
+### Removed
+- Sudo fallback logic from all installers
+- Global `/usr/local/bin` installation attempt
+
+## [0.2.7] - Previous Release
+- Initial public release

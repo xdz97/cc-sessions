@@ -108,15 +108,19 @@ if [ -d "$SCRIPT_DIR/cc_sessions/knowledge/claude-code" ]; then
     cp -r "$SCRIPT_DIR/cc_sessions/knowledge/claude-code" "$PROJECT_ROOT/sessions/knowledge/"
 fi
 
-# Install daic command
-echo "Installing daic command..."
-if [ -w "/usr/local/bin" ]; then
-    cp "$SCRIPT_DIR/cc_sessions/scripts/daic" "/usr/local/bin/"
-    chmod +x "/usr/local/bin/daic"
+# Install daic command fallback
+echo "Installing daic command fallback..."
+LOCAL_BIN="$PROJECT_ROOT/sessions/bin"
+mkdir -p "$LOCAL_BIN"
+
+cp "$SCRIPT_DIR/cc_sessions/scripts/daic" "$LOCAL_BIN/"
+chmod +x "$LOCAL_BIN/daic"
+
+# Check if daic is available as a package command
+if command -v daic >/dev/null 2>&1; then
+    echo "  ✓ The 'daic' command is available globally from package installation"
 else
-    echo "⚠️  Cannot write to /usr/local/bin. Trying with sudo..."
-    sudo cp "$SCRIPT_DIR/cc_sessions/scripts/daic" "/usr/local/bin/"
-    sudo chmod +x "/usr/local/bin/daic"
+    echo "  ℹ To use daic: './sessions/bin/daic' or add $LOCAL_BIN to your PATH"
 fi
 
 # Interactive configuration

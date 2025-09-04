@@ -16,6 +16,10 @@ Delegate to specialized agents in this order:
 ```
 1. code-review agent - Review all implemented code for security/quality
    Include: Changed files, task context, implementation approach
+   **IMPORTANT**: After code-review completes, report findings to user:
+   - Summarize any critical issues or warnings
+   - Ask if they want to address issues before completion
+   - Wait for user confirmation before proceeding
    
 2. service-documentation agent - Update CLAUDE.md files 
    Include: List of services modified during task

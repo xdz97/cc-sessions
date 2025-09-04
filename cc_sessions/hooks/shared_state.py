@@ -84,8 +84,6 @@ def set_daic_mode(value: str|bool):
     if value == True or value == "discussion":
         mode = "discussion"
         name = "Discussion Mode"
-        # Clear active todos when switching to discussion
-        clear_active_todos()
     elif value == False or value == "implementation":
         mode = "implementation"
         name = "Implementation Mode"

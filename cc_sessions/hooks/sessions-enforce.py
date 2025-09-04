@@ -72,46 +72,6 @@ tool_input = input_data.get("tool_input", {})
 # Load configuration
 config = load_config()
 
-# TodoWrite validation - enforce exact scope matching
-if tool_name == "TodoWrite":
-    from shared_state import get_active_todos, store_active_todos, check_daic_mode_bool
-    
-    incoming_todos = tool_input.get("todos", [])
-    active_todos = get_active_todos()
-    
-    if active_todos:  # We have approved todos stored
-        # Extract content strings for comparison
-        approved_contents = {t['content'] for t in active_todos}
-        incoming_contents = {t['content'] for t in incoming_todos}
-        
-        # Exact match required - no additions, removals, or modifications
-        if approved_contents != incoming_contents:
-            missing = approved_contents - incoming_contents
-            added = incoming_contents - approved_contents
-            
-            error_msg = "[DAIC: Blocked] Todo scope violation detected.\n"
-            if missing:
-                error_msg += f"Removed todos: {missing}\n"
-            if added:
-                error_msg += f"Added unapproved todos: {added}\n"
-            error_msg += "Return to discussion mode to propose changes."
-            
-            print(error_msg, file=sys.stderr)
-            
-            # Auto-switch to discussion mode
-            from shared_state import set_daic_mode
-            set_daic_mode(True)
-            sys.exit(2)  # Block the tool
-        
-        # Check if all todos are complete
-        if all(t.get('status') == 'completed' for t in incoming_todos):
-            # All done - will be handled by post-tool-use hook
-            pass
-    else:
-        # First TodoWrite after approval - store as approved scope
-        if not check_daic_mode_bool():  # Only store if in implementation mode
-            store_active_todos(incoming_todos)
-
 # For Bash commands, check if it's a read-only operation
 if tool_name == "Bash":
     command = tool_input.get("command", "").strip()
@@ -176,6 +136,87 @@ if discussion_mode and tool_name == "Bash":
 if discussion_mode and tool_name in config.get("blocked_tools", DEFAULT_CONFIG["blocked_tools"]):
     print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
     sys.exit(2)  # Block with feedback
+
+# TodoWrite validation - simplified logic (runs AFTER discussion mode check)
+if tool_name == "TodoWrite":
+    from shared_state import get_active_todos, store_active_todos, clear_active_todos, set_daic_mode
+    
+    incoming_todos = tool_input.get("todos", [])
+    active_todos = get_active_todos()
+    
+    # Determine the state of incoming todos
+    all_pending = all(t.get('status') == 'pending' for t in incoming_todos)
+    all_complete = all(t.get('status') == 'completed' for t in incoming_todos)
+    
+    # Extract just the content strings for name comparison
+    def get_todo_names(todos):
+        return [t.get('content', '') for t in todos]
+    
+    if all_pending:
+        # Branch 1: All pending - new todo list being proposed
+        if active_todos:
+            # Already have active todos - something's wrong
+            clear_active_todos()
+            set_daic_mode(True)
+            print("[DAIC: Blocked] Claude tried to propose a new ToDo list but there are already active todos. "
+                  "This either happened due to a failed ToDo list cleanup from the last implementation, "
+                  "or because Claude tried to implement unapproved tasks. "
+                  "For safety, Discussion Mode has been re-activated. "
+                  "If this was an error, re-propose the ToDo list for approval in the next message.", 
+                  file=sys.stderr)
+            sys.exit(2)
+        else:
+            # No active todos - store the new list
+            store_active_todos(incoming_todos)
+    
+    elif all_complete:
+        # Branch 3: All complete - work done
+        if active_todos:
+            active_names = get_todo_names(active_todos)
+            incoming_names = get_todo_names(incoming_todos)
+            
+            if active_names != incoming_names:
+                # Todo names changed - safety violation
+                clear_active_todos()
+                set_daic_mode(True)
+                print("[DAIC: Blocked] Todo names changed during completion. "
+                      "Cleared todos and returned to discussion mode. "
+                      "Explain what happened and await user guidance.", 
+                      file=sys.stderr)
+                sys.exit(2)
+            else:
+                # Names match - clean completion
+                clear_active_todos()
+                set_daic_mode(True)
+                # Let post-tool-use handle the auto-return message
+    
+    else:
+        # Branch 2: Mixed states - in-progress work
+        if active_todos:
+            active_names = get_todo_names(active_todos)
+            incoming_names = get_todo_names(incoming_todos)
+            
+            if active_names != incoming_names:
+                # Todo names changed - safety violation
+                clear_active_todos()
+                set_daic_mode(True)
+                print("[DAIC: Blocked] Todo list changed during execution. "
+                      "Cleared todos and returned to discussion mode. "
+                      "Immediately re-propose the remaining tasks you need to complete, "
+                      "explaining what happened.", 
+                      file=sys.stderr)
+                sys.exit(2)
+            else:
+                # Names match - update the stored state
+                store_active_todos(incoming_todos)
+        else:
+            # No active todos but mixed states - shouldn't happen
+            clear_active_todos()  # Ensure clean state
+            set_daic_mode(True)
+            print("[DAIC: Blocked] Tried to update todos but no active todos exist. "
+                  "Returned to discussion mode. Re-propose your full todo list.", 
+                  file=sys.stderr)
+            sys.exit(2)
 
 # Check if we're in a subagent context and trying to edit .claude/state files
 project_root = get_project_root()

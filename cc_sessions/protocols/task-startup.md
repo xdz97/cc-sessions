@@ -123,7 +123,24 @@ Before diving in:
 - Check for blockers or gotchas
 - Confirm approach with user if needed
 
-## 5. Work Mode
+## 5. Initial Discussion & Planning
+
+After loading task context:
+1. Run `daic` to ensure discussion mode
+2. Analyze the task requirements thoroughly
+3. Propose implementation plan with specific todo list:
+   ```
+   I propose to implement the following:
+   □ [Specific action 1]
+   □ [Specific action 2]
+   □ [Specific action 3]
+   
+   Shall I proceed with this implementation?
+   ```
+4. Iterate based on user feedback until approved
+5. Upon approval, convert proposed todos to TodoWrite exactly as written
+
+## 6. Work Mode
 
 Remember:
 - Follow DAIC protocol (Discussion before Implementation)

@@ -7,7 +7,7 @@ Complete Claude Code Sessions framework that enforces Discussion-Alignment-Imple
 
 The cc-sessions package transforms Claude Code from a basic AI coding assistant into a sophisticated workflow management system. It enforces structured collaboration patterns where Claude must discuss approaches before implementing code, maintains persistent task context across sessions, and provides specialized agents for complex operations.
 
-The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enforcement through Python hooks that cannot be bypassed. When Claude attempts to edit code without explicit user approval ("go ahead", "make it so", etc.), the hooks block the tools and require discussion first. This prevents the common AI coding problem of immediate over-implementation without alignment.
+The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enforcement through Python hooks that cannot be bypassed. When Claude attempts to edit code without explicit user approval ("go ahead", "make it so", etc.), the hooks block the tools and require discussion first. The system now uses todo-based execution boundaries where approved TodoWrite lists define the exact scope of implementation work. This prevents both over-implementation and "execution anxiety" from per-tool reminders.
 
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
@@ -17,7 +17,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/sessions-enforce.py` - Core DAIC enforcement and branch protection
 - `cc_sessions/hooks/session-start.py` - Automatic task context loading
 - `cc_sessions/hooks/user-messages.py` - Trigger phrase detection and mode switching
-- `cc_sessions/hooks/post-tool-use.py` - Implementation mode reminders
+- `cc_sessions/hooks/post-tool-use.py` - Todo completion detection and auto-return to discussion
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
 - `cc_sessions/agents/logging.md` - Session work log consolidation agent
@@ -37,6 +37,10 @@ The framework includes persistent task management with git branch enforcement, c
 ### DAIC Enforcement
 - Blocks Edit/Write/MultiEdit tools in discussion mode
 - Requires explicit trigger phrases to enter implementation mode
+- Todo-based execution boundaries enforce exact scope matching
+- Approved TodoWrite lists define implementation work scope
+- Auto-return to discussion mode when all todos complete
+- Clear active todos on mode switches
 - Configurable trigger phrases via `/add-trigger` command
 - Read-only Bash commands allowed in discussion mode
 
@@ -90,6 +94,7 @@ Primary configuration in `sessions/sessions-config.json`:
 State files in `.claude/state/`:
 - `current_task.json` - Active task metadata
 - `daic-mode.json` - Current discussion/implementation mode
+- `active-todos.json` - Approved TodoWrite execution scope
 
 Windows-specific configuration in `.claude/settings.json`:
 - Hook commands use Windows-style paths with `%CLAUDE_PROJECT_DIR%`
@@ -100,10 +105,11 @@ Windows-specific configuration in `.claude/settings.json`:
 
 ### Hook Architecture
 - Pre-tool-use hooks for enforcement (sessions-enforce.py)
-- Post-tool-use hooks for reminders (post-tool-use.py) 
-- User message hooks for trigger detection (user-messages.py)
+- TodoWrite validation enforces exact scope matching on approved todo lists
+- Post-tool-use hooks detect todo completion and auto-return to discussion
+- User message hooks for trigger detection and mode switching (user-messages.py)
 - Session start hooks for context loading (session-start.py)
-- Shared state management across all hooks (shared_state.py)
+- Shared state management including active todos tracking (shared_state.py)
 - Cross-platform path handling using pathlib.Path throughout
 - Windows-specific command prefixing with explicit python interpreter
 
@@ -162,6 +168,9 @@ Windows-specific configuration in `.claude/settings.json`:
 
 ### Process Integrity
 - Hook-based enforcement cannot be bypassed
+- Todo-based execution boundaries prevent scope creep
+- Exact scope matching required for TodoWrite operations
+- Auto-return to discussion when implementation complete
 - State file protection from unauthorized changes
 - Chronological work log maintenance
 - Task scope enforcement through structured protocols

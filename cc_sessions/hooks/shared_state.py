@@ -71,6 +71,10 @@ def toggle_daic_mode() -> str:
     with open(DAIC_STATE_FILE, 'w') as f:
         json.dump({"mode": new_mode}, f, indent=2)
     
+    # If switching to discussion, clear active todos
+    if new_mode == "discussion":
+        clear_active_todos()
+    
     # Return appropriate message
     return IMPLEMENTATION_MODE_MSG if new_mode == "implementation" else DISCUSSION_MODE_MSG
 
@@ -80,6 +84,8 @@ def set_daic_mode(value: str|bool):
     if value == True or value == "discussion":
         mode = "discussion"
         name = "Discussion Mode"
+        # Clear active todos when switching to discussion
+        clear_active_todos()
     elif value == False or value == "implementation":
         mode = "implementation"
         name = "Implementation Mode"
@@ -121,3 +127,36 @@ def add_service_to_task(service: str):
         with open(TASK_STATE_FILE, 'w') as f:
             json.dump(state, f, indent=2)
     return state
+
+# Todo state management for DAIC enforcement
+ACTIVE_TODOS_FILE = STATE_DIR / "active-todos.json"
+
+def get_active_todos() -> list:
+    """Get the currently active/approved todos."""
+    try:
+        with open(ACTIVE_TODOS_FILE, 'r') as f:
+            data = json.load(f)
+            return data.get("todos", [])
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def store_active_todos(todos: list) -> None:
+    """Store the approved todo list as active execution scope."""
+    ensure_state_dir()
+    data = {"todos": todos}
+    with open(ACTIVE_TODOS_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def clear_active_todos() -> None:
+    """Clear the active todos when returning to discussion mode."""
+    if ACTIVE_TODOS_FILE.exists():
+        ACTIVE_TODOS_FILE.unlink()
+
+def check_todos_complete() -> bool:
+    """Check if all todos in the active list are complete."""
+    todos = get_active_todos()
+    if not todos:
+        return False
+    
+    # All todos must have status == 'completed'
+    return all(t.get('status') == 'completed' for t in todos)

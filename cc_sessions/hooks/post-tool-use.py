@@ -21,13 +21,12 @@ in_subagent = subagent_flag.exists()
 if tool_name == "Task" and in_subagent:
     subagent_flag.unlink()
     # Don't show DAIC reminder for Task completion
-    in_subagent = True
 
 # Check current mode
 discussion_mode = check_daic_mode_bool()
 
-# Check for todo completion if in implementation mode
-if not discussion_mode and tool_name == "TodoWrite":
+# Check for todo completion if in implementation mode (but not in subagent context)
+if not discussion_mode and tool_name == "TodoWrite" and not in_subagent:
     # Check if all todos are complete
     from shared_state import check_todos_complete, set_daic_mode, clear_active_todos
     if check_todos_complete():
@@ -46,4 +45,4 @@ if tool_name == "Bash":
 if mod:
     sys.exit(2)  # Exit code 2 feeds stderr back to Claude
 else:
-    sys.exit(0)
+    sys.exit(0)# Test replay simulation - small dummy edit

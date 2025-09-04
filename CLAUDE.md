@@ -17,7 +17,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/sessions-enforce.py` - Core DAIC enforcement and branch protection
 - `cc_sessions/hooks/session-start.py` - Automatic task context loading
 - `cc_sessions/hooks/user-messages.py` - Trigger phrase detection and mode switching
-- `cc_sessions/hooks/post-tool-use.py` - Todo completion detection and auto-return to discussion
+- `cc_sessions/hooks/post-tool-use.py` - Todo completion detection with subagent guards and auto-return to discussion
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
 - `cc_sessions/agents/logging.md` - Session work log consolidation agent
@@ -110,6 +110,8 @@ Windows-specific configuration in `.claude/settings.json`:
 - User message hooks for trigger detection and mode switching (user-messages.py)
 - Session start hooks for context loading (session-start.py)
 - Shared state management including active todos tracking (shared_state.py)
+- Subagent context detection via in_subagent_context.flag file
+- Automatic subagent flag cleanup on Task tool completion
 - Cross-platform path handling using pathlib.Path throughout
 - Windows-specific command prefixing with explicit python interpreter
 
@@ -128,6 +130,8 @@ Windows-specific configuration in `.claude/settings.json`:
 ### Subagent Protection
 - Detection mechanism prevents DAIC reminders in subagent contexts
 - Subagents blocked from editing .claude/state files
+- Todo completion checks bypass subagent contexts
+- Automatic flag cleanup when Task tool completes
 - Strict separation between main thread and agent operations
 
 ### Windows Compatibility
@@ -186,3 +190,5 @@ Windows-specific configuration in `.claude/settings.json`:
 ## Sessions System Behaviors
 
 @CLAUDE.sessions.md
+
+# Test replay marker - debugging subagent flag cleanup issue

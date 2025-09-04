@@ -26,12 +26,15 @@ if tool_name == "Task" and in_subagent:
 # Check current mode
 discussion_mode = check_daic_mode_bool()
 
-# Only remind if in implementation mode AND not in a subagent
-implementation_tools = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
-if not discussion_mode and tool_name in implementation_tools and not in_subagent:
-    # Output reminder
-    print("[DAIC Reminder] When you're done implementing, run: daic", file=sys.stderr)
-    mod = True
+# Check for todo completion if in implementation mode
+if not discussion_mode and tool_name == "TodoWrite":
+    # Check if all todos are complete
+    from shared_state import check_todos_complete, set_daic_mode, clear_active_todos
+    if check_todos_complete():
+        set_daic_mode(True)  # Auto-return to discussion mode
+        clear_active_todos()  # Clear the approved todo list
+        print("[DAIC] All todos complete - returning to discussion mode", file=sys.stderr)
+        mod = True
 
 # Check for cd command in Bash operations
 if tool_name == "Bash":

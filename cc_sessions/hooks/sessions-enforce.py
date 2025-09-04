@@ -72,6 +72,46 @@ tool_input = input_data.get("tool_input", {})
 # Load configuration
 config = load_config()
 
+# TodoWrite validation - enforce exact scope matching
+if tool_name == "TodoWrite":
+    from shared_state import get_active_todos, store_active_todos, check_daic_mode_bool
+    
+    incoming_todos = tool_input.get("todos", [])
+    active_todos = get_active_todos()
+    
+    if active_todos:  # We have approved todos stored
+        # Extract content strings for comparison
+        approved_contents = {t['content'] for t in active_todos}
+        incoming_contents = {t['content'] for t in incoming_todos}
+        
+        # Exact match required - no additions, removals, or modifications
+        if approved_contents != incoming_contents:
+            missing = approved_contents - incoming_contents
+            added = incoming_contents - approved_contents
+            
+            error_msg = "[DAIC: Blocked] Todo scope violation detected.\n"
+            if missing:
+                error_msg += f"Removed todos: {missing}\n"
+            if added:
+                error_msg += f"Added unapproved todos: {added}\n"
+            error_msg += "Return to discussion mode to propose changes."
+            
+            print(error_msg, file=sys.stderr)
+            
+            # Auto-switch to discussion mode
+            from shared_state import set_daic_mode
+            set_daic_mode(True)
+            sys.exit(2)  # Block the tool
+        
+        # Check if all todos are complete
+        if all(t.get('status') == 'completed' for t in incoming_todos):
+            # All done - will be handled by post-tool-use hook
+            pass
+    else:
+        # First TodoWrite after approval - store as approved scope
+        if not check_daic_mode_bool():  # Only store if in implementation mode
+            store_active_todos(incoming_todos)
+
 # For Bash commands, check if it's a read-only operation
 if tool_name == "Bash":
     command = tool_input.get("command", "").strip()

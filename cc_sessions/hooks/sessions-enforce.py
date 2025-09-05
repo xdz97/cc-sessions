@@ -76,6 +76,23 @@ config = load_config()
 if tool_name == "Bash":
     command = tool_input.get("command", "").strip()
     
+    # Block any attempt to modify active-todos.json directly
+    if 'active-todos.json' in command:
+        # Check if it's a modifying operation
+        import re
+        modify_patterns = [
+            r'\brm\b', r'\bremove\b', r'\bdelete\b',
+            r'\bmv\b', r'\bmove\b', r'\brename\b',
+            r'\becho.*>', r'\bcat.*>', r'\btee\b',
+            r'\bsed\b', r'\bawk\b', r'\btruncate\b',
+            r'\btouch\b', r'\bcp\b', r'\bcopy\b'
+        ]
+        if any(re.search(pattern, command, re.IGNORECASE) for pattern in modify_patterns):
+            print("[Security] Direct modification of active-todos.json is not allowed. "
+                  "This file should only be modified through the TodoWrite tool.", 
+                  file=sys.stderr)
+            sys.exit(2)
+    
     # Check for write patterns
     import re
     write_patterns = [
@@ -153,18 +170,26 @@ if tool_name == "TodoWrite":
         return [t.get('content', '') for t in todos]
     
     if all_pending:
-        # Branch 1: All pending - new todo list being proposed
+        # Branch 1: All pending - new todo list being proposed or re-stated
         if active_todos:
-            # Already have active todos - something's wrong
-            clear_active_todos()
-            set_daic_mode(True)
-            print("[DAIC: Blocked] Claude tried to propose a new ToDo list but there are already active todos. "
-                  "This either happened due to a failed ToDo list cleanup from the last implementation, "
-                  "or because Claude tried to implement unapproved tasks. "
-                  "For safety, Discussion Mode has been re-activated. "
-                  "If this was an error, re-propose the ToDo list for approval in the next message.", 
-                  file=sys.stderr)
-            sys.exit(2)
+            # Check if it's the same list being re-stated
+            active_names = get_todo_names(active_todos)
+            incoming_names = get_todo_names(incoming_todos)
+            
+            if active_names == incoming_names:
+                # Same todos, just re-stating them (session restart or status check)
+                store_active_todos(incoming_todos)
+            else:
+                # Different todos - something's wrong
+                clear_active_todos()
+                set_daic_mode(True)
+                print("[DAIC: Blocked] Claude tried to propose a new ToDo list but there are already active todos. "
+                      "This either happened due to a failed ToDo list cleanup from the last implementation, "
+                      "or because Claude tried to implement unapproved tasks. "
+                      "For safety, Discussion Mode has been re-activated. "
+                      "If this was an error, re-propose the ToDo list for approval in the next message.", 
+                      file=sys.stderr)
+                sys.exit(2)
         else:
             # No active todos - store the new list
             store_active_todos(incoming_todos)
@@ -236,6 +261,15 @@ if subagent_flag.exists() and tool_name in ["Write", "Edit", "MultiEdit"]:
         except ValueError:
             # Not under .claude/state, which is fine
             pass
+
+# Block direct modification of active-todos.json via Write/Edit/MultiEdit
+if tool_name in ["Write", "Edit", "MultiEdit"]:
+    file_path_str = tool_input.get("file_path", "")
+    if file_path_str and 'active-todos.json' in str(file_path_str):
+        print("[Security] Direct modification of active-todos.json is not allowed. "
+              "This file should only be modified through the TodoWrite tool.", 
+              file=sys.stderr)
+        sys.exit(2)
 
 # Branch enforcement for Write/Edit/MultiEdit tools (if enabled)
 branch_config = config.get("branch_enforcement", DEFAULT_CONFIG["branch_enforcement"])

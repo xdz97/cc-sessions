@@ -2,6 +2,15 @@
 
 When starting work on a task (new or existing):
 
+## Protocol Todos
+<!-- Use TodoWrite to add these todos exactly as written -->
+□ Check git status and handle any uncommitted changes
+□ Create/checkout task branch and matching submodule branches
+□ Update .claude/state/current_task.json with task name
+□ Load task context manifest and verify understanding
+□ Update task status to in-progress and add started date
+□ Enter discussion mode and propose implementation todos
+
 ## 0. Git Setup
 
 Check task frontmatter for branch name and modules list, then create/checkout branches.

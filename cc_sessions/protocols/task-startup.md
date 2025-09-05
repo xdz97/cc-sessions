@@ -9,7 +9,6 @@ When starting work on a task (new or existing):
 □ Update .claude/state/current_task.json with task name
 □ Load task context manifest and verify understanding
 □ Update task status to in-progress and add started date
-□ Enter discussion mode and propose implementation todos
 
 ## 0. Git Setup
 
@@ -94,9 +93,7 @@ The full task state (branch, modules, status) is read from the task file frontma
 
 Read the Context Manifest section from the task file.
 
-If the Context Manifest is missing:
-- For new tasks: Run context-gathering agent (should have been done during creation)
-- For old tasks: Consider running context-gathering agent to create one
+If the Context Manifest is missing, you *must* use context-gathering agent to create one
 
 ## 3. Load Context & Verify Branch State
 
@@ -105,11 +102,12 @@ Based on the manifest:
 - Note technical reference details for implementation
 - Check environmental requirements
 - Note file locations for where changes will be made
+- Read prescribed file segments (if any)
 - Change the frontmatter status to "in-progress"
 - Add "started: YYYY-MM-DD" to the front matter
 
 **IF SUPER-REPO: Verify All Module Branches**
-Before starting work, confirm all modules are on correct branches. Check the task file frontmatter for the list of modules/services affected.
+Before starting work, confirm all modules are on correct branches. Check the task file frontmatter for the list of modules/services affected. Ensure *all* parents of any affected submodules are on branch (ex. super-repo containing other super-repos with affected submodules means top-level and service-containing super-repos need to be on branch *in addition to* the deepest submodule)
 
 If any module that will be edited is not on the task branch, STOP and fix it first.
 
@@ -119,19 +117,17 @@ Before diving in:
 - Understand the success criteria
 - Review the work log for previous progress
 - Check for blockers or gotchas
-- Confirm approach with user if needed
 
 ## 5. Initial Discussion & Planning
 
 After loading task context:
-1. Run `daic` to ensure discussion mode
-2. Analyze the task requirements thoroughly
-3. Propose implementation plan with specific todo list:
+1. Analyze the task requirements thoroughly
+2. Propose implementation plan with specific todo list:
    ```
    I propose to implement the following:
-   □ [Specific action 1]
-   □ [Specific action 2]
-   □ [Specific action 3]
+   □ [Specific action 1]: [Expanded explanation of the todo item]
+   □ [Specific action 2]: [Expanded explanation of the todo item]
+   □ [Specific action 3]: [Expanded explanation of the todo item]
    
    Shall I proceed with this implementation?
    ```
@@ -139,12 +135,17 @@ After loading task context:
 5. Upon approval, convert proposed todos to TodoWrite exactly as written
 
 ## 6. Work Mode
+For the duration of the task:
+- Discuss before implementing
+- Constantly seek user input and approval
 
-Remember:
-- Follow DAIC protocol (Discussion before Implementation)
-- Use code-review agent after significant changes
+Once approved, remember:
+- *Immediately* load your proposed todo items *exactly* as you proposed them using ToDoWrite
 - Update work log as you go
-- Delegate heavy analysis to agents
+
+After completion of the last task in any todo list:
+- *Do not* try to run any write-based tools (you will be automatically put into discussion mode)
+- Repeat todo proposal and approval workflow for any additional write/edit-based work
 
 ## Example First Message
 

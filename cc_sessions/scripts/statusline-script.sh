@@ -120,11 +120,11 @@ except:
 get_current_task() {
     cyan="\033[38;5;111m"    # 59C2FF entity blue
     reset="\033[0m"
-    if [[ -f "$cwd/.claude/state/current_task.json" ]]; then
+    if [[ -f "$CLAUDE_PROJECT_DIR/.claude/state/current_task.json" ]]; then
         task_name=$(python3 -c "
 import sys, json
 try:
-    with open('$cwd/.claude/state/current_task.json', 'r') as f:
+    with open('$CLAUDE_PROJECT_DIR/.claude/state/current_task.json', 'r') as f:
         data = json.load(f)
         print(data.get('task', 'None'))
 except:
@@ -138,11 +138,11 @@ except:
 
 # Get DAIC mode with color
 get_daic_mode() {
-    if [[ -f "$cwd/.claude/state/daic-mode.json" ]]; then
+    if [[ -f "$CLAUDE_PROJECT_DIR/.claude/state/daic-mode.json" ]]; then
         mode=$(python3 -c "
 import sys, json
 try:
-    with open('$cwd/.claude/state/daic-mode.json', 'r') as f:
+    with open('$CLAUDE_PROJECT_DIR/.claude/state/daic-mode.json', 'r') as f:
         data = json.load(f)
         print(data.get('mode', 'discussion'))
 except:
@@ -182,7 +182,7 @@ count_edited_files() {
 count_open_tasks() {
     blue="\033[38;5;111m"    # 73B8FF modified blue
     reset="\033[0m"
-    tasks_dir="$cwd/sessions/tasks"
+    tasks_dir="$CLAUDE_PROJECT_DIR/sessions/tasks"
     if [[ -d "$tasks_dir" ]]; then
         # Count .md files that don't contain "Status: done" or "Status: completed"
         open_count=0

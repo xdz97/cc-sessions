@@ -112,7 +112,7 @@ if transcript_path and tiktoken and os.path.exists(transcript_path):
         # Check for warning flag files to avoid repeating warnings
         from pathlib import Path
         PROJECT_ROOT = get_project_root()
-        warning_75_flag = PROJECT_ROOT / ".claude" / "state" / "context-warning-75.flag"
+        warning_85_flag = PROJECT_ROOT / ".claude" / "state" / "context-warning-85.flag"
         warning_90_flag = PROJECT_ROOT / ".claude" / "state" / "context-warning-90.flag"
         
         # Token warnings (only show once per session)
@@ -120,10 +120,10 @@ if transcript_path and tiktoken and os.path.exists(transcript_path):
             context += f"\n[90% WARNING] {context_length:,}/160,000 tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
             warning_90_flag.parent.mkdir(parents=True, exist_ok=True)
             warning_90_flag.touch()
-        elif usable_percentage >= 75 and not warning_75_flag.exists():
-            context += f"\n[75% WARNING] {context_length:,}/160,000 tokens used ({usable_percentage:.1f}%). Context is getting low. Be aware of coming context compaction trigger.\n"
-            warning_75_flag.parent.mkdir(parents=True, exist_ok=True)
-            warning_75_flag.touch()
+        elif usable_percentage >= 85 and not warning_85_flag.exists():
+            context += f"\n[Warning] Context window is {usable_percentage:.1f}% full ({context_length:,}/160,000 tokens). The danger zone is >90%. You will receive another warning when you reach 90% - don't panic but gently guide towards context compaction or task completion (if task is nearly complete). Task completion often satisfies compaction requirements and should allow the user to clear context safely, so you do not need to worry about fitting in both processes.\n"
+            warning_85_flag.parent.mkdir(parents=True, exist_ok=True)
+            warning_85_flag.touch()
 
 # DAIC keyword detection
 current_mode = check_daic_mode_bool()

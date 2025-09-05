@@ -66,10 +66,10 @@ if not daic_state_file.exists():
         json.dump({"mode": "discussion"}, f, indent=2)
 
 # 4. Clear context warning flags for new session
-warning_75_flag = PROJECT_ROOT / '.claude' / 'state' / 'context-warning-75.flag'
+warning_85_flag = PROJECT_ROOT / '.claude' / 'state' / 'context-warning-85.flag'
 warning_90_flag = PROJECT_ROOT / '.claude' / 'state' / 'context-warning-90.flag'
-if warning_75_flag.exists():
-    warning_75_flag.unlink()
+if warning_85_flag.exists():
+    warning_85_flag.unlink()
 if warning_90_flag.exists():
     warning_90_flag.unlink()
 

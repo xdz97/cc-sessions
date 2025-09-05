@@ -2,6 +2,14 @@
 
 When you are instructed to compact context:
 
+## Protocol Todos
+<!-- Use TodoWrite to add these todos exactly as written -->
+□ Run logging agent to update work logs
+□ Run context-refinement agent to check for discoveries
+□ Run service-documentation agent if service interfaces changed
+□ Verify/update .claude/state/current_task.json
+□ Announce readiness for context clear
+
 ## 1. Run Maintenance Agents
 
 Before compacting, delegate to agents:

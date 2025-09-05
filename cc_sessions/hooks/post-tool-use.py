@@ -35,6 +35,19 @@ if not discussion_mode and tool_name == "TodoWrite" and not in_subagent:
         print("[DAIC] All todos complete - returning to discussion mode", file=sys.stderr)
         mod = True
 
+# Check for implementation mode without todos (fallback reminder)
+if not discussion_mode and not in_subagent:
+    from shared_state import get_active_todos
+    active_todos = get_active_todos()
+    if not active_todos:
+        # In implementation mode but no todos - show reminder
+        print("[Reminder] You're in implementation mode without approved todos. "
+              "If you proposed todos that were approved, add them. "
+              "If the user asked you to do something without todo proposal/approval, translate it to todos and add them. "
+              "In any case, return to discussion mode after completing approved implementation.", 
+              file=sys.stderr)
+        mod = True
+
 # Check for cd command in Bash operations
 if tool_name == "Bash":
     command = tool_input.get("command", "")

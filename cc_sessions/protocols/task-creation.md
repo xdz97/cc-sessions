@@ -1,5 +1,15 @@
 # Task Creation Protocol
 
+## Protocol Todos
+<!-- Use TodoWrite to add these todos exactly as written -->
+□ Determine task priority and type prefix
+□ Decide if task needs file or directory structure
+□ Create task file with proper frontmatter
+□ Write clear problem statement and success criteria
+□ Run context-gathering agent to create context manifest
+□ Update appropriate service index files
+□ Commit the new task file
+
 ## Configuration
 Task naming conventions can be customized in `sessions/sessions-config.json`.
 If no config exists, the defaults below are used.

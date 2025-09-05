@@ -8,7 +8,7 @@ try:
     import tiktoken
 except ImportError:
     tiktoken = None
-from shared_state import check_daic_mode_bool, set_daic_mode
+from shared_state import check_daic_mode_bool, set_daic_mode, store_active_todos
 
 # Load input
 input_data = json.load(sys.stdin)
@@ -159,6 +159,19 @@ if "iterloop" in prompt.lower():
 if not is_add_trigger_command and task_creation_detected:
     task_creation_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-creation.md'
     set_daic_mode(False)
+    
+    # Auto-load protocol todos
+    protocol_todos = [
+        {'content': 'Determine task priority and type prefix', 'status': 'pending', 'activeForm': 'Determining task priority and type prefix'},
+        {'content': 'Decide if task needs file or directory structure', 'status': 'pending', 'activeForm': 'Deciding if task needs file or directory structure'},
+        {'content': 'Create task file with proper frontmatter', 'status': 'pending', 'activeForm': 'Creating task file with proper frontmatter'},
+        {'content': 'Write clear problem statement and success criteria', 'status': 'pending', 'activeForm': 'Writing clear problem statement and success criteria'},
+        {'content': 'Run context-gathering agent to create context manifest', 'status': 'pending', 'activeForm': 'Running context-gathering agent to create context manifest'},
+        {'content': 'Update appropriate service index files', 'status': 'pending', 'activeForm': 'Updating appropriate service index files'},
+        {'content': 'Commit the new task file', 'status': 'pending', 'activeForm': 'Committing the new task file'}
+    ]
+    store_active_todos(protocol_todos)
+    
     context += f"""[Task Creation Notice]
 Language in the user prompt indicates that the user may want to create a task. Tasks are for:
 • Work that needs to be done later
@@ -174,6 +187,19 @@ If the user *is* asking to create a task, you *MUST* read {task_creation_protoco
 if not is_add_trigger_command and task_completion_detected:
     task_completion_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-completion.md'
     set_daic_mode(False)
+    
+    # Auto-load protocol todos
+    protocol_todos = [
+        {'content': 'Verify all success criteria are checked off', 'status': 'pending', 'activeForm': 'Verifying all success criteria are checked off'},
+        {'content': 'Run code-review agent and address any critical issues', 'status': 'pending', 'activeForm': 'Running code-review agent and addressing critical issues'},
+        {'content': 'Run logging agent to consolidate work logs', 'status': 'pending', 'activeForm': 'Running logging agent to consolidate work logs'},
+        {'content': 'Run context-refinement agent to update task context', 'status': 'pending', 'activeForm': 'Running context-refinement agent to update task context'},
+        {'content': 'Commit all changes with comprehensive message', 'status': 'pending', 'activeForm': 'Committing all changes with comprehensive message'},
+        {'content': 'Merge task branch to main and push', 'status': 'pending', 'activeForm': 'Merging task branch to main and pushing'},
+        {'content': 'Archive completed task and select next task', 'status': 'pending', 'activeForm': 'Archiving completed task and selecting next task'}
+    ]
+    store_active_todos(protocol_todos)
+    
     context += f"""[Task Completion Notice]
 Language in the user prompt indicates that the user may want to complete the current task. 
 
@@ -187,6 +213,18 @@ If you are ready to complete the task, you *MUST* read {task_completion_protocol
 if not is_add_trigger_command and task_start_detected:
     task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
     set_daic_mode(False)
+    
+    # Auto-load protocol todos
+    protocol_todos = [
+        {'content': 'Check git status and handle any uncommitted changes', 'status': 'pending', 'activeForm': 'Checking git status and handling uncommitted changes'},
+        {'content': 'Create/checkout task branch and matching submodule branches', 'status': 'pending', 'activeForm': 'Creating/checking out task branch and matching submodule branches'},
+        {'content': 'Update .claude/state/current_task.json with task name', 'status': 'pending', 'activeForm': 'Updating .claude/state/current_task.json with task name'},
+        {'content': 'Load task context manifest and verify understanding', 'status': 'pending', 'activeForm': 'Loading task context manifest and verifying understanding'},
+        {'content': 'Update task status to in-progress and add started date', 'status': 'pending', 'activeForm': 'Updating task status to in-progress and adding started date'},
+        {'content': 'Enter discussion mode and propose implementation todos', 'status': 'pending', 'activeForm': 'Entering discussion mode and proposing implementation todos'}
+    ]
+    store_active_todos(protocol_todos)
+    
     context += f"""[Task Startup Notice]
 Language in the user prompt indicates that the user may want to start a new task. If the user wants to begin a new task, you *MUST* follow the task startup protocol at {task_start_protocol_path} to begin the task properly.
 
@@ -196,6 +234,17 @@ Language in the user prompt indicates that the user may want to start a new task
 if not is_add_trigger_command and compaction_detected:
     compaction_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'context-compaction.md'
     set_daic_mode(False)
+    
+    # Auto-load protocol todos
+    protocol_todos = [
+        {'content': 'Run logging agent to update work logs', 'status': 'pending', 'activeForm': 'Running logging agent to update work logs'},
+        {'content': 'Run context-refinement agent to check for discoveries', 'status': 'pending', 'activeForm': 'Running context-refinement agent to check for discoveries'},
+        {'content': 'Run service-documentation agent if service interfaces changed', 'status': 'pending', 'activeForm': 'Running service-documentation agent if service interfaces changed'},
+        {'content': 'Verify/update .claude/state/current_task.json', 'status': 'pending', 'activeForm': 'Verifying/updating .claude/state/current_task.json'},
+        {'content': 'Announce readiness for context clear', 'status': 'pending', 'activeForm': 'Announcing readiness for context clear'}
+    ]
+    store_active_todos(protocol_todos)
+    
     context += f"""[Context Compaction Notice]
 Language in the user prompt indicates that the user may want to compact context. You *MUST* read {compaction_protocol_path} and follow the instructions therein to compact context properly.
 """

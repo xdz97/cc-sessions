@@ -2,6 +2,16 @@
 
 When a task meets its success criteria:
 
+## Protocol Todos
+<!-- Use TodoWrite to add these todos exactly as written -->
+□ Verify all success criteria are checked off
+□ Run code-review agent and address any critical issues
+□ Run logging agent to consolidate work logs
+□ Run context-refinement agent to update task context
+□ Commit all changes with comprehensive message
+□ Merge task branch to main and push
+□ Archive completed task and select next task
+
 ## 1. Pre-Completion Checks
 
 Verify before proceeding:

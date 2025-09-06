@@ -68,10 +68,10 @@ fi
 # Create necessary directories
 echo "Creating directory structure..."
 mkdir -p "$PROJECT_ROOT/.claude/hooks"
-mkdir -p "$PROJECT_ROOT/.claude/state"
 mkdir -p "$PROJECT_ROOT/.claude/agents"
 mkdir -p "$PROJECT_ROOT/.claude/commands"
 mkdir -p "$PROJECT_ROOT/sessions/tasks/done"
+mkdir -p "$PROJECT_ROOT/sessions/state"
 mkdir -p "$PROJECT_ROOT/sessions/protocols"
 
 # Install Python dependencies
@@ -468,10 +468,10 @@ echo "$settings_content" > "$PROJECT_ROOT/.claude/settings.json"
 echo -e "${GREEN}✓ Sessions hooks configured in settings.json${NC}"
 
 # Initialize DAIC state
-echo '{"mode": "discussion"}' > "$PROJECT_ROOT/.claude/state/daic-mode.json"
+echo '{"mode": "discussion"}' > "$PROJECT_ROOT/sessions/state/daic-mode.json"
 
 # Create initial task state
-cat > "$PROJECT_ROOT/.claude/state/current_task.json" << EOF
+cat > "$PROJECT_ROOT/sessions/state/current-task.json" << EOF
 {
   "task": null,
   "branch": null,

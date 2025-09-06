@@ -12,6 +12,9 @@ cwd=$(echo "$input" | python3 -c "import sys, json; data = json.load(sys.stdin);
 model_name=$(echo "$input" | python3 -c "import sys, json; data = json.load(sys.stdin); print(data.get('model', {}).get('display_name', 'Claude'))")
 session_id=$(echo "$input" | python3 -c "import sys, json; data = json.load(sys.stdin); print(data.get('session_id', ''))")
 
+# Store model name in sessions/state/current-model.json for reference by hooks 
+$(echo "$model_name" | python3 -c "import json, os; model_name = input().strip(); state_dir = '$CLAUDE_PROJECT_DIR' / 'sessions' / 'state' / 'current-model.json' ; os.makedirs(os.path.dirname(state_dir), exist_ok=True); with open(state_dir, 'w') as f: json.dump({'model': model_name}, f)")
+
 # Function to calculate context breakdown and progress
 calculate_context() {
     # Get transcript if available
@@ -120,11 +123,11 @@ except:
 get_current_task() {
     cyan="\033[38;5;111m"    # 59C2FF entity blue
     reset="\033[0m"
-    if [[ -f "$CLAUDE_PROJECT_DIR/.claude/state/current_task.json" ]]; then
+    if [[ -f "$CLAUDE_PROJECT_DIR/sessions/state/current-task.json" ]]; then
         task_name=$(python3 -c "
 import sys, json
 try:
-    with open('$CLAUDE_PROJECT_DIR/.claude/state/current_task.json', 'r') as f:
+    with open('$CLAUDE_PROJECT_DIR/sessions/state/current-task.json', 'r') as f:
         data = json.load(f)
         print(data.get('task', 'None'))
 except:
@@ -138,11 +141,11 @@ except:
 
 # Get DAIC mode with color
 get_daic_mode() {
-    if [[ -f "$CLAUDE_PROJECT_DIR/.claude/state/daic-mode.json" ]]; then
+    if [[ -f "$CLAUDE_PROJECT_DIR/sessions/state/daic-mode.json" ]]; then
         mode=$(python3 -c "
 import sys, json
 try:
-    with open('$CLAUDE_PROJECT_DIR/.claude/state/daic-mode.json', 'r') as f:
+    with open('$CLAUDE_PROJECT_DIR/sessions/state/daic-mode.json', 'r') as f:
         data = json.load(f)
         print(data.get('mode', 'discussion'))
 except:

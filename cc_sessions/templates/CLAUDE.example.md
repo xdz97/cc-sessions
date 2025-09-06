@@ -24,7 +24,7 @@ This project uses the Claude Code Sessions system for task management and contex
 
 When working on tasks, refer to:
 - **sessions/tasks/*.md** - Active task files with context manifests
-- **.claude/state/current_task.json** - Current task state
+- **sessions/state/current-task.json** - Current task state
 
 The SessionStart hook will guide you to load appropriate context based on the active task.
 

@@ -229,7 +229,7 @@ These are (currently):
 
 To make this a lot easier, the logging agent gets the entire conversation history - instead of relying on Claude to re-output everything important that happened in this session, the logging agent just branches off from your conversation, writes the logs, and passes it back to the main thread.
 
-In the background, any call to a subagent copies the current conversation into a set of conversation history logs in a dedicated directory for the agent. If you ever want an agent to load the full conversation context before following their prompt, you can just adjust their agent prompt to tell them to read all of the files in .claude/state/{agent-name}/.
+In the background, any call to a subagent copies the current conversation into a set of conversation history logs in a dedicated directory for the agent. If you ever want an agent to load the full conversation context before following their prompt, you can just adjust their agent prompt to tell them to read all of the files in sessions/state/{agent-name}/.
   
 ```
 You: Lets start the caching upgrades                                                                                                                                                                                                                                                                  e

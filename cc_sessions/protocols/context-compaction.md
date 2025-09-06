@@ -7,7 +7,7 @@ When you are instructed to compact context:
 □ Run logging agent to update work logs
 □ Run context-refinement agent to check for discoveries
 □ Run service-documentation agent if service interfaces changed
-□ Verify/update .claude/state/current_task.json
+□ Verify/update sessions/state/current-task.json
 □ Announce readiness for context clear
 
 ## 1. Run Maintenance Agents
@@ -29,7 +29,7 @@ Before compacting, delegate to agents:
 
 ## 2. Verify/Update Task State
 
-Ensure that .claude/state/current_task.json contains the correct current task, branch, and services.
+Ensure that sessions/state/current-task.json contains the correct current task, branch, and services.
 
 ## 3. Create Checkpoint
 

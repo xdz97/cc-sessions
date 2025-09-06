@@ -166,13 +166,13 @@ async function createDirectories() {
   
   const dirs = [
     '.claude/hooks',
-    '.claude/state',
     '.claude/agents',
     '.claude/commands',
     'sessions/tasks/done',
     'sessions/protocols',
     'sessions/knowledge',
-    'sessions/scripts'
+    'sessions/scripts',
+    'sessions/state'
   ];
   
   for (const dir of dirs) {
@@ -829,14 +829,14 @@ async function saveConfig(installStatusline = false) {
   
   // Initialize DAIC state
   await fs.writeFile(
-    path.join(PROJECT_ROOT, '.claude/state/daic-mode.json'),
+    path.join(PROJECT_ROOT, 'sessions/state/daic-mode.json'),
     JSON.stringify({ mode: "discussion" }, null, 2)
   );
   
   // Create initial task state
   const currentDate = new Date().toISOString().split('T')[0];
   await fs.writeFile(
-    path.join(PROJECT_ROOT, '.claude/state/current_task.json'),
+    path.join(PROJECT_ROOT, 'sessions/state/current-task.json'),
     JSON.stringify({
       task: null,
       branch: null,

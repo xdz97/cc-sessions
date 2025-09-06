@@ -6,7 +6,7 @@ When starting work on a task (new or existing):
 <!-- Use TodoWrite to add these todos exactly as written -->
 □ Check git status and handle any uncommitted changes
 □ Create/checkout task branch and matching submodule branches
-□ Update .claude/state/current_task.json with task name
+□ Update sessions/state/current-task.json with task name
 □ Load task context manifest and verify understanding
 □ Update task status to in-progress and add started date
 
@@ -66,7 +66,7 @@ Example: If working on tt1-login-ux-flow affecting io_web and io_user_model, cre
 > Note: If resuming work on an existing branch:
 > - Check git status first for uncommitted work in super-repo AND all submodules
 >   - Address EVERY file shown in `git status`, not just expected files
->   - Common missed files: CLAUDE.md, .claude/state files, test outputs
+>   - Common missed files: CLAUDE.md, sessions/state files, test outputs
 >   - Either commit ALL changes or explicitly discuss with user
 > - Checkout the branch in the super-repo
 > - For each affected submodule, navigate to it and checkout the matching branch
@@ -74,7 +74,7 @@ Example: If working on tt1-login-ux-flow affecting io_web and io_user_model, cre
 
 ## 1. Update Task State
 
-After creating/checking out branches, update the .claude/state/current_task.json file.
+After creating/checking out branches, update the sessions/state/current-task.json file.
 
 ```json
 {

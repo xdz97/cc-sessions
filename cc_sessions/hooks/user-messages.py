@@ -1,84 +1,102 @@
 #!/usr/bin/env python3
-"""User message hook to detect DAIC trigger phrases and special patterns."""
+# ===== IMPORTS ===== #
+
+## ===== STDLIB ===== ##
+from pathlib import Path
 import json
 import sys
-import re
 import os
-try:
-    import tiktoken
-except ImportError:
-    tiktoken = None
-from shared_state import check_daic_mode_bool, set_daic_mode, store_active_todos
+##-##
 
-# Load input
+## ===== 3RD-PARTY ===== ##
+##-##
+
+## ===== LOCAL ===== ##
+from shared_state import check_daic_mode_bool, set_daic_mode, store_active_todos, clear_active_todos, get_current_model, PROJECT_ROOT
+##-##
+
+#-#
+
+# ===== GLOBALS ===== #
 input_data = json.load(sys.stdin)
 prompt = input_data.get("prompt", "")
-transcript_path = input_data.get("transcript_path", "")
-context = ""
-
-# Get configuration (if exists)
-try:
-    from pathlib import Path
-    from shared_state import get_project_root
-    PROJECT_ROOT = get_project_root()
-    CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
-    
-    if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, 'r') as f:
-            config = json.load(f)
-    else:
-        config = {}
-except:
-    config = {}
-
-# Default trigger phrases if not configured
-DEFAULT_TRIGGER_PHRASES = ["make it so", "run that", "yert"]
-trigger_phrases = config.get("trigger_phrases", DEFAULT_TRIGGER_PHRASES)
-
-# Load all trigger categories from config
-task_creation_phrases = config.get("task_creation_phrases", ["create a task", "create a new task", "write a task"])
-task_completion_phrases = config.get("task_completion_phrases", ["complete the task", "are we done here", "is the task complete"])
-task_start_phrases = config.get("task_start_phrases", ["start the task", "begin the task", "let's start the task"])
-compaction_phrases = config.get("compaction_phrases", ["let's compact", "compact context", "run compaction"])
 
 # Check if this is any /add-*-trigger command
 prompt_stripped = prompt.strip()
 is_add_trigger_command = (prompt_stripped.startswith('/add-') and '-trigger' in prompt_stripped.split()[0] if prompt_stripped else False)
 
-# Detect all trigger types
-prompt_lower = prompt.lower()
-daic_toggle_detected = any(phrase.lower() in prompt_lower for phrase in trigger_phrases)
-task_creation_detected = any(phrase.lower() in prompt_lower for phrase in task_creation_phrases)
-task_completion_detected = any(phrase.lower() in prompt_lower for phrase in task_completion_phrases)
-task_start_detected = any(phrase.lower() in prompt_lower for phrase in task_start_phrases)
-compaction_detected = any(phrase.lower() in prompt_lower for phrase in compaction_phrases)
+# Check current DAIC mode
+current_mode = check_daic_mode_bool()
 
-# Check API mode and add ultrathink if not in API mode (skip for /add-trigger)
-if not config.get("api_mode", False) and not is_add_trigger_command:
-    context = "[[ ultrathink ]]\n"
+CURRENT_MODEL = get_current_model()
 
-# Token monitoring
+# Only add ultrathink if not /add-trigger command
+context = "" if is_add_trigger_command else "[[ ultrathink ]]\n"
+transcript_path = input_data.get("transcript_path", "")
+
+#!> Trigger phrase detection
+daic_phrases = ["run that", "yert", "make it so"]
+task_creation_phrases = []
+task_completion_phrases = []
+task_start_phrases = []
+compaction_phrases = ["lets compact"]
+
+try:
+    trigger_file = PROJECT_ROOT / 'sessions' / 'state' / 'trigger-phrases.json'
+    if trigger_file.exists():
+        with open(trigger_file, 'r') as f:
+            custom_phrases = json.load(f)
+            daic_phrases += custom_phrases.get('daic_phrases', [])
+            task_creation_phrases += custom_phrases.get('task_creation_phrases', [])
+            task_completion_phrases += custom_phrases.get('task_completion_phrases', [])
+            task_start_phrases += custom_phrases.get('task_start_phrases', [])
+            compaction_phrases += custom_phrases.get('compaction_phrases', [])
+except Exception as e: print(f"[DEBUG] Error loading trigger phrases: {e}", file=sys.stderr)
+
+daic_toggle_detected = any(phrase.lower() in prompt.lower() for phrase in daic_phrases)
+task_creation_detected = any(phrase.lower() in prompt.lower() for phrase in task_creation_phrases)
+task_completion_detected = any(phrase.lower() in prompt.lower() for phrase in task_completion_phrases)
+task_start_detected = any(phrase.lower() in prompt.lower() for phrase in task_start_phrases)
+compaction_detected = any(phrase.lower() in prompt.lower() for phrase in compaction_phrases)
+
+if any([daic_toggle_detected, task_creation_detected, task_completion_detected, task_start_detected, compaction_detected]):
+    clear_active_todos()
+#!<
+#-#
+
+"""
+╔═══════════════════════════════════════════════════════════════════════════════════════════════╗
+║ ██╗   ██╗ ██████╗██████╗██████╗   ███╗   ███╗██████╗ ██████╗ ██████╗ █████╗  ██████╗██████╗ ║
+║ ██║   ██║██╔════╝██╔═══╝██╔══██╗  ████╗ ████║██╔═══╝██╔════╝██╔════╝██╔══██╗██╔════╝██╔═══╝ ║
+║ ██║   ██║███████╗█████╗ ██████╔╝  ██╔████╔██║█████╗ ███████╗███████╗███████║██║  ██╗█████╗  ║
+║ ██║   ██║╚════██║██╔══╝ ██╔══██╗  ██║╚██╔╝██║██╔══╝ ╚════██║╚════██║██╔══██║██║  ██║██╔══╝  ║
+║ ╚██████╔╝██████╔╝██████╗██║  ██║  ██║ ╚═╝ ██║██████╗██████╔╝██████╔╝██║  ██║╚██████╔╝██████╗ ║
+║  ╚═════╝ ╚═════╝ ╚═════╝╚═╝  ╚═╝  ╚═╝     ╚═╝╚═════╝╚═════╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
+UserPromptSubmit Hook
+
+Manages DAIC mode transitions and protocol triggers:
+- Detects trigger phrases for mode switching and protocol activation  
+- Monitors context window usage and provides warnings
+- Auto-loads protocol todos when protocols are triggered
+- Clears active todos when switching contexts
+"""
+
+# ===== FUNCTIONS ===== #
 def get_context_length_from_transcript(transcript_path):
     """Get current context length from the most recent main-chain message in transcript"""
     try:
-        import os
-        if not os.path.exists(transcript_path):
-            return 0
-            
-        with open(transcript_path, 'r') as f:
-            lines = f.readlines()
-        
+        with open(transcript_path, 'r') as f: lines = f.readlines()
+
         most_recent_usage = None
         most_recent_timestamp = None
-        
         # Parse each JSONL entry
         for line in lines:
             try:
                 data = json.loads(line.strip())
                 # Skip sidechain entries (subagent calls)
-                if data.get('isSidechain', False):
-                    continue
-                    
+                if data.get('isSidechain', False): continue
+
                 # Check if this entry has usage data
                 if data.get('message', {}).get('usage'):
                     entry_time = data.get('timestamp')
@@ -86,9 +104,8 @@ def get_context_length_from_transcript(transcript_path):
                     if entry_time and (not most_recent_timestamp or entry_time > most_recent_timestamp):
                         most_recent_timestamp = entry_time
                         most_recent_usage = data['message']['usage']
-            except json.JSONDecodeError:
-                continue
-        
+            except json.JSONDecodeError: continue
+
         # Calculate context length from most recent usage
         if most_recent_usage:
             context_length = (
@@ -97,37 +114,41 @@ def get_context_length_from_transcript(transcript_path):
                 most_recent_usage.get('cache_creation_input_tokens', 0)
             )
             return context_length
-    except Exception:
-        pass
+    except Exception: pass
     return 0
+#-#
 
+# ===== EXECUTION ===== #
+
+## ===== TOKEN MONITORING ===== ##
 # Check context usage and warn if needed (only if tiktoken is available)
-if transcript_path and tiktoken and os.path.exists(transcript_path):
+if transcript_path and os.path.exists(transcript_path):
     context_length = get_context_length_from_transcript(transcript_path)
     
     if context_length > 0:
-        # Calculate percentage of usable context (160k practical limit before auto-compact)
-        usable_percentage = (context_length / 160000) * 100
+        # Calculate percentage of usable context (opus 160k/sonnet 800k practical limit before auto-compact)
+        usable_tokens = 160000
+        if CURRENT_MODEL == "sonnet": usable_tokens = 800000
+        usable_percentage = (context_length / usable_tokens) * 100
         
         # Check for warning flag files to avoid repeating warnings
-        from pathlib import Path
-        PROJECT_ROOT = get_project_root()
-        warning_85_flag = PROJECT_ROOT / ".claude" / "state" / "context-warning-85.flag"
-        warning_90_flag = PROJECT_ROOT / ".claude" / "state" / "context-warning-90.flag"
+        warning_85_flag = PROJECT_ROOT / "sessions" / "state" / "context-warning-85.flag"
+        warning_90_flag = PROJECT_ROOT / "sessions" / "state" / "context-warning-90.flag"
         
         # Token warnings (only show once per session)
         if usable_percentage >= 90 and not warning_90_flag.exists():
-            context += f"\n[90% WARNING] {context_length:,}/160,000 tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
+            context += f"\n[90% WARNING] {context_length:,}/{usable_tokens:,} tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
             warning_90_flag.parent.mkdir(parents=True, exist_ok=True)
             warning_90_flag.touch()
         elif usable_percentage >= 85 and not warning_85_flag.exists():
-            context += f"\n[Warning] Context window is {usable_percentage:.1f}% full ({context_length:,}/160,000 tokens). The danger zone is >90%. You will receive another warning when you reach 90% - don't panic but gently guide towards context compaction or task completion (if task is nearly complete). Task completion often satisfies compaction requirements and should allow the user to clear context safely, so you do not need to worry about fitting in both processes.\n"
+            context += f"\n[Warning] Context window is {usable_percentage:.1f}% full ({context_length:,}/{usable_tokens:,} tokens). The danger zone is >90%. You will receive another warning when you reach 90% - don't panic but gently guide towards context compaction or task completion (if task is nearly complete). Task completion often satisfies compaction requirements and should allow the user to clear context safely, so you do not need to worry about fitting in both processes.\n"
             warning_85_flag.parent.mkdir(parents=True, exist_ok=True)
             warning_85_flag.touch()
+##-##
 
-# DAIC keyword detection
-current_mode = check_daic_mode_bool()
+## ===== CONTEXT MUTATIONS ===== ##
 
+#!> DAIC mode toggling
 # Implementation triggers (only work in discussion mode, skip for /add-trigger)
 if not is_add_trigger_command and current_mode and daic_toggle_detected:
     set_daic_mode(False)  # Switch to implementation
@@ -137,25 +158,19 @@ CRITICAL RULES:
 - Do NOT add new todos - only implement approved items
 - Do NOT remove todos - complete them or return to discussion
 - Check off each todo as you complete it
-- If you need to change approach: run 'daic' immediately
+- If you discover you need to change your approach, return to discussion mode (Bash, 'daic') and explain
 - Todo list defines your execution boundary
-- When all todos are complete, you'll auto-return to discussion
+- When all todos are complete, you'll auto-return to discussion (no daic command needed)
 """
 
 # Emergency stop (works in any mode)
 if any(word in prompt for word in ["SILENCE", "STOP"]):  # Case sensitive
     set_daic_mode(True)  # Force discussion mode
-    from shared_state import clear_active_todos
     clear_active_todos()  # Clear any active todo list
     context += "[DAIC: EMERGENCY STOP] All tools locked. You are now in discussion mode. Re-align with your pair programmer.\n"
+#!<
 
-# Iterloop detection
-if "iterloop" in prompt.lower():
-    context += "You have been instructed to iteratively loop over a list. Identify what list the user is referring to, then follow this loop: present one item, wait for the user to respond with questions and discussion points, only continue to the next item when the user explicitly says 'continue' or something similar\n"
-
-# Protocol detection - explicit phrases that trigger protocol reading
-
-# Task creation detection
+#!> Task creation
 if not is_add_trigger_command and task_creation_detected:
     task_creation_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-creation.md'
     set_daic_mode(False)
@@ -172,18 +187,22 @@ if not is_add_trigger_command and task_creation_detected:
     ]
     store_active_todos(protocol_todos)
     
-    context += f"""[Task Creation Notice]
-Language in the user prompt indicates that the user may want to create a task. Tasks are for:
-• Work that needs to be done later
-• Work that needs separate context  
-• Work that needs its own git branch
-• NOT subtasks of current work (those go in the current task file/directory)
+    context += f"""[Task Detection Notice]
+Language in the user prompt indicates that the user may want to create a task or the message may reference something that could be a task.
 
-If the user *is* asking to create a task, you *MUST* read {task_creation_protocol_path} and follow the instructions therein to create the task.
+Assess whether the user has explicitly asked to create a task, often evidenced by the use of one of the following trigger phrases:
+{task_creation_phrases if task_creation_phrases else 'No custom trigger phrases defined.'}
+
+**If and only if appropriate**, lightly attempt to dissuade the user from tasks that would be more like a major version than a line item of one or a minor patch.
+
+If its an explicit task creation request, immediately read {task_creation_protocol_path} and follow the instructions therein to create the task.
+
+If you can't be sure, read the protocol after confirmation from the user.
 
 """
+#!<
 
-# Task completion detection
+#!> Task completion
 if not is_add_trigger_command and task_completion_detected:
     task_completion_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-completion.md'
     set_daic_mode(False)
@@ -199,40 +218,49 @@ if not is_add_trigger_command and task_completion_detected:
         {'content': 'Archive completed task and select next task', 'status': 'pending', 'activeForm': 'Archiving completed task and selecting next task'}
     ]
     store_active_todos(protocol_todos)
-    
-    context += f"""[Task Completion Notice]
-Language in the user prompt indicates that the user may want to complete the current task. 
 
+    # Add task completion note
+    context += f"""[Task Completion Notice]
+Language in the user prompt indicates that the user may want to complete the current task.
 IF you or the user believe that the current task is complete, or IF the user has explicitly asked to complete the task, check the current task file and report back on its completion status.
 
 If you are ready to complete the task, you *MUST* read {task_completion_protocol_path} and follow the instructions therein to complete the task.
 
 """
+#!<
 
-# Task startup detection
+#!> Task startup
 if not is_add_trigger_command and task_start_detected:
-    task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
+    task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.m'
+
     set_daic_mode(False)
     
     # Auto-load protocol todos
     protocol_todos = [
         {'content': 'Check git status and handle any uncommitted changes', 'status': 'pending', 'activeForm': 'Checking git status and handling uncommitted changes'},
         {'content': 'Create/checkout task branch and matching submodule branches', 'status': 'pending', 'activeForm': 'Creating/checking out task branch and matching submodule branches'},
-        {'content': 'Update .claude/state/current_task.json with task name', 'status': 'pending', 'activeForm': 'Updating .claude/state/current_task.json with task name'},
+        {'content': 'Update sessions/state/current-task.json with task name', 'status': 'pending', 'activeForm': 'Updating sessions/state/current-task.json with task name'},
         {'content': 'Load task context manifest and verify understanding', 'status': 'pending', 'activeForm': 'Loading task context manifest and verifying understanding'},
         {'content': 'Update task status to in-progress and add started date', 'status': 'pending', 'activeForm': 'Updating task status to in-progress and adding started date'},
-        {'content': 'Enter discussion mode and propose implementation todos', 'status': 'pending', 'activeForm': 'Entering discussion mode and proposing implementation todos'}
     ]
     store_active_todos(protocol_todos)
-    
+
+    protocol_file = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
+
+    with open(protocol_file, 'r') as f:
+        protocol_content = f.read()
+
     context += f"""[Task Startup Notice]
-Language in the user prompt indicates that the user may want to start a new task. If the user wants to begin a new task, you *MUST* follow the task startup protocol at {task_start_protocol_path} to begin the task properly.
+Language in the user prompt indicates that the user may want to start a new task. If the user wants to begin a new task, you *MUST* follow the task startup protocol: at {protocol_content} to begin the task properly.
 
 """
 
-# Context compaction detection
+#!<
+
+#!> Context compaction
 if not is_add_trigger_command and compaction_detected:
     compaction_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'context-compaction.md'
+
     set_daic_mode(False)
     
     # Auto-load protocol todos
@@ -240,56 +268,28 @@ if not is_add_trigger_command and compaction_detected:
         {'content': 'Run logging agent to update work logs', 'status': 'pending', 'activeForm': 'Running logging agent to update work logs'},
         {'content': 'Run context-refinement agent to check for discoveries', 'status': 'pending', 'activeForm': 'Running context-refinement agent to check for discoveries'},
         {'content': 'Run service-documentation agent if service interfaces changed', 'status': 'pending', 'activeForm': 'Running service-documentation agent if service interfaces changed'},
-        {'content': 'Verify/update .claude/state/current_task.json', 'status': 'pending', 'activeForm': 'Verifying/updating .claude/state/current_task.json'},
+        {'content': 'Verify/update sessions/state/current-task.json', 'status': 'pending', 'activeForm': 'Verifying/updating sessions/state/current-task.json'},
         {'content': 'Announce readiness for context clear', 'status': 'pending', 'activeForm': 'Announcing readiness for context clear'}
     ]
     store_active_todos(protocol_todos)
-    
+
+    # Add context compaction note
     context += f"""[Context Compaction Notice]
 Language in the user prompt indicates that the user may want to compact context. You *MUST* read {compaction_protocol_path} and follow the instructions therein to compact context properly.
 """
+#!<
 
+#!> Iterloop detection
+if "iterloop" in prompt.lower():
+    context += "ITERLOOP DETECTED:\nYou have been instructed to iteratively loop over a list. Identify what list the user is referring to, then follow this loop: present one item, wait for the user to respond with questions and discussion points, only continue to the next item when the user explicitly says 'continue' or something similar\n"
+#!<
 
-# Task detection patterns (optional feature)
-if config.get("task_detection", {}).get("enabled", True):
-    task_patterns = [
-        r"(?i)we (should|need to|have to) (implement|fix|refactor|migrate|test|research)",
-        r"(?i)create a task for",
-        r"(?i)add this to the (task list|todo|backlog)",
-        r"(?i)we'll (need to|have to) (do|handle|address) (this|that) later",
-        r"(?i)that's a separate (task|issue|problem)",
-        r"(?i)file this as a (bug|task|issue)"
-    ]
-    
-    task_mentioned = any(re.search(pattern, prompt) for pattern in task_patterns)
-    
-    if task_mentioned:
-        # Add task detection note
-        context += """
-[Task Detection Notice]
-The message may reference something that could be a task.
+##-##
 
-IF you or the user have discovered a potential task that is sufficiently unrelated to the current task, ask if they'd like to create a task file.
-
-Tasks are:
-• More than a couple commands to complete
-• Semantically distinct units of work
-• Work that takes meaningful context
-• Single focused goals (not bundled multiple goals)
-• Things that would take multiple days should be broken down
-• NOT subtasks of current work (those go in the current task file/directory)
-
-If they want to create a task, follow the task creation protocol.
-"""
+#-#
 
 # Output the context additions
-if context:
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "UserPromptSubmit",
-            "additionalContext": context
-        }
-    }
-    print(json.dumps(output))
+output = { "hookSpecificOutput": { "hookEventName": "UserPromptSubmit", "additionalContext": context } }
+print(json.dumps(output))
 
 sys.exit(0)

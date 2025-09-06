@@ -68,7 +68,7 @@ from shared_state import get_project_root
 PROJECT_ROOT = get_project_root()
 
 # Clear the current transcript directory
-BATCH_DIR = PROJECT_ROOT / '.claude' / 'state' / subagent_type
+BATCH_DIR = PROJECT_ROOT / 'sessions' / 'state' / subagent_type
 BATCH_DIR.mkdir(parents=True, exist_ok=True)
 target_dir = BATCH_DIR
 for item in target_dir.iterdir():
@@ -77,7 +77,7 @@ for item in target_dir.iterdir():
 
 # Set flag indicating we're entering a subagent context
 # This prevents DAIC reminders from the subagent's tool calls
-subagent_flag = PROJECT_ROOT / '.claude' / 'state' / 'in_subagent_context.flag'
+subagent_flag = PROJECT_ROOT / 'sessions' / 'state' / 'in_subagent_context.flag'
 subagent_flag.touch()
 
 # Set up token counting

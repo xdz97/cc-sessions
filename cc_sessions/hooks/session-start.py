@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
-"""Session start hook to initialize Claude Code Sessions context."""
+
+# ===== IMPORTS ===== #
+
+## ===== STDLIB ===== ##
+import subprocess
+import shutil
 import json
 import os
-import sys
-import subprocess
-from pathlib import Path
-from shared_state import get_project_root, ensure_state_dir, get_task_state
+##-##
 
-# Get project root
-PROJECT_ROOT = get_project_root()
+## ===== 3RD-PARTY ===== ##
+##-##
 
+## ===== LOCAL ===== ##
+from shared_state import PROJECT_ROOT, ensure_state_dir, get_task_state
+##-##
+
+#-#
+
+# ===== GLOBALS ===== #
 # Get developer name from config
 try:
     CONFIG_FILE = PROJECT_ROOT / 'sessions' / 'sessions-config.json'
@@ -22,58 +31,78 @@ try:
 except:
     developer_name = 'the developer'
 
+daic_state_file = PROJECT_ROOT / 'sessions' / 'state' / 'daic-mode.json'
+subagent_flag = PROJECT_ROOT / 'sessions' / 'state' / 'in_subagent_context.flag'
+warning_85_flag = PROJECT_ROOT / 'sessions' / 'state' / 'context-warning-85.flag'
+warning_90_flag = PROJECT_ROOT / 'sessions' / 'state' / 'context-warning-90.flag'
+active_todos_file = PROJECT_ROOT / 'sessions' / 'state' / 'active-todos.json'
+
 # Initialize context
-context = f"""You are beginning a new context window with {developer_name}.
+context = f"""You are beginning a new context window with the developer, {developer_name}.
 
 """
 
-# Quick configuration checks
-needs_setup = False
-quick_checks = []
-
-# 1. Check if daic command exists
-try:
-    import shutil
-    import os
-    # Cross-platform command detection
-    if os.name == 'nt':
-        # Windows - check for .cmd or .ps1 versions
-        if not (shutil.which('daic.cmd') or shutil.which('daic.ps1') or shutil.which('daic')):
-            needs_setup = True
-            quick_checks.append("daic command")
-    else:
-        # Unix/Mac - use which command
-        if not shutil.which('daic'):
-            needs_setup = True
-            quick_checks.append("daic command")
-except:
-    needs_setup = True
-    quick_checks.append("daic command")
-
-# 2. Check if tiktoken is installed (required for subagent transcript chunking)
 try:
     import tiktoken
 except ImportError:
     needs_setup = True
     quick_checks.append("tiktoken (pip install tiktoken)")
 
-# 3. Check if DAIC state file exists (create if not)
+# Quick configuration checks
+needs_setup = False
+quick_checks = []
+#-#
+
+"""
+╔═══════════════════════════════════════════════════════════════════════════════════════════════╗
+║ ██████╗██████╗ ██████╗ ██████╗██╗ █████╗ ███╗  ██╗  ██████╗██████╗ █████╗ ██████╗██████╗ ║
+║ ██╔═══╝██╔═══╝██╔════╝██╔════╝██║██╔══██╗████╗ ██║  ██╔════╝╚═██╔═╝██╔══██╗██╔══██╝╚═██╔═╝ ║
+║ ██████╗█████╗ ███████╗███████╗██║██║  ██║██╔██╗██║  ███████╗  ██║  ███████║██████╔╝  ██║  ║
+║ ╚═══██║██╔══╝ ╚════██║╚════██║██║██║  ██║██║╚████║  ╚════██║  ██║  ██╔══██║██╔═██╗   ██║  ║
+║ ██████║██████╗██████║██████║██║╚█████╔╝██║ ╚███║  ██████║  ██║  ██║  ██║██║  ██║  ██║  ║
+║ ╚═════╝╚═════╝╚═════╝╚═════╝╚═╝ ╚════╝ ╚═╝  ╚══╝  ╚═════╝  ╚═╝  ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═╝  ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
+SessionStart Hook
+
+Initializes session state and loads task context:
+- Checks for required components (daic command, tiktoken)  
+- Clears session warning flags and stale state
+- Loads current task or lists available tasks
+- Updates task status from pending to in-progress
+"""
+
+# ===== EXECUTION ===== #
+
+#!> 1. Check for daic command existence
+# Placeholder as daic approach will be refactored soon
+#!<
+
+#!> 2. Check if tiktoken is installed
+try:
+    import tiktoken
+except ImportError:
+    needs_setup = True
+    quick_checks.append("tiktoken (pip install tiktoken)")
+#!<
+
+#!> 3. Check if DAIC state file exists (create if not)
 ensure_state_dir()
-daic_state_file = PROJECT_ROOT / '.claude' / 'state' / 'daic-mode.json'
+daic_state_file = PROJECT_ROOT / 'sessions' / 'state' / 'daic-mode.json'
 if not daic_state_file.exists():
     # Create default state
-    with open(daic_state_file, 'w') as f:
-        json.dump({"mode": "discussion"}, f, indent=2)
+    with open(daic_state_file, 'w') as f: json.dump({"mode": "discussion"}, f, indent=2)
+#!<
 
-# 4. Clear context warning flags for new session
-warning_85_flag = PROJECT_ROOT / '.claude' / 'state' / 'context-warning-85.flag'
-warning_90_flag = PROJECT_ROOT / '.claude' / 'state' / 'context-warning-90.flag'
+#!> 4. Clear context warning flags for new session
+warning_85_flag = PROJECT_ROOT / 'sessions' / 'state' / 'context-warning-85.flag'
+warning_90_flag = PROJECT_ROOT / 'sessions' / 'state' / 'context-warning-90.flag'
 if warning_85_flag.exists():
     warning_85_flag.unlink()
 if warning_90_flag.exists():
     warning_90_flag.unlink()
+#!<
 
-# 5. Check if sessions directory exists
+#!> 5. Check if sessions directory exists
 sessions_dir = PROJECT_ROOT / 'sessions'
 if sessions_dir.exists():
     # Check for active task
@@ -146,7 +175,7 @@ Continue from where you left off, updating the work log as you progress.
             
             context += """
 To select a task:
-1. Update .claude/state/current_task.json with the task name
+1. Update sessions/state/current-task.json with the task name
 2. Or create a new task following sessions/protocols/task-creation.md
 """
         else:
@@ -156,7 +185,7 @@ To create your first task:
 1. Copy the template: cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name].md
    Priority prefixes: h- (high), m- (medium), l- (low), ?- (investigate)
 2. Fill in the task details
-3. Update .claude/state/current_task.json
+3. Update sessions/state/current-task.json
 4. Follow sessions/protocols/task-startup.md
 """
 else:
@@ -164,12 +193,13 @@ else:
     context += """Sessions system is not yet initialized.
 
 Run the install script to set up the sessions framework:
-.claude/sessions-setup.sh
+sessions/sessions-setup.sh
 
 Or follow the manual setup in the documentation.
 """
+#!<
 
-# If setup is needed, provide guidance
+#!> 6. If setup is needed, provide guidance
 if needs_setup:
     context += f"""
 [Setup Required]
@@ -181,6 +211,9 @@ To complete setup:
 
 The sessions system helps manage tasks and maintain discussion/implementation workflow discipline.
 """
+#!<
+
+#-#
 
 output = {
     "hookSpecificOutput": {

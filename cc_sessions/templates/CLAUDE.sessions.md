@@ -14,19 +14,19 @@ This file provides collaborative guidance and philosophy when using the Claude C
 ## Task Management
 
 ### Best Practices
-- One task at a time (check .claude/state/current_task.json)
+- One task at a time (check sessions/state/current-task.json)
 - Update work logs as you progress  
 - Mark todos as completed immediately after finishing
 
 ### Quick State Checks
 ```bash
-cat .claude/state/current_task.json  # Shows current task
+cat sessions/state/current-task.json  # Shows current task
 git branch --show-current             # Current branch/task
 ```
 
-### current_task.json Format
+### current-task.json Format
 
-**ALWAYS use this exact format for .claude/state/current_task.json:**
+**ALWAYS use this exact format for sessions/state/current-task.json:**
 ```json
 {
   "task": "task-name",        // Just the task name, NO path, NO .md extension

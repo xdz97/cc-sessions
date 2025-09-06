@@ -63,7 +63,7 @@ Before making any changes:
 Follow these steps to find and read the transcript files:
 
 1. **Determine the parent directory** of the sessions/ directory in which the task file is stored
-2. **List all files** in `[parent directory]/.claude/state/logging/`
+2. **List all files** in `[parent directory]/sessions/state/logging/`
 3. **Read every file** in that directory
 
 The transcript files contain the full conversation history that led to this point.
@@ -232,8 +232,8 @@ Before saving, verify you have:
 ### CRITICAL RESTRICTIONS
 
 **YOU MUST NEVER:**
-- Edit or touch any files in .claude/state/ directory
-- Modify current_task.json
+- Edit or touch any files in sessions/state/ directory
+- Modify current-task.json
 - Change DAIC mode or run daic command
 - Edit any system state files
 - Try to control workflow or session state

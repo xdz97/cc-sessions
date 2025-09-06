@@ -91,8 +91,8 @@ Primary configuration in `sessions/sessions-config.json`:
 - `branch_enforcement.enabled` - Enable/disable git branch checking
 - `task_detection.enabled` - Enable/disable task-based workflows
 
-State files in `.claude/state/`:
-- `current_task.json` - Active task metadata
+State files in `sessions/state/`:
+- `current-task.json` - Active task metadata
 - `daic-mode.json` - Current discussion/implementation mode
 - `active-todos.json` - Approved TodoWrite execution scope
 
@@ -129,7 +129,7 @@ Windows-specific configuration in `.claude/settings.json`:
 
 ### Subagent Protection
 - Detection mechanism prevents DAIC reminders in subagent contexts
-- Subagents blocked from editing .claude/state files
+- Subagents blocked from editing sessions/state files
 - Todo completion checks bypass subagent contexts
 - Automatic flag cleanup when Task tool completes
 - Strict separation between main thread and agent operations

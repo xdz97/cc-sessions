@@ -20,7 +20,7 @@ You've been called at the end of a work session to check if any new context was 
    Follow these steps to find and read the transcript files:
    
    a. **Determine the parent directory** of the sessions/ directory in which the task file is stored
-   b. **List all files** in `[parent directory]/.claude/state/context-refinement/`
+   b. **List all files** in `[parent directory]/sessions/state/context-refinement/`
    c. **Read every file** in that directory
    
    The transcript files contain the full conversation history that led to this point.

@@ -33,11 +33,9 @@ import os
 import sys
 import json
 import shutil
-import stat
 import subprocess
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
 
 # Colors for terminal output
 class Colors:
@@ -134,9 +132,9 @@ class SessionsInstaller:
         
         dirs = [
             ".claude/hooks",
-            ".claude/state", 
             ".claude/agents",
             ".claude/commands",
+            "sessions/state", 
             "sessions/tasks",
             "sessions/tasks/done",
             "sessions/protocols",
@@ -603,12 +601,12 @@ class SessionsInstaller:
         print(color("✓ Sessions hooks configured in settings.json", Colors.GREEN))
         
         # Initialize DAIC state
-        daic_state = self.project_root / ".claude/state/daic-mode.json"
+        daic_state = self.project_root / "sessions/state/daic-mode.json"
         daic_state.write_text(json.dumps({"mode": "discussion"}, indent=2))
         
         # Create initial task state
         current_date = datetime.now().strftime("%Y-%m-%d")
-        task_state = self.project_root / ".claude/state/current_task.json"
+        task_state = self.project_root / "sessions/state/current-task.json"
         task_state.write_text(json.dumps({
             "task": None,
             "branch": None,

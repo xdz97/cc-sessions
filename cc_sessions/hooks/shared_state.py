@@ -25,7 +25,7 @@ else:
     current = Path.cwd()
     while current.parent != current:
         if (current / ".claude").exists(): PROJECT_ROOT = current; break
-    current = current.parent
+        current = current.parent
 
 if not PROJECT_ROOT:
     print("Error: Could not find project root (no .claude directory).", file=sys.stderr)
@@ -35,6 +35,51 @@ STATE_DIR = PROJECT_ROOT / "sessions" / "state"
 DAIC_STATE_FILE = STATE_DIR / "daic-mode.json"
 TASK_STATE_FILE = STATE_DIR / "current-task.json"
 ACTIVE_TODOS_FILE = STATE_DIR / "active-todos.json"
+STASHED_TODOS_FILE = STATE_DIR / "stashed-todos.json"
+
+# Load configuration from project's .claude directory
+CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
+
+#!> Default configuration
+DEFAULT_CONFIG = {
+    "trigger_phrases": ["make it so", "run that"],
+    "blocked_tools": ["Edit", "Write", "MultiEdit", "NotebookEdit"],
+    "branch_enforcement": {
+        "enabled": True,
+        "task_prefixes": ["implement-", "fix-", "refactor-", "migrate-", "test-", "docs-"],
+        "branch_prefixes": {
+            "implement-": "feature/",
+            "fix-": "fix/",
+            "refactor-": "feature/",
+            "migrate-": "feature/",
+            "test-": "feature/",
+            "docs-": "feature/"
+        }
+    },
+    "read_only_bash_commands": [
+        "ls", "ll", "pwd", "cd", "echo", "cat", "head", "tail", "less", "more",
+        "grep", "rg", "find", "which", "whereis", "type", "file", "stat",
+        "du", "df", "tree", "basename", "dirname", "realpath", "readlink",
+        "whoami", "env", "printenv", "date", "cal", "uptime", "ps", "top",
+        "wc", "cut", "sort", "uniq", "comm", "diff", "cmp", "md5sum", "sha256sum",
+        "git status", "git log", "git diff", "git show", "git branch", 
+        "git remote", "git fetch", "git describe", "git rev-parse", "git blame",
+        "docker ps", "docker images", "docker logs", "npm list", "npm ls",
+        "pip list", "pip show", "yarn list", "curl", "wget", "jq", "awk",
+        "sed -n", "tar -t", "unzip -l",
+        # Windows equivalents
+        "dir", "where", "findstr", "fc", "comp", "certutil -hashfile",
+        "Get-ChildItem", "Get-Location", "Get-Content", "Select-String",
+        "Get-Command", "Get-Process", "Get-Date", "Get-Item"
+    ]
+}
+#!<
+
+USER_CONFIG = DEFAULT_CONFIG
+if CONFIG_FILE.exists():
+    try:
+        with open(CONFIG_FILE, 'r') as f: USER_CONFIG = json.load(f)
+    except: pass
 
 # Mode description strings
 DISCUSSION_MODE_MSG = "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)"
@@ -114,8 +159,7 @@ def toggle_daic_mode() -> str:
         with open(DAIC_STATE_FILE, 'r') as f:
             data = json.load(f)
             current_mode = data.get("mode", "discussion")
-    except (FileNotFoundError, json.JSONDecodeError):
-        current_mode = "discussion"
+    except (FileNotFoundError, json.JSONDecodeError): current_mode = "discussion"
 
     # Toggle and write new value
     new_mode = "implementation" if current_mode == "discussion" else "discussion"
@@ -146,20 +190,20 @@ def set_daic_mode(value: str|bool):
     return name
 ##-##
 
-## ==== TASK MGMT ===== ##
+## ===== TASK/GIT MGMT ===== ##
 def parse_task_frontmatter(content: str) -> dict:
     """Parse YAML frontmatter from task file content."""
     if not content.startswith('---'): return {}
- 
+
     lines = content.split('\n')
     frontmatter_lines = []
     in_frontmatter = False
- 
+
     for i, line in enumerate(lines):
         if i == 0 and line == '---': in_frontmatter = True; continue
         if in_frontmatter and line == '---': break
         if in_frontmatter: frontmatter_lines.append(line)
- 
+
     # Parse the frontmatter
     frontmatter = {}
     for line in frontmatter_lines:
@@ -184,19 +228,19 @@ def update_task_frontmatter(file_path: Path, updates: dict) -> None:
     lines = content.split('\n')
 
     if not content.startswith('---'): return
- 
+
     # Find frontmatter boundaries
     end_idx = 0
     for i, line in enumerate(lines[1:], 1):
         if line == '---': end_idx = i; break
- 
+
     # Update frontmatter lines
     for i in range(1, end_idx):
         for key, value in updates.items():
             if lines[i].startswith(f"{key}:"):
                 if isinstance(value, list): lines[i] = f"{key}: [{', '.join(value)}]"
                 else: lines[i] = f"{key}: {value}"
- 
+
     # Write back
     file_path.write_text('\n'.join(lines))
 
@@ -218,7 +262,7 @@ def get_task_state() -> dict:
     # Get the active task name
     task_name = get_active_task_name()
     if not task_name: return {"task": None, "branch": None, "services": [], "updated": None}
- 
+
     # Find the task file
     tasks_dir = PROJECT_ROOT / "sessions" / "tasks"
     task_file = tasks_dir / f"{task_name}.md"
@@ -243,7 +287,7 @@ def get_task_state() -> dict:
 
 def set_task_state(task: str, branch: str, services: list):
     """Set current task state.
- 
+
     Updates both the current-task.json pointer and the task file frontmatter.
     """
     ensure_state_dir()
@@ -281,7 +325,7 @@ def add_service_to_task(service: str):
     if service not in state.get("services", []):
         services = state.get("services", [])
         services.append(service)
-        
+
         # Update using set_task_state to maintain consistency
         task_name = state.get("task")
         branch = state.get("branch")
@@ -315,6 +359,32 @@ def check_todos_complete() -> bool:
  
     # All todos must have status == 'completed'
     return all(t.get('status') == 'completed' for t in todos)
+
+def stash_active_todos() -> None:
+    """Stash the current active todos to a timestamped backup file."""
+    todos = get_active_todos()
+    if not todos: return
+
+    with open(STASHED_TODOS_FILE, 'w') as f: json.dump({"todos": todos}, f, indent=2)
+
+    # Clear the main active todos file
+    clear_active_todos()
+
+def restore_stashed_todos() -> None:
+    """Restore todos from the stashed backup file."""
+    if not STASHED_TODOS_FILE.exists(): return
+
+    try:
+        with open(STASHED_TODOS_FILE, 'r') as f: data = json.load(f)
+        todos = data.get("todos", [])
+        if todos: store_active_todos(todos)
+        STASHED_TODOS_FILE.unlink()
+        return todos
+    except (FileNotFoundError, json.JSONDecodeError): return None
+
+def clear_stashed_todos() -> None:
+    """Clear the stashed todos file."""
+    if STASHED_TODOS_FILE.exists(): STASHED_TODOS_FILE.unlink()
 ##-##
 
 #-#

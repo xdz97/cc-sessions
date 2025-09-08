@@ -2,7 +2,6 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-from pathlib import Path
 import json
 import sys
 import os
@@ -12,7 +11,9 @@ import os
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import check_daic_mode_bool, set_daic_mode, store_active_todos, clear_active_todos, get_current_model, PROJECT_ROOT
+from shared_state import (  check_daic_mode_bool, set_daic_mode, store_active_todos, 
+                            get_current_model, clear_active_todos, PROJECT_ROOT,
+                            stash_active_todos )
 ##-##
 
 #-#
@@ -34,6 +35,8 @@ CURRENT_MODEL = get_current_model()
 context = "" if is_add_trigger_command else "[[ ultrathink ]]\n"
 transcript_path = input_data.get("transcript_path", "")
 
+active_todos_file = PROJECT_ROOT / 'sessions' / 'state' / 'active-todos.json'
+
 #!> Trigger phrase detection
 daic_phrases = ["run that", "yert", "make it so"]
 task_creation_phrases = []
@@ -42,15 +45,12 @@ task_start_phrases = []
 compaction_phrases = ["lets compact"]
 
 try:
-    trigger_file = PROJECT_ROOT / 'sessions' / 'state' / 'trigger-phrases.json'
-    if trigger_file.exists():
-        with open(trigger_file, 'r') as f:
-            custom_phrases = json.load(f)
-            daic_phrases += custom_phrases.get('daic_phrases', [])
-            task_creation_phrases += custom_phrases.get('task_creation_phrases', [])
-            task_completion_phrases += custom_phrases.get('task_completion_phrases', [])
-            task_start_phrases += custom_phrases.get('task_start_phrases', [])
-            compaction_phrases += custom_phrases.get('compaction_phrases', [])
+    if USER_CONFIG:
+        daic_phrases += USER_CONFIG.get('trigger_phrases', [])
+        task_creation_phrases += USER_CONFIG.get('task_creation_phrases', [])
+        task_completion_phrases += USER_CONFIG.get('task_completion_phrases', [])
+        task_start_phrases += USER_CONFIG.get('task_start_phrases', [])
+        compaction_phrases += USER_CONFIG.get('compaction_phrases', [])
 except Exception as e: print(f"[DEBUG] Error loading trigger phrases: {e}", file=sys.stderr)
 
 daic_toggle_detected = any(phrase.lower() in prompt.lower() for phrase in daic_phrases)
@@ -62,6 +62,7 @@ compaction_detected = any(phrase.lower() in prompt.lower() for phrase in compact
 if any([daic_toggle_detected, task_creation_detected, task_completion_detected, task_start_detected, compaction_detected]):
     clear_active_todos()
 #!<
+
 #-#
 
 """
@@ -121,20 +122,20 @@ def get_context_length_from_transcript(transcript_path):
 # ===== EXECUTION ===== #
 
 ## ===== TOKEN MONITORING ===== ##
-# Check context usage and warn if needed (only if tiktoken is available)
+# Check context usage and warn if needed
 if transcript_path and os.path.exists(transcript_path):
     context_length = get_context_length_from_transcript(transcript_path)
-    
+
     if context_length > 0:
         # Calculate percentage of usable context (opus 160k/sonnet 800k practical limit before auto-compact)
         usable_tokens = 160000
         if CURRENT_MODEL == "sonnet": usable_tokens = 800000
         usable_percentage = (context_length / usable_tokens) * 100
-        
+
         # Check for warning flag files to avoid repeating warnings
         warning_85_flag = PROJECT_ROOT / "sessions" / "state" / "context-warning-85.flag"
         warning_90_flag = PROJECT_ROOT / "sessions" / "state" / "context-warning-90.flag"
-        
+
         # Token warnings (only show once per session)
         if usable_percentage >= 90 and not warning_90_flag.exists():
             context += f"\n[90% WARNING] {context_length:,}/{usable_tokens:,} tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
@@ -174,7 +175,9 @@ if any(word in prompt for word in ["SILENCE", "STOP"]):  # Case sensitive
 if not is_add_trigger_command and task_creation_detected:
     task_creation_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-creation.md'
     set_daic_mode(False)
-    
+    had_active_todos = False
+    if active_todos_file.exists(): had_active_todos = True; stash_active_todos()
+
     # Auto-load protocol todos
     protocol_todos = [
         {'content': 'Determine task priority and type prefix', 'status': 'pending', 'activeForm': 'Determining task priority and type prefix'},
@@ -186,7 +189,8 @@ if not is_add_trigger_command and task_creation_detected:
         {'content': 'Commit the new task file', 'status': 'pending', 'activeForm': 'Committing the new task file'}
     ]
     store_active_todos(protocol_todos)
-    
+
+    # Add task detection note
     context += f"""[Task Detection Notice]
 Language in the user prompt indicates that the user may want to create a task or the message may reference something that could be a task.
 
@@ -200,13 +204,18 @@ If its an explicit task creation request, immediately read {task_creation_protoc
 If you can't be sure, read the protocol after confirmation from the user.
 
 """
+
+    if had_active_todos:
+        context += """Your previous todos have been stashed and task creation protocol todos have been made active. Your previous todos will be restored after the task creation todos are complete. Do not attempt to update or complete them until after the task creation protocol todos have been completed.
+
+"""
 #!<
 
 #!> Task completion
 if not is_add_trigger_command and task_completion_detected:
     task_completion_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-completion.md'
     set_daic_mode(False)
-    
+ 
     # Auto-load protocol todos
     protocol_todos = [
         {'content': 'Verify all success criteria are checked off', 'status': 'pending', 'activeForm': 'Verifying all success criteria are checked off'},
@@ -231,10 +240,10 @@ If you are ready to complete the task, you *MUST* read {task_completion_protocol
 
 #!> Task startup
 if not is_add_trigger_command and task_start_detected:
-    task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.m'
+    task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
 
     set_daic_mode(False)
-    
+
     # Auto-load protocol todos
     protocol_todos = [
         {'content': 'Check git status and handle any uncommitted changes', 'status': 'pending', 'activeForm': 'Checking git status and handling uncommitted changes'},
@@ -254,15 +263,14 @@ if not is_add_trigger_command and task_start_detected:
 Language in the user prompt indicates that the user may want to start a new task. If the user wants to begin a new task, you *MUST* follow the task startup protocol: at {protocol_content} to begin the task properly.
 
 """
-
 #!<
 
 #!> Context compaction
 if not is_add_trigger_command and compaction_detected:
     compaction_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'context-compaction.md'
-
+    had_active_todos = False
+    if active_todos_file.exists(): had_active_todos = True; stash_active_todos()
     set_daic_mode(False)
-    
     # Auto-load protocol todos
     protocol_todos = [
         {'content': 'Run logging agent to update work logs', 'status': 'pending', 'activeForm': 'Running logging agent to update work logs'},
@@ -276,6 +284,10 @@ if not is_add_trigger_command and compaction_detected:
     # Add context compaction note
     context += f"""[Context Compaction Notice]
 Language in the user prompt indicates that the user may want to compact context. You *MUST* read {compaction_protocol_path} and follow the instructions therein to compact context properly.
+
+"""
+    if had_active_todos: context += """Your todos have been stashed and will be restored in the next session after the user clears context. Do not attempt to update or complete your previous todo list (context compaction todos are now active).
+
 """
 #!<
 

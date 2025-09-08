@@ -258,7 +258,7 @@ while true; do
 done
 
 # Tool blocking configuration (advanced)
-blocked_tools='["Edit", "Write", "MultiEdit", "NotebookEdit"]'
+blocked_tools='["Edit", "Write", "MultiEdit", "NotebookEdit", "Task", "Bash"]'  # Default blocked tools
 if [ "$advanced_config" = "y" ]; then
     echo
     echo -e "${CYAN}╭───────────────────────────────────────────────────────────────╮${NC}"
@@ -273,16 +273,16 @@ if [ "$advanced_config" = "y" ]; then
     echo -e "    2. ${YELLOW}🔒${NC} Write - Create new files"
     echo -e "    3. ${YELLOW}🔒${NC} MultiEdit - Multiple edits in one operation"
     echo -e "    4. ${YELLOW}🔒${NC} NotebookEdit - Edit Jupyter notebooks"
-    echo -e "    5. ${GREEN}🔓${NC} Bash - Run shell commands"
+    echo -e "    5. ${YELLOW}🔒${NC} Task - Launch specialized agents"
     echo -e "    6. ${GREEN}🔓${NC} Read - Read file contents"
     echo -e "    7. ${GREEN}🔓${NC} Grep - Search file contents"
-    echo -e "    8. ${GREEN}🔓${NC} Glob - Find files by pattern"
+    echo -e "    8. ${GREEN}🔓 ${NC} Bash - Run shell commands"
     echo -e "    9. ${GREEN}🔓${NC} LS - List directory contents"
     echo -e "   10. ${GREEN}🔓${NC} WebSearch - Search the web"
     echo -e "   11. ${GREEN}🔓${NC} WebFetch - Fetch web content"
-    echo -e "   12. ${GREEN}🔓${NC} Task - Launch specialized agents"
+    echo -e "   12. ${GREEN}🔓${NC} Glob - Find files by pattern"
     echo
-    echo -e "${DIM}  Hint: Edit tools are typically blocked to enforce discussion-first workflow${NC}"
+    echo -e "${DIM}  Hint: Edit tools are typically blocked to enforce discussion-first workflow. Bash tool is blocked for write-oriented commands - to disable read-only Bash commands in discussion mode, add Bash to your blocked tools.${NC}"
     echo
     while true; do
         read -p "$(echo -e ${CYAN})  Modify blocked tools list? (y/n): $(echo -e ${NC})" -r
@@ -421,7 +421,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-hooks.py"
           }
         ]
       }

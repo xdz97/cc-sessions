@@ -88,6 +88,9 @@ Ask yourself:
 - Does this change the understanding of how the system works?
 - Would the original implementation have gone smoother with this knowledge?
 
+If yes to any → Update the manifest
+If no to all → Report no updates needed
+
 ## Examples
 
 **Worth Documenting:**
@@ -95,6 +98,12 @@ Ask yourself:
 
 **Not Worth Documenting:**
 "Found that the function could be written more efficiently using a map instead of a loop. Changed it for better performance."
+
+## Output
+
+Either:
+1. "No context updates needed - implementation aligned with documented context"
+2. "Context manifest updated with X discoveries from this session" + summary of what was added
 
 ## Remember
 

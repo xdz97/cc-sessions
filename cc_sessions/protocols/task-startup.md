@@ -10,7 +10,7 @@ When starting work on a task (new or existing):
 □ Load task context manifest and verify understanding
 □ Update task status to in-progress and add started date
 
-## 0. Git Setup
+## 1. Git Setup
 
 Check task frontmatter for branch name and modules list, then create/checkout branches.
 
@@ -27,22 +27,10 @@ fi
 
 ### Branch Creation/Checkout
 
-**For main tasks** (no letter suffix):
-1. Start from main branch (safe to pull since we don't commit to main)
-2. Pull latest changes from origin/main
-3. Create the new task branch
+1. Start from main branch
+2. Reconcile any divergences - ensure that any unstaged changes to main are committed or stashed based on user preferences and any unpulled changes are pulled from origin/main
+3. Once origin/main contains all local change the user wants and local main contains all remote change, create the new task branch
 
-**For subtasks** (branch contains letter suffix like tt1a-*):
-1. First check current status to ensure no uncommitted changes
-   - Run `git status` and address EVERY file shown
-   - If super-repo: Check inside each submodule for uncommitted changes
-   - Either commit or stash ALL changes, never leave files behind
-2. Ensure the parent branch exists and checkout from it
-3. If the parent branch has a remote, check if it needs updating:
-   - Fetch the remote version
-   - Compare local and remote to determine if pulling is needed
-   - Alert if branches have diverged
-4. Create the subtask branch from the parent branch
 
 ### Super-repo Submodule Management (IF .gitmodules exists)
 
@@ -51,7 +39,7 @@ fi
 - For each module listed:
   - Navigate to that module directory
   - Check for uncommitted changes first
-  - Checkout main and pull latest
+  - If not on main, checkout main and pull latest
   - Create a branch with the same name as the task branch
   - Return to the parent directory
 
@@ -72,7 +60,7 @@ Example: If working on tt1-login-ux-flow affecting io_web and io_user_model, cre
 > - For each affected submodule, navigate to it and checkout the matching branch
 > - Only pull from remote if the remote branch exists
 
-## 1. Update Task State
+## 2. Update Task State
 
 After creating/checking out branches, update the sessions/state/current-task.json file.
 
@@ -89,13 +77,13 @@ The full task state (branch, modules, status) is read from the task file frontma
 - ❌ Including `.md` file extension
 - ❌ Adding branch or services fields (these come from frontmatter now)
 
-## 2. Load Task Context Manifest
+## 3. Load Task Context Manifest
 
 Read the Context Manifest section from the task file.
 
-If the Context Manifest is missing, you *must* use context-gathering agent to create one
+If the Context Manifest is missing, you **must** use the context-gathering agent to analyze this task and create a context manifest.
 
-## 3. Load Context & Verify Branch State
+## 4. Load Context & Verify Branch State
 
 Based on the manifest:
 - Read the narrative explanation to understand how everything works
@@ -104,21 +92,17 @@ Based on the manifest:
 - Note file locations for where changes will be made
 - Read prescribed file segments (if any)
 - Change the frontmatter status to "in-progress"
-- Add "started: YYYY-MM-DD" to the front matter
+- Add "started: MM/DD/YYYY" to the front matter
 
-**IF SUPER-REPO: Verify All Module Branches**
-Before starting work, confirm all modules are on correct branches. Check the task file frontmatter for the list of modules/services affected. Ensure *all* parents of any affected submodules are on branch (ex. super-repo containing other super-repos with affected submodules means top-level and service-containing super-repos need to be on branch *in addition to* the deepest submodule)
 
-If any module that will be edited is not on the task branch, STOP and fix it first.
-
-## 4. Verify Understanding
+## 5. Verify Understanding
 
 Before diving in:
 - Understand the success criteria
 - Review the work log for previous progress
 - Check for blockers or gotchas
 
-## 5. Initial Discussion & Planning
+## 6. Initial Discussion & Planning
 
 After loading task context:
 1. Analyze the task requirements thoroughly
@@ -131,10 +115,12 @@ After loading task context:
    
    Shall I proceed with this implementation?
    ```
-4. Iterate based on user feedback until approved
-5. Upon approval, convert proposed todos to TodoWrite exactly as written
+3. Iterate based on user feedback until approved
+4. Upon approval, convert proposed todos to TodoWrite exactly as written
 
-## 6. Work Mode
+**IMPORTANT**: Until your todos are approved, you are seeking the user's approval of an explicitly proposed and properly explained list of execution todos. Besides answering user questions during discussion, your messages should end with an expanded explanation of each todo, the clean list of todos, and **no further messages**.
+
+## 7. Work Mode
 For the duration of the task:
 - Discuss before implementing
 - Constantly seek user input and approval
@@ -149,4 +135,11 @@ After completion of the last task in any todo list:
 
 ## Example First Message
 
-"I've loaded the context for [task]. Based on the manifest, I understand we're working on [summary]. The last work log entry shows [status]. Should I continue with [next step] or would you like to discuss the approach?"
+"I've loaded the context for [task]. Based on the manifest, I understand we're working on [summary]. The last work log entry shows [status]. 
+
+Here is the work I think we should accomplish:
+- [todo item]: [full explanation]
+- [todo item]: [full explanation]
+- ...
+
+Use any disccusion mode trigger phrase if you approve the proposal *or* tell me how I should adjust the proposal."

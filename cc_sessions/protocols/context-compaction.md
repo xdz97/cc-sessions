@@ -1,6 +1,6 @@
 # Context Compaction Protocol
 
-When you are instructed to compact context:
+When context window reaches ~90%, you will be instructed to perform these steps:
 
 ## Protocol Todos
 <!-- Use TodoWrite to add these todos exactly as written -->
@@ -31,15 +31,7 @@ Before compacting, delegate to agents:
 
 Ensure that sessions/state/current-task.json contains the correct current task, branch, and services.
 
-## 3. Create Checkpoint
-
-Document the current state:
-- What was accomplished
-- What remains to be done
-- Any blockers or considerations
-- Next concrete steps
-
-## 4. Announce Readiness
+## 3. Announce Readiness
 
 Announce to the user that the agents have completed their work, the task state is updated, and we are ready to clear context.
 

@@ -110,7 +110,7 @@ async function detectProjectDirectory() {
 const config = {
   developer_name: "the developer",
   trigger_phrases: ["make it so", "run that", "go ahead", "yert"],
-  blocked_tools: ["Edit", "Write", "MultiEdit", "NotebookEdit"],
+  blocked_tools: ["Edit", "Write", "MultiEdit", "NotebookEdit", "Task", "Bash"],
   task_detection: { enabled: true },
   branch_enforcement: { enabled: true }
 };
@@ -771,7 +771,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\subagent-hooks.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-hooks.py"
           }
         ]
       }

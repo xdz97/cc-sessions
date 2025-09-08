@@ -14,7 +14,7 @@ import sys
 
 ## ===== LOCAL ===== ##
 from shared_state import (  check_todos_complete, set_daic_mode, clear_active_todos,
-                            check_daic_mode_bool, get_project_root, get_active_todos)
+                            check_daic_mode_bool, PROJECT_ROOT, get_active_todos)
 ##-##
 
 #-#
@@ -27,7 +27,6 @@ cwd = input_data.get("cwd", "")
 mod = False
 
 # Check if we're in a subagent context
-PROJECT_ROOT = get_project_root()
 if tool_name == "Task": task_log = PROJECT_ROOT / 'sessions' / 'state' / 'task_tool_events.log'
 
 ## ===== FLAGS ===== ##
@@ -60,11 +59,11 @@ Handles post-tool execution cleanup and state management:
 if tool_name == "Task" and in_subagent:
     # Clear the subagent flag
     subagent_flag.unlink()
-    
+
     # Clean up agent transcript directory
     subagent_type = tool_input.get("subagent_type", "shared")
     agent_dir = PROJECT_ROOT / 'sessions' / 'state' / subagent_type
-    
+
     if agent_dir.exists():
         try: shutil.rmtree(agent_dir)
         except: pass  # Ignore cleanup failures silently

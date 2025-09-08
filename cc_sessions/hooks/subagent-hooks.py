@@ -7,6 +7,8 @@ import json
 import sys
 import os
 
+
+
 # Load input from stdin
 try:
     input_data = json.load(sys.stdin)
@@ -62,10 +64,6 @@ for block in task_call.get('content'):
     if block.get('type') == 'tool_use' and block.get('name') == 'Task':
         task_input = block.get('input')
         subagent_type = task_input.get('subagent_type')
-
-# Get project root using shared_state
-from shared_state import get_project_root
-PROJECT_ROOT = get_project_root()
 
 # Clear the current transcript directory
 BATCH_DIR = PROJECT_ROOT / 'sessions' / 'state' / subagent_type

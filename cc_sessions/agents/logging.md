@@ -229,6 +229,10 @@ Before saving, verify you have:
 - [ ] Ensured no redundancy across sections
 - [ ] Kept only current, relevant information
 
+### Important Output Note
+
+IMPORTANT: Neither the caller nor the user can see your execution unless you return it as your response. Your confirmation and summary of log consolidation must be returned as your final response, not saved as a separate file.
+
 ### CRITICAL RESTRICTIONS
 
 **YOU MUST NEVER:**

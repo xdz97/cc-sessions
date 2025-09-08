@@ -7,9 +7,9 @@ When a task meets its success criteria:
 □ Verify all success criteria are checked off
 □ Run code-review agent and address any critical issues
 □ Run logging agent to consolidate work logs
-□ Run context-refinement agent to update task context
+□ Run service-documentation agent to update CLAUDE.md files and other documentation
 □ Commit all changes with comprehensive message
-□ Merge task branch to main and push
+□ OPTIONAL: Merge task branch to main and push
 □ Archive completed task and select next task
 
 ## 1. Pre-Completion Checks
@@ -62,8 +62,23 @@ EOF
 
 ## 5. Git Operations (Commit & Merge)
 
-### Step 1: Review Unstaged Changes
+**NOTE**: DO NOT perform **ANY** git operations until you have cleared task state and archived the task file. This ensures your final commit and merge is complete with no unstaged/uncommitted changes.
 
+### Step 1: Check for Super-repo Structure
+To be sure, determine if you're in a regular git repo or a super-repo with submodules (sessions/ and .claude/ will be in the same directory as .gitmodules):
+```bash
+# Check if we're in a super-repo with submodules from the sessions/ parent directory
+if [ -f .gitmodules ]; then
+  echo "Super-repo detected with submodules"
+  # Follow submodule commit ordering below
+else
+  echo "Standard repository"
+  # Skip to step 4
+fi
+```
+
+### Step 2: Review Unstaged Changes
+If in a regular repo, check for unstaged changes. If in a super-repo, check each submodule listed in the task frontmatter *and* the super-repo itself.
 ```bash
 # Check for any unstaged changes
 git status
@@ -76,76 +91,40 @@ git status
 # 3. Review changes first"
 ```
 
-### Step 2: Determine Branch Type
-
-1. Check the current branch name
-2. Determine if this is a subtask or regular task:
-   - **Subtask**: Branch name has pattern like `tt\d+[a-z]` (e.g., tt1a, tt234b)
-   - **Regular task**: Branch name like `feature/*`, `fix/*`, or `tt\d+` (no letter)
-
-### Step 3: Check for Super-repo Structure
-
-```bash
-# Check if we're in a super-repo with submodules
-if [ -f .gitmodules ]; then
-  echo "Super-repo detected with submodules"
-  # Follow submodule commit ordering below
-else
-  echo "Standard repository"
-  # Skip to step 4
-fi
-```
-
-### Step 4: Commit and Merge (Conditional on Structure)
+### Step 3: Commit and Merge (Conditional on Structure and Preference)
+First, ask the user if they would like to simply commit all changes, commit *and* merge, or commit, merge, *and* push. Based on their preference and repo type, follow the appropriate steps below.
 
 **IF SUPER-REPO**: Process from deepest submodules to super-repo
 
-#### A. Deepest Submodules First (Depth 2+)
+### A. Deepest Submodules First (Depth 2+)
 For any submodules within submodules:
 1. Navigate to each modified deep submodule
-2. Stage changes based on user preference from Step 1
+2. Stage changes based on user preference from Step 2
 3. Commit all changes with descriptive message
-4. Merge based on branch type:
-   - Subtask → merge into parent task branch
-   - Regular task → merge into main
-5. Push the merged branch
+4. If user opted to merge, merge into main or desired branch
+5. If user opted to push, push the merged branch
 
-#### B. Direct Submodules (Depth 1)
+### B. Direct Submodules (Depth 1)
 For all modified direct submodules:
 1. Navigate to each modified submodule
 2. Stage changes based on user preference
 3. Commit all changes with descriptive message
-4. Merge based on branch type:
-   - Subtask → merge into parent task branch
-   - Regular task → merge into main
-5. Push the merged branch
+4. If user opted to merge, merge into main or desired branch
+5. If user opted to push, push the merged branch
 
-#### C. Super-repo (Root)
+### C. Super-repo (Root)
 After ALL submodules are committed and merged:
 1. Return to super-repo root
 2. Stage changes based on user preference
 3. Commit all changes with descriptive message
-4. Merge based on branch type:
-   - Subtask → merge into parent task branch
-   - Regular task → merge into main
-5. Push the merged branch
+4. If user opted to merge, merge into main or desired branch
+5. If user opted to push, push the merged branch
 
-**IF STANDARD REPO**: Simple commit and merge
+**IF STANDARD REPO**: 
 1. Stage changes based on user preference
 2. Commit with descriptive message
-3. Merge based on branch type (subtask → parent, regular → main)
-4. Push the merged branch
-
-### Special Cases
-
-**Experiment branches:**
-- Ask user whether to keep the experimental branch for reference
-- If keeping: Just push branches without merging
-- If not: Document findings first, then delete branches
-
-**Research tasks (no branch):**
-- No merging needed
-- Just ensure findings are documented in task file
+3. If user opted to merge, merge into main or desired branch
+4. If user opted to push, push the merged branch
 
 ## 6. Select Next Task
 
@@ -161,7 +140,7 @@ echo "Task complete! Here are the remaining tasks:"
 
 User selects next task:
 - Switch to task branch: `git checkout [branch-name]`
-- Update task state: Edit `sessions/state/current-task.json` with new task name only
+- Update task state: Edit `sessions/state/current-task.json` with new task
 - Follow task-startup.md protocol
 
 If no tasks remain:

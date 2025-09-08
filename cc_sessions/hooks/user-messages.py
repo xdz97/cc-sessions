@@ -59,8 +59,14 @@ task_completion_detected = any(phrase.lower() in prompt.lower() for phrase in ta
 task_start_detected = any(phrase.lower() in prompt.lower() for phrase in task_start_phrases)
 compaction_detected = any(phrase.lower() in prompt.lower() for phrase in compaction_phrases)
 
-if any([daic_toggle_detected, task_creation_detected, task_completion_detected, task_start_detected, compaction_detected]):
-    clear_active_todos()
+if task_start_detected:
+    task_startup_protocol_file = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
+    task_reference = None
+    words = prompt.split()
+    for word in words:
+        if word.startswith("@") and ("sessions/tasks/" in word) and word.endswith(".md"):
+            task_reference = word.split('sessions/tasks/')[-1]
+            break
 #!<
 
 #-#
@@ -221,10 +227,10 @@ if not is_add_trigger_command and task_completion_detected:
         {'content': 'Verify all success criteria are checked off', 'status': 'pending', 'activeForm': 'Verifying all success criteria are checked off'},
         {'content': 'Run code-review agent and address any critical issues', 'status': 'pending', 'activeForm': 'Running code-review agent and addressing critical issues'},
         {'content': 'Run logging agent to consolidate work logs', 'status': 'pending', 'activeForm': 'Running logging agent to consolidate work logs'},
-        {'content': 'Run context-refinement agent to update task context', 'status': 'pending', 'activeForm': 'Running context-refinement agent to update task context'},
-        {'content': 'Commit all changes with comprehensive message', 'status': 'pending', 'activeForm': 'Committing all changes with comprehensive message'},
-        {'content': 'USER OPTION: Merge task branch to main and push', 'status': 'pending', 'activeForm': 'Merging task branch to main and pushing'},
-        {'content': 'Archive completed task and select next task', 'status': 'pending', 'activeForm': 'Archiving completed task and selecting next task'}
+        {'content': 'Run service-documentation agent to update CLAUDE.md files and other documentation', 'status': 'pending', 'activeForm': 'Running service-documentation agent to update documentation'},
+        {'content': 'Mark task file complete and move to tasks/done/', 'status': 'pending', 'activeForm': 'Archiving task file'},
+        {'content': 'Commit all changes with comprehensive message and (USER OPTION: merge to main)', 'status': 'pending', 'activeForm': 'Committing and merging'},
+        {'content': 'USER OPTION: Push changes to remote', 'status': 'pending', 'activeForm': 'Asking user about pushing changes'},
     ]
     store_active_todos(protocol_todos)
 
@@ -241,28 +247,34 @@ If you are ready to complete the task, you *MUST* read {task_completion_protocol
 #!> Task startup
 if not is_add_trigger_command and task_start_detected:
     task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
-
+    clear_active_todos()
     set_daic_mode(False)
 
     # Auto-load protocol todos
     protocol_todos = [
         {'content': 'Check git status and handle any uncommitted changes', 'status': 'pending', 'activeForm': 'Checking git status and handling uncommitted changes'},
-        {'content': 'Create/checkout task branch and matching submodule branches', 'status': 'pending', 'activeForm': 'Creating/checking out task branch and matching submodule branches'},
-        {'content': 'Update sessions/state/current-task.json with task name', 'status': 'pending', 'activeForm': 'Updating sessions/state/current-task.json with task name'},
+        {'content': 'Create/checkout task branch and matching submodule branches', 'status': 'pending', 'activeForm': 'Creating/checking out task branch(es)'},
+        {'content': 'Update sessions/state/current-task.json with new task', 'status': 'pending', 'activeForm': 'Updating sessions/state/current-task.json'},
         {'content': 'Load task context manifest and verify understanding', 'status': 'pending', 'activeForm': 'Loading task context manifest and verifying understanding'},
         {'content': 'Update task status to in-progress and add started date', 'status': 'pending', 'activeForm': 'Updating task status to in-progress and adding started date'},
     ]
     store_active_todos(protocol_todos)
 
-    protocol_file = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
+    protocol_content = None
+    if task_startup_protocol_file.exists():
+        with open(task_startup_protocol_file, 'r') as f: protocol_content = f.read()
 
-    with open(protocol_file, 'r') as f:
-        protocol_content = f.read()
+    context += f"[Task Startup Notice]\nLanguage in the user prompt indicates that the user may want to start a new task. "
 
-    context += f"""[Task Startup Notice]
-Language in the user prompt indicates that the user may want to start a new task. If the user wants to begin a new task, you *MUST* follow the task startup protocol: at {protocol_content} to begin the task properly.
+    if task_reference: 
+        current_task_data = {"task": task_reference}
+        with open(currrent_task_file, 'w') as f: json.dump(current_task_data, f, indent=4)
+        context += f"A potential task reference was detected in the user prompt: {task_reference}. This task has been set as the current task in sessions/state/current-task.json. "
 
-"""
+    context += "If the user wants to begin a new task, you *MUST* follow the task startup protocol:\n"
+
+    if protocol_content: context += f"{protocol_content}\n"
+    else: context += f"sessions/protocols/task-startup.md\n"
 #!<
 
 #!> Context compaction

@@ -3,7 +3,7 @@ task: [prefix]-[descriptive-name]
 branch: feature/[name]|fix/[name]|experiment/[name]|none
 status: pending|in-progress|completed|blocked
 created: YYYY-MM-DD
-modules: [list of services/modules involved]
+submodules: [list of git submodules affected (delete if not super-repo)]
 ---
 
 # [Human-Readable Title]

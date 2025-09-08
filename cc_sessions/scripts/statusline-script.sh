@@ -119,7 +119,7 @@ except:
     echo -e "$progress_bar"
 }
 
-# Get current task with color
+# Get current task with color and stripped file extension
 get_current_task() {
     cyan="\033[38;5;111m"    # 59C2FF entity blue
     reset="\033[0m"
@@ -129,11 +129,13 @@ import sys, json
 try:
     with open('$CLAUDE_PROJECT_DIR/sessions/state/current-task.json', 'r') as f:
         data = json.load(f)
-        print(data.get('task', 'None'))
+        task_file = data.get('task', None)
+        if task_file and 'README.md' in task_file: print(task_file.split('/')[-2])
+        else: print(task_file.strip('.md') if task_file else 'None')
 except:
     print('None')
 " 2>/dev/null)
-        echo -e "${cyan}Task: $task_name${reset}"
+        echo -e "${cyan}Task: ${task_name}${reset}"
     else
         echo -e "${cyan}Task: None${reset}"
     fi

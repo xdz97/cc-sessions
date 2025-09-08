@@ -203,7 +203,7 @@ After:
 - Refactoring completed
 
 **DON'T Include:**
-- Code snippets (those go in patterns)
+- Code snippets
 - Detailed technical explanations
 - Tool commands used
 - Minor debugging steps

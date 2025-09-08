@@ -414,7 +414,7 @@ Before Sessions, your CLAUDE.md looked like this:
 [... 200 more ALWAYS rules ...]
 
 ### REMEMBER
-- We use Tailwind not CSS modules
+- We use Tailwind not CSSmodules
 - The database is PostgreSQL
 - Yes, still PostgreSQL
 - I SAID POSTGRESQL

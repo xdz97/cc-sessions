@@ -37,12 +37,12 @@ if file_path_string: file_path = Path(file_path_string)
 discussion_mode = check_daic_mode_bool()
 
 expected_branch = None
-affected_services = []
+affected_submodules = []
 if not discussion_mode and tool_name in ["Write", "Edit", "MultiEdit"] and file_path:
     # Get current task details
     task_state = get_task_state()
     expected_branch = task_state.get("branch")
-    affected_services = task_state.get("services", [])
+    affected_submodules = task_state.get("submodules", [])
 
 if tool_name == "Bash":
     command = tool_input.get("command", "").strip()
@@ -193,7 +193,6 @@ if tool_name == "TodoWrite":
 
         stashed_todos_file = PROJECT_ROOT / 'sessions' / 'state' / 'stashed_todos.json'
         if stashed_todos_file.exists(): 
-            clear_active_todos() 
             todos = restore_stashed_todos()
             print(f"[DAIC: Todos Complete] All todos completed. Your previous todos have been restored to active and you may immediately resume completing them.\nFor reference, your new active todos are:\n{json.dumps(todos, indent=2)}")
         else: set_daic_mode(True)  # No stashed todos, just enter discussion mode
@@ -223,7 +222,7 @@ if subagent_flag.exists() and tool_name in ["Write", "Edit", "MultiEdit"]:
         sys.exit(2)  # Block with feedback
 #!<
 
-#!> Git branch/task services enforcement
+#!> Git branch/task submodules enforcement
 if not expected_branch: sys.exit(0) # No branch/task info, allow to proceed
 
 else:
@@ -240,36 +239,36 @@ else:
             )
             current_branch = result.stdout.strip()
     
-            # Extract the service name from the repo path
-            service_name = repo_path.name
+            # Extract the submodule name from the repo path
+            submodule_name = repo_path.name
 
             # Check both conditions: branch status and task inclusion
             branch_correct = (current_branch == expected_branch)
-            in_task = (service_name in affected_services)
+            in_task = (submodule_name in affected_submodules)
             if repo_path == PROJECT_ROOT: in_task = True # Root repo - always considered in task
 
             # Scenario 1: Everything is correct - allow to proceed
             if in_task and branch_correct: pass
 
-            # Scenario 2: Service is in task but on wrong branch
+            # Scenario 2: Submodule is in task but on wrong branch
             elif in_task and not branch_correct:
-                print(f"[Branch Mismatch] Service '{service_name}' is part of this task but is on branch '{current_branch}' instead of '{expected_branch}'.", file=sys.stderr)
+                print(f"[Branch Mismatch] Submodule '{submodule_name}' is part of this task but is on branch '{current_branch}' instead of '{expected_branch}'.", file=sys.stderr)
                 print(f"Please run: cd {repo_path.relative_to(PROJECT_ROOT)} && git checkout {expected_branch}", file=sys.stderr)
                 sys.exit(2)
 
-            # Scenario 3: Service not in task but already on correct branch
+            # Scenario 3: Submodule not in task but already on correct branch
             elif not in_task and branch_correct:
-                print(f"[Service Not in Task] Service '{service_name}' is on the correct branch '{expected_branch}' but is not listed in the task file.", file=sys.stderr)
-                print(f"Please update the task file to include '{service_name}' in the services list.", file=sys.stderr)
+                print(f"[Submodule Not in Task] Submodule '{submodule_name}' is on the correct branch '{expected_branch}' but is not listed in the task file.", file=sys.stderr)
+                print(f"Please update the task file to include '{submodule_name}' in the submodules list.", file=sys.stderr)
                 sys.exit(2)
 
-            # Scenario 4: Service not in task AND on wrong branch
+            # Scenario 4: Submodule not in task AND on wrong branch
             else:
-                print(f"[Service Not in Task + Wrong Branch] Service '{service_name}' has two issues:", file=sys.stderr)
-                print(f"  1. Not listed in the task file's services", file=sys.stderr)
+                print(f"[Submodule Not in Task + Wrong Branch] Submodule '{submodule_name}' has two issues:", file=sys.stderr)
+                print(f"  1. Not listed in the task file's submodules", file=sys.stderr)
                 print(f"  2. On branch '{current_branch}' instead of '{expected_branch}'", file=sys.stderr)
                 print(f"To fix: cd {repo_path.relative_to(PROJECT_ROOT)} && git checkout -b {expected_branch}", file=sys.stderr)
-                print(f"Then update the task file to include '{service_name}' in the services list.", file=sys.stderr)
+                print(f"Then update the task file to include '{submodule_name}' in the submodules list.", file=sys.stderr)
                 sys.exit(2)
         except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
             # Can't check branch, allow to proceed but warn

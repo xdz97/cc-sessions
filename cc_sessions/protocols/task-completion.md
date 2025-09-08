@@ -3,14 +3,14 @@
 When a task meets its success criteria:
 
 ## Protocol Todos
-<!-- Use TodoWrite to add these todos exactly as written -->
+<!-- Use TodoWrite to add these todos **exactly as written** -->
 □ Verify all success criteria are checked off
 □ Run code-review agent and address any critical issues
 □ Run logging agent to consolidate work logs
 □ Run service-documentation agent to update CLAUDE.md files and other documentation
-□ Commit all changes with comprehensive message
-□ USER OPTION: Merge task branch to main and push
-□ Archive completed task and select next task
+□ Mark task file complete and move to tasks/done/
+□ Commit all changes with comprehensive message (USER OPTION: merge to main)
+□ USER OPTION: Push changes to remote
 
 ## 1. Pre-Completion Checks
 
@@ -140,7 +140,19 @@ echo "Task complete! Here are the remaining tasks:"
 
 User selects next task:
 - Switch to task branch: `git checkout [branch-name]`
-- Update task state: Edit `sessions/state/current-task.json` with new task
+- Edit `sessions/state/current-task.json` with new task:
+  - If the next task is a single file, use: 
+    ```json
+    { "task": "task-file.md" }
+    ```
+  - If the next task is an entire task directory use:
+    ```json
+    { "task": "task-dir/README.md" }
+    ```
+  - If the next task is a subtask in a task directory, use:
+    ```json
+    { "task": "task-dir/subtask-file.md" }
+    ```
 - Follow task-startup.md protocol
 
 If no tasks remain:

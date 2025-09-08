@@ -6,13 +6,13 @@ When starting work on a task (new or existing):
 <!-- Use TodoWrite to add these todos exactly as written -->
 □ Check git status and handle any uncommitted changes
 □ Create/checkout task branch and matching submodule branches
-□ Update sessions/state/current-task.json with task name
+□ Update sessions/state/current-task.json with new task
 □ Load task context manifest and verify understanding
 □ Update task status to in-progress and add started date
 
 ## 1. Git Setup
 
-Check task frontmatter for branch name and modules list, then create/checkout branches.
+Check task frontmatter for branch name (and, if in a super-repo, submodules list), then create/checkout branches.
 
 ### Check for Super-repo Structure
 
@@ -35,19 +35,19 @@ fi
 ### Super-repo Submodule Management (IF .gitmodules exists)
 
 **CRITICAL: Create matching branches in ALL affected submodules**
-- Check the task frontmatter for the modules list
-- For each module listed:
-  - Navigate to that module directory
-  - Check for uncommitted changes first
-  - If not on main, checkout main and pull latest
+- Check the task frontmatter for the submodules list
+- For each submodule listed:
+  - Navigate to that submodule directory and verify repo (.git exists)
+  - Check for uncommitted changes first and, if any, ask user how to handle them
+  - If not on main, checkout main and pull latest (do not destroy uncommitted changes)
   - Create a branch with the same name as the task branch
   - Return to the parent directory
 
 Example: If working on tt1-login-ux-flow affecting io_web and io_user_model, create tt1-login-ux-flow branches in both submodules.
 
 **Branch Discipline Rules:**
-- Task frontmatter must list ALL modules that might be edited
-- All listed modules MUST have matching task branches
+- If in a super-repo, task frontmatter must list ALL submodules that might be edited
+- All listed submodules MUST have matching task branches
 - Before editing any file, verify the submodule is on the correct branch
 - If a module needs to be added mid-task, create its branch immediately
 
@@ -64,18 +64,21 @@ Example: If working on tt1-login-ux-flow affecting io_web and io_user_model, cre
 
 After creating/checking out branches, update the sessions/state/current-task.json file.
 
+If the task is a task directory with README.md and subtasks:
 ```json
 {
-  "task": "task-name"  // Just the task name, NO path, NO .md extension
+  "task": "task-directory/subtask-or-README.md"
 }
 ```
 
-The full task state (branch, modules, status) is read from the task file frontmatter.
-
-**COMMON MISTAKES TO AVOID:**
-- ❌ Including path like `"tasks/m-task.md"` instead of just `"m-task"`
-- ❌ Including `.md` file extension
-- ❌ Adding branch or services fields (these come from frontmatter now)
+If the task is a simple task file:
+```json
+{
+  "task": "task-file.md"
+}
+```
+The full task state (branch, submodules*, status) is read from the task file frontmatter.
+*submodules field only present in super-repos
 
 ## 3. Load Task Context Manifest
 

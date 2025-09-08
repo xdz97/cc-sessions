@@ -92,7 +92,7 @@ Primary configuration in `sessions/sessions-config.json`:
 - `task_detection.enabled` - Enable/disable task-based workflows
 
 State files in `sessions/state/`:
-- `current-task.json` - Active task metadata
+- `current-task.json` - Active task file path (below sessions/tasks)
 - `daic-mode.json` - Current discussion/implementation mode
 - `active-todos.json` - Approved TodoWrite execution scope
 

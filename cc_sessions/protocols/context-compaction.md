@@ -29,7 +29,7 @@ Before compacting, delegate to agents:
 
 ## 2. Verify/Update Task State
 
-Ensure that sessions/state/current-task.json contains the correct current task, branch, and services.
+Ensure that sessions/state/current-task.json contains the correct current task.
 
 ## 3. Announce Readiness
 

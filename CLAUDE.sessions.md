@@ -27,14 +27,21 @@ git branch --show-current             # Current branch/task
 ### current-task.json Format
 
 **ALWAYS use this exact format for sessions/state/current-task.json:**
+
+If the task is a directory with README.md and subtasks:
 ```json
 {
-  "task": "task-name",        // Just the task name, NO path, NO .md extension
-  "branch": "feature/branch", // Git branch (NOT "branch_name")
-  "services": ["service1"],   // Array of affected services/modules
-  "updated": "2025-08-27"     // Current date in YYYY-MM-DD format
+  "task": "task-directory/subtask-or-README.md"
 }
 ```
+
+If the task is a simple task file:
+```json
+{
+  "task": "task-file.md"
+}
+```
+
 ## Using Specialized Agents
 
 You have specialized subagents for heavy lifting. Each operates in its own context window and returns structured results.

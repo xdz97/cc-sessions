@@ -608,10 +608,7 @@ class SessionsInstaller:
         current_date = datetime.now().strftime("%Y-%m-%d")
         task_state = self.project_root / "sessions/state/current-task.json"
         task_state.write_text(json.dumps({
-            "task": None,
-            "branch": None,
-            "services": [],
-            "updated": current_date
+            "task": None
         }, indent=2))
     
     def setup_claude_md(self) -> None:

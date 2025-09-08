@@ -76,7 +76,7 @@ cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name]/README.md
   - branch: Based on task type (or 'none' for research)
   - status: Start as 'pending'
   - created: Today's date
-  - modules: List all services/modules that will be touched
+  - submodules: If operating in a super-repo, list all submodules requiring git branches for the task (all that will be affected)
 
 ### 5: Write problem statement and success criteria
   - Clear description of what we're solving/building in Problem/Goal section
@@ -107,6 +107,14 @@ If a file task needs subtasks during work:
 2. Move original file to directory as README.md
 3. Add subtask files
 4. Update active task reference if needed
+  - ex:
+  ```json
+  { "task": "some-task-dir/README.md" }
+  ```
+  - ex:
+  ```json
+  { "task": "some-task-dir/some-subtask.md" }
+  ```
 
 ## Important Note on Context
 

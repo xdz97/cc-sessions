@@ -838,10 +838,7 @@ async function saveConfig(installStatusline = false) {
   await fs.writeFile(
     path.join(PROJECT_ROOT, 'sessions/state/current-task.json'),
     JSON.stringify({
-      task: null,
-      branch: null,
-      services: [],
-      updated: currentDate
+      task: null
     }, null, 2)
   );
 }

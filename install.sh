@@ -473,10 +473,7 @@ echo '{"mode": "discussion"}' > "$PROJECT_ROOT/sessions/state/daic-mode.json"
 # Create initial task state
 cat > "$PROJECT_ROOT/sessions/state/current-task.json" << EOF
 {
-  "task": null,
-  "branch": null,
-  "services": [],
-  "updated": "$(date +%Y-%m-%d)"
+  "task": null
 }
 EOF
 

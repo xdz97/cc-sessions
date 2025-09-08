@@ -223,7 +223,7 @@ if not is_add_trigger_command and task_completion_detected:
         {'content': 'Run logging agent to consolidate work logs', 'status': 'pending', 'activeForm': 'Running logging agent to consolidate work logs'},
         {'content': 'Run context-refinement agent to update task context', 'status': 'pending', 'activeForm': 'Running context-refinement agent to update task context'},
         {'content': 'Commit all changes with comprehensive message', 'status': 'pending', 'activeForm': 'Committing all changes with comprehensive message'},
-        {'content': 'Merge task branch to main and push', 'status': 'pending', 'activeForm': 'Merging task branch to main and pushing'},
+        {'content': 'USER OPTION: Merge task branch to main and push', 'status': 'pending', 'activeForm': 'Merging task branch to main and pushing'},
         {'content': 'Archive completed task and select next task', 'status': 'pending', 'activeForm': 'Archiving completed task and selecting next task'}
     ]
     store_active_todos(protocol_todos)

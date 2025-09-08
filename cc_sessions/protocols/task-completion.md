@@ -9,7 +9,7 @@ When a task meets its success criteria:
 □ Run logging agent to consolidate work logs
 □ Run service-documentation agent to update CLAUDE.md files and other documentation
 □ Commit all changes with comprehensive message
-□ OPTIONAL: Merge task branch to main and push
+□ USER OPTION: Merge task branch to main and push
 □ Archive completed task and select next task
 
 ## 1. Pre-Completion Checks

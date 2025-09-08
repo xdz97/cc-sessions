@@ -127,7 +127,7 @@ For the duration of the task:
 
 Once approved, remember:
 - *Immediately* load your proposed todo items *exactly* as you proposed them using ToDoWrite
-- Update work log as you go
+- Work logs are maintained by the logging agent (not manually)
 
 After completion of the last task in any todo list:
 - *Do not* try to run any write-based tools (you will be automatically put into discussion mode)

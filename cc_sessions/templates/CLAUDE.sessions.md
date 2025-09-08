@@ -15,7 +15,7 @@ This file provides collaborative guidance and philosophy when using the Claude C
 
 ### Best Practices
 - One task at a time (check sessions/state/current-task.json)
-- Update work logs as you progress  
+- Work logs are maintained by the logging agent  
 - Mark todos as completed immediately after finishing
 
 ### Quick State Checks

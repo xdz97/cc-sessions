@@ -3,12 +3,16 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-from dataclasses import dataclass
-from typing import Optional
+from __future__ import annotations
+
+from typing import Optional, List, Dict, Any, Iterator, Literal
+from importlib.metadata import version, PackageNotFoundError
+from dataclasses import dataclass, asdict, field
+from contextlib import contextmanager, suppress
+import json, os, tempfile, shutil, sys
+from time import monotonic, sleep
 from pathlib import Path
-import json
-import sys
-import os
+from enum import Enum
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -20,67 +24,16 @@ import os
 #-#
 
 # ===== GLOBALS ===== #
-PROJECT_ROOT = None
-if project_root := os.getenv("CLAUDE_PROJECT_DIR"): PROJECT_ROOT = Path(project_root)
-else:
-    current = Path.cwd()
-    while current.parent != current:
-        if (current / ".claude").exists(): PROJECT_ROOT = current; break
-        current = current.parent
-
-if not PROJECT_ROOT:
+def find_project_root() -> Path:
+    if (p := os.environ.get("CLAUDE_PROJECT_DIR")): return Path(p)
+    cur = Path.cwd()
+    for parent in (cur, *cur.parents):
+        if (parent / ".claude").exists(): return parent
     print("Error: Could not find project root (no .claude directory).", file=sys.stderr)
     sys.exit(2)
 
-STATE_DIR = PROJECT_ROOT / "sessions" / "state"
-DAIC_STATE_FILE = STATE_DIR / "daic-mode.json"
-TASK_STATE_FILE = STATE_DIR / "current-task.json"
-ACTIVE_TODOS_FILE = STATE_DIR / "active-todos.json"
-STASHED_TODOS_FILE = STATE_DIR / "stashed-todos.json"
-
-# Load configuration from project's .claude directory
-CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
-
-#!> Default configuration
-DEFAULT_CONFIG = {
-    "trigger_phrases": ["make it so", "run that"],
-    "blocked_tools": ["Edit", "Write", "MultiEdit", "NotebookEdit"],
-    "branch_enforcement": {
-        "enabled": True,
-        "task_prefixes": ["implement-", "fix-", "refactor-", "migrate-", "test-", "docs-"],
-        "branch_prefixes": {
-            "implement-": "feature/",
-            "fix-": "fix/",
-            "refactor-": "feature/",
-            "migrate-": "feature/",
-            "test-": "feature/",
-            "docs-": "feature/"
-        }
-    },
-    "read_only_bash_commands": [
-        "ls", "ll", "pwd", "cd", "echo", "cat", "head", "tail", "less", "more",
-        "grep", "rg", "find", "which", "whereis", "type", "file", "stat",
-        "du", "df", "tree", "basename", "dirname", "realpath", "readlink",
-        "whoami", "env", "printenv", "date", "cal", "uptime", "ps", "top",
-        "wc", "cut", "sort", "uniq", "comm", "diff", "cmp", "md5sum", "sha256sum",
-        "git status", "git log", "git diff", "git show", "git branch", 
-        "git remote", "git fetch", "git describe", "git rev-parse", "git blame",
-        "docker ps", "docker images", "docker logs", "npm list", "npm ls",
-        "pip list", "pip show", "yarn list", "curl", "wget", "jq", "awk",
-        "sed -n", "tar -t", "unzip -l",
-        # Windows equivalents
-        "dir", "where", "findstr", "fc", "comp", "certutil -hashfile",
-        "Get-ChildItem", "Get-Location", "Get-Content", "Select-String",
-        "Get-Command", "Get-Process", "Get-Date", "Get-Item"
-    ]
-}
-#!<
-
-USER_CONFIG = DEFAULT_CONFIG
-if CONFIG_FILE.exists():
-    try:
-        with open(CONFIG_FILE, 'r') as f: USER_CONFIG = json.load(f)
-    except: pass
+STATE_FILE = PROJECT_ROOT / "sessions" / "sessions-state.json"
+LOCK_DIR  = STATE_FILE.with_suffix(".lock")
 
 # Mode description strings
 DISCUSSION_MODE_MSG = "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)"
@@ -103,221 +56,292 @@ Provides centralized state management for hooks:
 - Task state persistence  
 - Active todo list management
 - Project root detection
+
+Release note (v0.3.0):
+So ppl are already asking about paralellism so we're going to maybe make this less pain in the dik by providing some locking and atomic writing despite not really needing it for the main thread rn. If it becomes super annoying then multi-session bros will have to take ritalin.
 """
 
 # ===== DECLARATIONS ===== #
-# Lets make a task state dataclass to deal with parsed frontmatter as an object
+
+## ===== EXCEPTIONS ===== ##
+class StateError(RuntimeError): pass
+
+class StashOccupiedError(RuntimeError): pass
+##-##
+
+## ===== ENUMS ===== ##
+class Mode(str, Enum):
+    NO = "discussion"
+    GO = "implementation"
+
+class TodoStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in-progress"
+    COMPLETED = "completed"
+
+class Model(str, Enum):
+    OPUS = "opus"
+    SONNET = "sonnet"
+##-##
+
+## ===== DATA CLASSES ===== ##
+
+#!> State components
 @dataclass
 class TaskState:
-    task: Optional[str] = None
+    name: Optional[str] = None
+    file: Optional[str] = None
     branch: Optional[str] = None
     status: Optional[str] = None
+    created: Optional[str] = None
+    started: Optional[str] = None
     updated: Optional[str] = None
-    submodules: Optional[list] = None
+    submodules: Optional[List[str]] = None
+
+    @property
+    def file_path(self) -> Optional[Path]:
+        if not self.file: return None
+        file_path = PROJECT_ROOT / 'sessions' / 'tasks' / self.file
+        if file_path.exists(): return file_path
+
+    @property
+    def task_state(self) -> Dict[str, Any]:
+        d = asdict(self)
+        return d
+
+    @classmethod
+    def load_task(cls, path: Path) -> "TaskState":
+        tasks_root = PROJECT_ROOT / 'sessions' / 'tasks'
+        if not path.exists(): raise FileNotFoundError(f"Task file {path} does not exist.")
+        # Parse task file frontmatter into fields
+        content = path.read_text(encoding="utf-8")
+        if not (fm_start := content.find("---")) == 0: raise StateError(f"Task file {path} missing frontmatter.")
+        fm_end = content.find("---", fm_start + 3)
+        if fm_end == -1: raise StateError(f"Task file {path} missing frontmatter end.")
+        fm_content = content[fm_start + 3:fm_end].strip()
+        data = {}
+        for line in fm_content.splitlines():
+            if ':' not in line: continue
+            key, value = line.split(':', 1)
+            key = key.strip()
+            value = value.strip()
+            if key == "submodules": data[key] = [s.strip() for s in value.split(',') if s.strip()]
+            else: data[key] = value or None
+        try: rel = path.relative_to(tasks_root); data["file"] = str(rel)
+        except ValueError: data["file"] = path.name
+        return cls(**data)
+
+@dataclass
+class CCTodo:
+    content: str
+    status: TodoStatus = TodoStatus.PENDING
+    activeForm: Optional[str] = None
+
+
+@dataclass
+class SessionsFlags:
+    context_85: bool = False
+    context_90: bool = False
+    subagent: bool = False
+    noob: bool = True
+
+    def clear_flags(self) -> None:
+        self.context_85 = False
+        self.context_90 = False
+        self.subagent = False
+
+@dataclass
+class SessionsTodos:
+    active: List[CCTodo] = field(default_factory=list)
+    stashed: List[CCTodo] = field(default_factory=list)
+
+    def store_todos(self, todos: List[Dict[str, str]], over: bool = True) -> bool:
+        """
+        Store a list of todos (dicts with 'content', activeForm, and optional 'status') into active.
+        Returns True if any were added, False if none.
+        """
+        if self.active:
+            if not over: return False
+            self.clear_active()
+        try:
+            for t in todos:
+                self.active.append(CCTodo(
+                    content=t.get('content', ''),
+                    activeForm=t.get('activeForm'),
+                    status=TodoStatus(t.get('status', 'pending')) if 'status' in t else TodoStatus.PENDING))
+            return True
+        except Exception as e: print(f"Error loading todos: {e}"); return False
+
+    def all_complete(self) -> bool:
+        """True if every active todo is COMPLETED (ignores stashed)."""
+        return all(t.status is TodoStatus.COMPLETED for t in self.active)
+
+    def stash_active(self, *, force: bool = True) -> int:
+        """
+        Move the entire active set into the single stash slot, clearing active.
+        Overwrites any stashed todos unless force = False (which raises StashOccupiedError).
+        Returns number moved.
+        """
+        if not self.stashed or force:
+            n = len(self.active)
+            self.stashed = list(self.active)
+            self.active.clear()
+            return n
+        raise StashOccupiedError("Stash already occupied. Use force=True to overwrite.")
+
+    def clear_active(self) -> int:
+        """Delete all active todos. Returns number removed."""
+        n = len(self.active)
+        self.active.clear()
+        return n
+
+    def clear_stashed(self) -> int:
+        """Delete all stashed todos. Returns number removed."""
+        n = len(self.stashed)
+        self.stashed.clear()
+        return n
+
+    def restore_stashed(self) -> int:
+        """
+        Restore the stashed set back into active *only if* the active set is
+        complete or empty. Replaces active (does not append). Returns number restored.
+        If stash is empty, returns 0 and does nothing.
+        """
+        if not self.stashed: return 0
+        if self.active and not self.all_complete(): return 0
+        n = len(self.stashed)
+        self.active.clear()
+        self.active.extend(self.stashed)
+        self.stashed.clear()
+        return n
+
+    def to_list(self, which: Literal['active', 'stashed']) -> List[Dict[str, str]]:
+        """Return the specified todo list as a list of dicts."""
+        if which == 'active': out = [asdict(t) for t in self.active]
+        elif which == 'stashed': out = [asdict(t) for t in self.stashed]
+        else: raise ValueError("which must be 'active' or 'stashed'")
+
+        for t in out:
+            if isinstance(t.get("status"), Enum): t["status"] = t["status"].value
+        return out
+
+    def list_content(self, which: Literal['active', 'stashed']) -> List[str]:
+        """Return a list of the content strings of all active todos."""
+        todos = self.active if which == 'active' else self.stashed
+        return [t.content for t in todos]
+
+#!<
+
+#!> State object
+@dataclass
+class SessionsState:
+    version: str = "unknown"
+    current_task: TaskState = field(default_factory=TaskState)
+    mode: Mode = Mode.NO
+    todos: SessionsTodos = field(default_factory=SessionsTodos)
+    model: Model = Model.OPUS
+    flags: SessionsFlags = field(default_factory=SessionsFlags)
+    # freeform bag for runtime-only / unknown keys:
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @staticmethod
+    def _coerce_todo(x: Any) -> CCTodo:
+        if isinstance(x, str): return CCTodo(x)
+        status = x.get("status", TodoStatus.PENDING)
+        if isinstance(status, str): status = TodoStatus(status)
+        return CCTodo(content=x.get("content", ""), status=status)
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "SessionsState":
+        try: pkg_version = version("cc-sessions")
+        except PackageNotFoundError: pkg_version = "unknown"
+        return cls(
+            version=d.get("version", pkg_version),
+            current_task=TaskState(**d.get("current_task", {})),
+            mode=Mode(d.get("mode", Mode.NO)),
+            todos=SessionsTodos(
+                active=[cls._coerce_todo(t) for t in d.get("todos", {}).get("active", [])],
+                stashed=[cls._coerce_todo(t) for t in d.get("todos", {}).get("stashed", [])],
+            ),
+            model=Model(d.get("model") or Model.OPUS),
+            flags=SessionsFlags(
+                context_85=d.get("flags", {}).get("context_85") or d.get("flags", {}).get("context_warnings", {}).get("85%", False),
+                context_90=d.get("flags", {}).get("context_90") or d.get("flags", {}).get("context_warnings", {}).get("90%", False),
+                subagent=d.get("flags", {}).get("subagent", False),
+            ),
+            metadata=d.get("metadata", {}),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = asdict(self)
+        d["mode"] = self.mode.value
+        # Normalize enums in nested todos for JSON
+        for bucket in ("active", "stashed"):
+            for t in d["todos"][bucket]:
+                if isinstance(t.get("status"), Enum): t["status"] = t["status"].value
+        return d
+#!<
+
+##-##
+
 #-#
 
 # ===== FUNCTIONS ===== #
 
-## ===== HELPERS ===== ##
-def ensure_state_dir():
-    """Ensure the state directory exists."""
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
+## ===== STATE PROTECTION ===== ##
+def _the_ol_in_out(path: Path, obj: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", delete=False, dir=str(path.parent), encoding="utf-8") as tmp:
+        json.dump(obj, tmp, indent=2)
+        tmp.flush()
+        os.fsync(tmp.fileno())
+        tmp_name = tmp.name
+    os.replace(tmp_name, path)  # atomic across filesystems on same volume
 
-def get_current_model():
-    """Get the current Claude model being used in sessions from the state file stored by the statusline bash script"""
-    model_file = STATE_DIR / "current_model.json"
+@contextmanager
+def _lock(lock_dir: Path, timeout: float = 5.0, poll: float = 0.05) -> Iterator[None]:
+    start = monotonic()
+    while True:
+        try:
+            lock_dir.mkdir(exist_ok=False)  # atomic lock acquire
+            break
+        except FileExistsError:
+            if monotonic() - start > timeout:
+                raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s")
+            sleep(poll)
     try:
-        with open(model_file, 'r') as f:
-            data = json.load(f)
-        model = data.get("model", "Opus 4.1")
-        if "opus" in model.lower(): return "opus"
-        elif "sonnet" in model.lower(): return "sonnet"
-        else: return "unknown"
-    except (FileNotFoundError, json.JSONDecodeError):
-        return "claude-2"
+        yield
+    finally:
+        with suppress(Exception):
+            shutil.rmtree(lock_dir)
 ##-##
 
-## ===== DAIC MGMT ===== ##
-def check_daic_mode_bool() -> bool:
-    """Check if DAIC (discussion) mode is enabled. Returns True for discussion, False for implementation."""
-    ensure_state_dir()
+## ===== GEIPI ===== ##
+def load_state() -> SessionsState:
+    if not STATE_FILE.exists():
+        initial = SessionsState()
+        _the_ol_in_out(STATE_FILE, initial.to_dict())
+        return initial
     try:
-        with open(DAIC_STATE_FILE, 'r') as f:
-            data = json.load(f)
-            return data.get("mode", "discussion") == "discussion"
-    except (FileNotFoundError, json.JSONDecodeError):
-        # Default to discussion mode if file doesn't exist
-        set_daic_mode(True)
-        return True
+        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        # Corrupt file: back it up once and start fresh
+        backup = STATE_FILE.with_suffix(".bad.json")
+        with suppress(Exception):
+            STATE_FILE.replace(backup)
+        fresh = SessionsState()
+        _the_ol_in_out(STATE_FILE, fresh.to_dict())
+        return fresh
+    return SessionsState.from_dict(data)
 
-def check_daic_mode() -> str:
-    """Check if DAIC (discussion) mode is enabled. Returns mode message."""
-    ensure_state_dir()
-    try:
-        with open(DAIC_STATE_FILE, 'r') as f:
-            data = json.load(f)
-            mode = data.get("mode", "discussion")
-            return DISCUSSION_MODE_MSG if mode == "discussion" else IMPLEMENTATION_MODE_MSG
-    except (FileNotFoundError, json.JSONDecodeError):
-        # Default to discussion mode if file doesn't exist
-        set_daic_mode(True)
-        return DISCUSSION_MODE_MSG
-
-def toggle_daic_mode() -> str:
-    """Toggle DAIC mode and return the new state message."""
-    ensure_state_dir()
-    # Read current mode
-    try:
-        with open(DAIC_STATE_FILE, 'r') as f:
-            data = json.load(f)
-            current_mode = data.get("mode", "discussion")
-    except (FileNotFoundError, json.JSONDecodeError): current_mode = "discussion"
-
-    # Toggle and write new value
-    new_mode = "implementation" if current_mode == "discussion" else "discussion"
-    with open(DAIC_STATE_FILE, 'w') as f:
-        json.dump({"mode": new_mode}, f, indent=2)
-
-    # If switching to discussion, clear active todos
-    if new_mode == "discussion":
-        clear_active_todos()
-
-    # Return appropriate message
-    return IMPLEMENTATION_MODE_MSG if new_mode == "implementation" else DISCUSSION_MODE_MSG
-
-def set_daic_mode(value: str|bool):
-    """Set DAIC mode to a specific value."""
-    ensure_state_dir()
-    if value == True or value == "discussion":
-        mode = "discussion"
-        name = "Discussion Mode"
-    elif value == False or value == "implementation":
-        mode = "implementation"
-        name = "Implementation Mode"
-    else:
-        raise ValueError(f"Invalid mode value: {value}")
-
-    with open(DAIC_STATE_FILE, 'w') as f:
-        json.dump({"mode": mode}, f, indent=2)
-    return name
-##-##
-
-## ===== TASK/GIT MGMT ===== ##
-def parse_task_frontmatter(content: str) -> TaskState:
-    """Parse YAML frontmatter from task file content."""
-    if not content.startswith('---'): return TaskState()
-
-    lines = content.split('\n')
-    frontmatter_lines = []
-    in_frontmatter = False
-
-    for i, line in enumerate(lines):
-        if i == 0 and line == '---': in_frontmatter = True; continue
-        if in_frontmatter and line == '---': break
-        if in_frontmatter: frontmatter_lines.append(line)
-
-    # Parse the frontmatter
-    frontmatter = {}
-    for line in frontmatter_lines:
-        if ':' in line:
-            key, value = line.split(':', 1)
-            key = key.strip()
-            value = value.strip()
-
-            # Handle list values [item1, item2]
-            if value.startswith('[') and value.endswith(']'):
-                # Parse as list
-                items = value[1:-1].split(',')
-                value = [item.strip() for item in items]
-
-            frontmatter[key] = value
-
-    return TaskState(**frontmatter)
-
-def get_active_task_name() -> Optional[str]:
-    """Get the currently active task name from current-task.json."""
-    try:
-        with open(TASK_STATE_FILE, 'r') as f:
-            data = json.load(f)
-            # Support both old format (full state) and new format (just task name)
-            if isinstance(data, dict): return data.get("task", None)
-            return None
-    except (FileNotFoundError, json.JSONDecodeError): return None
-
-def get_task_state() -> dict:
-    """Get current task state including branch and affected submodules.
-
-    Reads task name from current-task.json, then loads full state from task file frontmatter.
-    """
-    # Get the active task file/file path
-    task_file = get_active_task_name()
-    if not task_file: return {"task": None, "branch": None, "updated": None}
-
-    task_state = TaskState(task=task_file)
-
-    # Find the task file
-    tasks_dir = PROJECT_ROOT / "sessions" / "tasks"
-    task_file_path = tasks_dir / task_file
-
-    if task_file_path.exists():
-        # Parse frontmatter
-        content = task_file_path.read_text()
-        frontmatter = parse_task_frontmatter(content)
-        return {**frontmatter.__dict__, **task_state.__dict__}
-    else: return {**task_state.__dict__}
-
-## ===== TODO MGMT ===== ##
-def get_active_todos() -> list:
-    """Get the currently active/approved todos."""
-    try:
-        with open(ACTIVE_TODOS_FILE, 'r') as f:
-            data = json.load(f)
-            return data.get("todos", [])
-    except (FileNotFoundError, json.JSONDecodeError): return []
-
-def store_active_todos(todos: list) -> None:
-    """Store the approved todo list as active execution scope."""
-    ensure_state_dir()
-    data = {"todos": todos}
-    with open(ACTIVE_TODOS_FILE, 'w') as f: json.dump(data, f, indent=2)
-
-def clear_active_todos() -> None:
-    """Clear the active todos when returning to discussion mode."""
-    if ACTIVE_TODOS_FILE.exists(): ACTIVE_TODOS_FILE.unlink()
-
-def check_todos_complete() -> bool:
-    """Check if all todos in the active list are complete."""
-    todos = get_active_todos()
-    if not todos: return False
- 
-    # All todos must have status == 'completed'
-    return all(t.get('status') == 'completed' for t in todos)
-
-def stash_active_todos() -> None:
-    """Stash the current active todos to a timestamped backup file."""
-    todos = get_active_todos()
-    if not todos: return
-
-    with open(STASHED_TODOS_FILE, 'w') as f: json.dump({"todos": todos}, f, indent=2)
-
-    # Clear the main active todos file
-    clear_active_todos()
-
-def restore_stashed_todos() -> None:
-    """Restore todos from the stashed backup file."""
-    if not STASHED_TODOS_FILE.exists(): return
-
-    try:
-        with open(STASHED_TODOS_FILE, 'r') as f: data = json.load(f)
-        todos = data.get("todos", [])
-        if todos: store_active_todos(todos)
-        STASHED_TODOS_FILE.unlink()
-        return todos
-    except (FileNotFoundError, json.JSONDecodeError): return None
-
-def clear_stashed_todos() -> None:
-    """Clear the stashed todos file."""
-    if STASHED_TODOS_FILE.exists(): STASHED_TODOS_FILE.unlink()
+@contextmanager
+def edit_state() -> Iterator[SessionsState]:
+    # Acquire lock, reload (so we operate on latest), yield, then save atomically
+    with _lock(LOCK_DIR):
+        state = load_state()
+        try: yield state
+        except Exception: raise
+        else: _the_ol_in_out(STATE_FILE, state.to_dict())
 ##-##
 
 #-#

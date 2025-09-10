@@ -1,5 +1,36 @@
 #!/usr/bin/env python3
+
+# ===== IMPORTS ===== #
+
+## ===== STDLIB ===== ##
+from pathlib import Path
+import subprocess
+import shutil
+import json
+import sys
+import os
+##-##
+
+## ===== 3RD-PARTY ===== ##
+##-##
+
+## ===== LOCAL ===== ##
+##-##
+
+#-#
+
+# ===== GLOBALS ===== #
+#-#
+
 """
+╔═══════════════════════════════════════════════════════╗
+║ ██████╗██╗  ██╗██████╗██████╗ █████╗ ██╗     ██╗      ║
+║ ╚═██╔═╝███╗ ██║██╔═══╝╚═██╔═╝██╔══██╗██║     ██║      ║
+║   ██║  ████╗██║██████╗  ██║  ███████║██║     ██║      ║
+║   ██║  ██╔████║╚═══██║  ██║  ██╔══██║██║     ██║      ║
+║ ██████╗██║╚███║██████║  ██║  ██║  ██║███████╗███████╗ ║
+║ ╚═════╝╚═╝ ╚══╝╚═════╝  ╚═╝  ╚═╝  ╚═╝╚══════╝╚══════╝ ║
+╚═══════════════════════════════════════════════════════╝
 Claude Code Sessions Framework - Cross-Platform Python Installer
 
 Complete installation system for the Claude Code Sessions framework with native
@@ -27,16 +58,10 @@ See Also:
     - cc_sessions.scripts.daic: Unix bash implementation
     - cc_sessions.scripts.daic.cmd: Windows Command Prompt implementation
     - cc_sessions.scripts.daic.ps1: Windows PowerShell implementation
+
 """
 
-import os
-import sys
-import json
-import shutil
-import subprocess
-from pathlib import Path
-from datetime import datetime
-
+# ===== DECLARATIONS ===== #
 # Colors for terminal output
 class Colors:
     RESET = '\033[0m'
@@ -55,27 +80,9 @@ class Colors:
     BGBLUE = '\033[44m'
     BGMAGENTA = '\033[45m'
     BGCYAN = '\033[46m'
+#-#
 
-def color(text: str, color_code: str) -> str:
-    """Colorize text for terminal output"""
-    return f"{color_code}{text}{Colors.RESET}"
-
-def command_exists(command: str) -> bool:
-    """Check if a command exists in the system"""
-    if os.name == 'nt':
-        # Windows - try with common extensions
-        for ext in ['', '.exe', '.bat', '.cmd']:
-            if shutil.which(command + ext):
-                return True
-        return False
-    return shutil.which(command) is not None
-
-def get_package_dir() -> Path:
-    """Get the directory where the package is installed"""
-    import cc_sessions
-    # All data files are now inside cc_sessions/
-    return Path(cc_sessions.__file__).parent
-
+# ===== CLASSES ===== #
 class SessionsInstaller:
     def __init__(self):
         self.package_dir = get_package_dir()
@@ -599,18 +606,8 @@ class SessionsInstaller:
         # Save the updated settings
         settings_file.write_text(json.dumps(settings, indent=2))
         print(color("✓ Sessions hooks configured in settings.json", Colors.GREEN))
+
         
-        # Initialize DAIC state
-        daic_state = self.project_root / "sessions/state/daic-mode.json"
-        daic_state.write_text(json.dumps({"mode": "discussion"}, indent=2))
-        
-        # Create initial task state
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        task_state = self.project_root / "sessions/state/current-task.json"
-        task_state.write_text(json.dumps({
-            "task": None
-        }, indent=2))
-    
     def setup_claude_md(self) -> None:
         """Set up CLAUDE.md integration"""
         print()
@@ -727,6 +724,31 @@ class SessionsInstaller:
         except Exception as e:
             print(color(f"❌ Installation failed: {e}", Colors.RED))
             sys.exit(1)
+#-#
+
+# ===== FUNCTIONS ===== #
+
+## ===== HELPERS ===== ##
+def color(text: str, color_code: str) -> str:
+    """Colorize text for terminal output"""
+    return f"{color_code}{text}{Colors.RESET}"
+
+def command_exists(command: str) -> bool:
+    """Check if a command exists in the system"""
+    if os.name == 'nt':
+        # Windows - try with common extensions
+        for ext in ['', '.exe', '.bat', '.cmd']:
+            if shutil.which(command + ext):
+                return True
+        return False
+    return shutil.which(command) is not None
+
+def get_package_dir() -> Path:
+    """Get the directory where the package is installed"""
+    import cc_sessions
+    # All data files are now inside cc_sessions/
+    return Path(cc_sessions.__file__).parent
+##-##
 
 def main():
     """Main entry point for the installer"""

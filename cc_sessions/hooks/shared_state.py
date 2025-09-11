@@ -498,7 +498,7 @@ class SessionsState:
                 active=[cls._coerce_todo(t) for t in d.get("todos", {}).get("active", [])],
                 stashed=[cls._coerce_todo(t) for t in d.get("todos", {}).get("stashed", [])],
             ),
-            model=Model(d.get("model") or Model.OPUS),
+            model=Model(d.get("model")) or Model.OPUS,
             flags=SessionsFlags(
                 context_85=d.get("flags", {}).get("context_85") or d.get("flags", {}).get("context_warnings", {}).get("85%", False),
                 context_90=d.get("flags", {}).get("context_90") or d.get("flags", {}).get("context_warnings", {}).get("90%", False),
@@ -523,9 +523,18 @@ class SessionsState:
 
 # ===== FUNCTIONS ===== #
 
-## ===== STATE PROTECTION ===== ##
-"""Neither state protection function is dependent on type (can be SessionsState.to_dict() or SessionsConfig.to_dict())""""
+## ===== HELPERS ===== ##
+def find_git_repo(path: Path) -> Optional[Path]:
+    """Walk up directory tree to find .git directory."""
+    current = path if path.is_dir() else path.parent
+    while True:
+        if (current / '.git').exists(): return current
+        if current == PROJECT_ROOT or current.parent == current: break
+        current = current.parent
+    return None
+##-##
 
+## ===== STATE PROTECTION ===== ##
 def _the_ol_in_out(path: Path, obj: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", delete=False, dir=str(path.parent), encoding="utf-8") as tmp:
@@ -536,15 +545,66 @@ def _the_ol_in_out(path: Path, obj: Dict[str, Any]) -> None:
     os.replace(tmp_name, path)  # atomic across filesystems on same volume
 
 @contextmanager
-def _lock(lock_dir: Path, timeout: float = 5.0, poll: float = 0.05) -> Iterator[None]:
+def _lock(lock_dir: Path, timeout: float = 5.0, poll: float = 0.05, stale_timeout: float = 30.0) -> Iterator[None]:
+    """
+    Acquire a directory-based lock with stale lock detection.
+    
+    Args:
+        lock_dir: Directory to use as lock
+        timeout: Seconds to wait for lock acquisition
+        poll: Seconds between acquisition attempts
+        stale_timeout: Seconds after which a lock is considered stale
+    """
+    lock_info_file = lock_dir / "lock_info.json"
     start = monotonic()
+    
+                            # Check if process exists (works on Unix0
     while True:
+        # Check for stale lock first
+        if lock_dir.exists():
+            try:
+                # Try to read lock info
+                if lock_info_file.exists():
+                    lock_info = json.loads(lock_info_file.read_text())
+                    lock_pid = lock_info.get("pid")
+                    lock_time = lock_info.get("timestamp", 0)
+                    
+                    # Check if lock is stale (older than stale_timeout)
+                    if monotonic() - lock_time > stale_timeout:
+                        print(f"Removing stale lock (age: {monotonic() - lock_time:.1f}s)", file=sys.stderr)
+                        with suppress(Exception): shutil.rmtree(lock_dir)
+                    # Check if owning process is dead (same machine only)
+                    elif lock_pid and lock_pid != os.getpid():
+                        try: os.kill(lock_pid, 0) # Check if process exists (works on Unix)
+                        except (OSError, ProcessLookupError):
+                            # Process doesn't exist, remove stale lock
+                            print(f"Removing lock from dead process {lock_pid}", file=sys.stderr)
+                            with suppress(Exception): shutil.rmtree(lock_dir)
+            except (json.JSONDecodeError, KeyError, ValueError):
+                # Malformed lock info, try to remove after timeout
+                if monotonic() - start > timeout:
+                    print(f"Removing malformed lock", file=sys.stderr)
+                    with suppress(Exception): shutil.rmtree(lock_dir)
+        
+        # Try to acquire lock
         try:
             lock_dir.mkdir(exist_ok=False)  # atomic lock acquire
+            # Write lock info atomically
+            lock_info = { "pid": os.getpid(),
+                "timestamp": monotonic(),
+                "host": os.uname().nodename if hasattr(os, 'uname') else "unknown" }
+            lock_info_file.write_text(json.dumps(lock_info))
             break
         except FileExistsError:
-            if monotonic() - start > timeout: raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s")
+            if monotonic() - start > timeout:
+                # Try one more aggressive cleanup before failing
+                if lock_dir.exists():
+                    try:
+                        lock_age = monotonic() - json.loads((lock_dir / "lock_info.json").read_text()).get("timestamp", 0)
+                        raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s (held for {lock_age:.1f}s)")
+                    except: raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s")
             sleep(poll)
+    
     try: yield
     finally:
         with suppress(Exception): shutil.rmtree(lock_dir)

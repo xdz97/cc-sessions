@@ -184,7 +184,7 @@ task_part = f"{cyan}Task: {curr_task}{reset}" if curr_task else f"{cyan}Task: {g
 print(context_part + " | " + task_part)
 
 # Line 2 - Mode | Edited & Uncommitted (trunc) | Open Tasks
-print(f"{purple}Mode: {curr_mode}{reset}" + " | " + f"{orange}✎ {total_edited} files to commit{reset}" + " | " + f"{cyan}Open Tasks: {open_task_count + open_task_dir_count} [{open_task_count} files | {open_task_dir_count} dirs]{reset}")
+print(f"{purple}Mode: {curr_mode}{reset}" + " | " + f"{orange}✎ {total_edited} files to commit{reset}" + " | " + f"{cyan}Open Tasks: {open_task_count + open_task_dir_count}{reset}")
 ##-##
 
 #-#

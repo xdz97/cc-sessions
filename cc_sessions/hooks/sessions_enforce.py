@@ -12,7 +12,7 @@ from pathlib import Path
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, load_state, Mode, PROJECT_ROOT, load_config
+from shared_state import edit_state, load_state, Mode, PROJECT_ROOT, load_config, find_git_repo
 ##-##
 
 #-#
@@ -69,7 +69,7 @@ Enforces DAIC (Discussion, Alignment, Implementation, Check) workflow:
 
 ## ===== HELPERS ===== ##
 # Check if a bash command is read-only (no writes, no redirections)
-def is_bash_read_only(command: str, fail_closed: bool = True) -> bool:
+def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.extrasafe or True) -> bool:
     """Determine if a bash command is read-only.
     Args:
         command (str): The bash command to evaluate.
@@ -89,16 +89,6 @@ def is_bash_read_only(command: str, fail_closed: bool = True) -> bool:
         if CONFIG.blocked_actions.matches_custom_pattern(first): return False
         if first not in READONLY_FIRST and CONFIG.blocked_actions.extrasafe: return False
     return True
-
-# Find the git repo for this file by walking up the directory tree
-def find_git_repo(path: Path) -> Optional[Path]:
-    """Walk up directory tree to find .git directory."""
-    current = path if path.is_dir() else path.parent
-    while True:
-        if (current / '.git').exists(): return current
-        if current == PROJECT_ROOT or current.parent == current: break
-        current = current.parent
-    return None
 ##-##
 
 #-#

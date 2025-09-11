@@ -20,6 +20,11 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/user-messages.py` - Configurable trigger phrase detection and mode switching
 - `cc_sessions/hooks/post-tool-use.py` - Todo completion detection and automated mode transitions
 - `cc_sessions/hooks/subagent-hooks.py` - Subagent context management and flag handling
+- `cc_sessions/scripts/api/__main__.py` - Sessions API entry point for programmatic access
+- `cc_sessions/scripts/api/router.py` - Command routing and argument parsing
+- `cc_sessions/scripts/api/state_commands.py` - State inspection and limited write operations
+- `cc_sessions/scripts/api/config_commands.py` - Configuration management commands
+- `cc_sessions/commands/` - User slash commands (mode, state, config, triggers)
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
@@ -45,6 +50,7 @@ The framework includes persistent task management with git branch enforcement, c
 - Clear active todos on mode switches
 - Configurable trigger phrases via `/add-trigger` command
 - Read-only Bash commands allowed in discussion mode
+- Sessions API commands whitelisted in discussion mode
 
 ### Task Management
 - Priority-prefixed tasks: h- (high), m- (medium), l- (low), ?- (investigate)
@@ -61,6 +67,14 @@ The framework includes persistent task management with git branch enforcement, c
 - Automatic context compaction at 75%/90% token usage
 - Session restart with full task context loading
 - Specialized agents operate in separate contexts
+
+### Sessions API
+- **State Inspection** - View current task, mode, todos, flags, and metadata
+- **Configuration Management** - Manage trigger phrases, git preferences, environment settings
+- **Limited Write Operations** - One-way mode switching (implementation → discussion)
+- **JSON Output Support** - Machine-readable format for programmatic use
+- **Security Boundaries** - No access to safety-critical settings or todo manipulation
+- **Dual Access** - Same functionality available via Python module and user slash commands
 
 ### Specialized Agents
 - **context-gathering**: Creates comprehensive task context manifests
@@ -79,6 +93,8 @@ The framework includes persistent task management with git branch enforcement, c
 - File system locks for atomic state/configuration operations
 
 ### Provides
+- **Sessions API** - Programmatic access via `python -m sessions.api` or `python -m cc_sessions.scripts.api`
+- **User Slash Commands** - `/mode`, `/state`, `/config`, `/add-trigger`, `/remove-trigger`
 - `/add-trigger` - Dynamic trigger phrase configuration with persistent storage
 - `daic` - Manual mode switching command
 - Hook-based tool blocking with user-configurable patterns
@@ -169,6 +185,7 @@ Configuration in `.claude/settings.json`:
 - **Subagent Protection**: Automatic subagent context detection and flag management with cleanup
 - **Atomic File Operations**: File locking and atomic writes prevent state corruption across all operations
 - **Cross-platform Compatibility**: pathlib.Path throughout with Windows-specific handling
+- **API Command Integration**: Sessions API commands whitelisted in DAIC enforcement and bypass ultrathink detection
 
 ### Agent Delegation
 - Heavy file operations delegated to specialized agents
@@ -243,6 +260,7 @@ Configuration in `.claude/settings.json`:
 - **Atomic State Protection**: File locking prevents state corruption and race conditions
 - **Configuration Validation**: Type-safe configuration prevents invalid behavioral patterns
 - **Backup and Recovery**: Automatic backup of corrupted configuration/state files
+- **API Security Boundaries**: Sessions API prevents access to safety-critical features
 - Chronological work log maintenance
 - Task scope enforcement through structured protocols
 
@@ -254,8 +272,41 @@ Configuration in `.claude/settings.json`:
 - README.md - Marketing-focused feature overview
 - sessions/protocols/ - Workflow protocol specifications (in installed projects)
 
+## Sessions API Usage
+
+### User Slash Commands
+- `/mode` - Toggle between discussion and implementation modes
+- `/state [component]` - Show current state or specific component (todos, task, flags)
+- `/config` - Show current configuration (read-only)
+- `/add-trigger <category> <phrase>` - Add trigger phrase to specified category
+- `/remove-trigger <category> <phrase>` - Remove trigger phrase from category
+
+### Programmatic API
+
+**State Operations:**
+- `python -m sessions.api state [--json]` - Full state inspection
+- `python -m sessions.api state <component> [--json]` - Specific component (mode/task/todos/flags)
+- `python -m sessions.api mode discussion` - One-way switch to discussion mode
+- `python -m sessions.api flags clear` - Reset behavioral flags
+- `python -m sessions.api status` - Human-readable state summary
+- `python -m sessions.api version` - Package version information
+
+**Configuration Operations:**
+- `python -m sessions.api config [--json]` - Full configuration inspection
+- `python -m sessions.api config phrases list [category]` - View trigger phrases
+- `python -m sessions.api config phrases add <category> "<phrase>"` - Add trigger phrase
+- `python -m sessions.api config phrases remove <category> "<phrase>"` - Remove trigger phrase
+- `python -m sessions.api config git show` - View git preferences
+- `python -m sessions.api config git set <setting> <value>` - Update git preference
+- `python -m sessions.api config env show` - View environment settings
+- `python -m sessions.api config env set <setting> <value>` - Update environment setting
+
+**Security Notes:**
+- No access to blocked_actions configuration (prevents DAIC bypass)
+- No two-way mode switching (prevents safety bypass)
+- No todo manipulation (respects TodoWrite safety mechanisms)
+- No access to branch_enforcement toggle (maintains git safety)
+
 ## Sessions System Behaviors
 
 @CLAUDE.sessions.md
-
-# Test replay marker - debugging subagent flag cleanup issue

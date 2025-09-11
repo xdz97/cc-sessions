@@ -32,17 +32,14 @@ def find_project_root() -> Path:
     print("Error: Could not find project root (no .claude directory).", file=sys.stderr)
     sys.exit(2)
 
-PROJECT_ROOT = find_project_root()
 STATE_FILE = PROJECT_ROOT / "sessions" / "sessions-state.json"
 LOCK_DIR  = STATE_FILE.with_suffix(".lock")
-CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
 
 # Mode description strings
 DISCUSSION_MODE_MSG = "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)"
 IMPLEMENTATION_MODE_MSG = "You are now in Implementation Mode and may use tools to execute the agreed upon actions - when you are done return immediately to Discussion Mode"
 #-#
 
-#!> Docstring section
 """
 ╔════════════════════════════════════════════════════════════════════════════════════════╗
 ║ ██████╗██╗  ██╗ █████╗ █████╗ ██████╗█████╗       ██████╗██████╗ █████╗ ██████╗██████╗ ║
@@ -63,7 +60,6 @@ Provides centralized state management for hooks:
 Release note (v0.3.0):
 So ppl are already asking about paralellism so we're going to maybe make this less pain in the dik by providing some locking and atomic writing despite not really needing it for the main thread rn. If it becomes super annoying then multi-session bros will have to take ritalin.
 """
-#!<
 
 # ===== DECLARATIONS ===== #
 
@@ -74,246 +70,21 @@ class StashOccupiedError(RuntimeError): pass
 ##-##
 
 ## ===== ENUMS ===== ##
-
-#!> Config enums
-class TriggerCategory(str, Enum):
-    IMPLEMENTATION_MODE = "implementation_mode"
-    DISCUSSION_MODE = "discussion_mode"
-    TASK_CREATION = "task_creation"
-    TASK_STARTUP = "task_startup"
-    TASK_COMPLETION = "task_completion"
-    CONTEXT_COMPACTION = "context_compaction"
-
-class GitAddPattern(str, Enum):
-    ASK = "ask"
-    ALL = "all"
-    MOD = "modified"
-
-class GitCommitStyle(str, Enum):
-    CONVENTIONAL = "conventional"
-    SIMPLE = "simple"
-    DETAILED = "detailed"
-
-class UserOS(str, Enum):
-    LINUX = "linux" # All Linux distros and Unix-likes
-    MACOS = "macos"
-    WINDOWS = "windows"
-
-class UserShell(str, Enum):
-    BASH = "bash"
-    ZSH = "zsh"
-    FISH = "fish"
-    POWERSHELL = "powershell"
-    CMD = "cmd"
-
-class CCTools(str, Enum):
-    READ = "Read"
-    WRITE = "Write"
-    EDIT = "Edit"
-    MULTIEDIT = "MultiEdit"
-    NOTEBOOKEDIT = "NotebookEdit"
-    GREP = "Grep"
-    GLOB = "Glob"
-    LS = "LS"
-    BASH = "Bash"
-    BASHOUTPUT = "BashOutput"
-    KILLBASH = "KillBash"
-    WEBSEARCH = "WebSearch"
-    WEBFETCH = "WebFetch"
-    TASK = "Task"
-    TODOWRITE = "TodoWrite"
-    EXITPLANMODE = "ExitPlanMode"
-#!<
-
-#!> State enums
 class Mode(str, Enum):
     NO = "discussion"
     GO = "implementation"
 
 class TodoStatus(str, Enum):
     PENDING = "pending"
-    IN_PROGRESS = "in_progress"
+    IN_PROGRESS = "in-progress"
     COMPLETED = "completed"
 
 class Model(str, Enum):
     OPUS = "opus"
     SONNET = "sonnet"
-#!<
 ##-##
 
 ## ===== DATA CLASSES ===== ##
-
-#!> Config components
-@dataclass
-class TriggerPhrases:
-    implementation_mode: List[str] = field(default_factory=lambda: ["yert", "make it so", "run that"])
-    discussion_mode: List[str] = field(default_factory=lambda: ["stop", "silence"])
-    task_creation: List[str] = field(default_factory=lambda: ["mek:", "mekdis"])
-    task_startup: List[str] = field(default_factory=lambda: ["start^", "begin task:"])
-    task_completion: List[str] = field(default_factory=lambda: ["finito"])
-    context_compaction: List[str] = field(default_factory=lambda: ["lets compact", "let's compact", "squish"])
-
-    def _coax_phrase_type(self, phrase_type: str) -> TriggerCategory:
-        mapping = {
-            "implement": TriggerCategory.IMPLEMENTATION_MODE,
-            "discuss": TriggerCategory.DISCUSSION_MODE,
-            "create": TriggerCategory.TASK_CREATION,
-            "start": TriggerCategory.TASK_STARTUP,
-            "complete": TriggerCategory.TASK_COMPLETION,
-            "compact": TriggerCategory.CONTEXT_COMPACTION,
-            "implementation_mode": TriggerCategory.IMPLEMENTATION_MODE,
-            "discussion_mode": TriggerCategory.DISCUSSION_MODE,
-            "task_creation": TriggerCategory.TASK_CREATION,
-            "task_startup": TriggerCategory.TASK_STARTUP,
-            "task_completion": TriggerCategory.TASK_COMPLETION,
-            "context_compaction": TriggerCategory.CONTEXT_COMPACTION
-        }
-        if phrase_type in mapping: return mapping[phrase_type]
-        raise ValueError(f"Unknown phrase type: {phrase_type}")
-
-    def add_phrase(self, category: TriggerCategory, phrase: str) -> bool:
-        """Add a phrase to the specified category. Returns True if added, False if already present."""
-        if isinstance(category, str): category = self._coax_phrase_type(category)
-        lst = getattr(self, category.value, None)
-        if lst is None or not isinstance(lst, list): raise ValueError(f"Unknown trigger category: {category}")
-        if phrase in lst: return False
-        lst.append(phrase)
-        return True
-
-    def remove_phrase(self, category: TriggerCategory, phrase: str) -> bool:
-        """Remove a phrase from the specified category. Returns True if removed, False if not found."""
-        if isinstance(category, str): category = self._coax_phrase_type(category)
-        lst = getattr(self, category.value, None)
-        if lst is None or not isinstance(lst, list): raise ValueError(f"Unknown trigger category: {category}")
-        if phrase in lst:
-            lst.remove(phrase)
-            return True
-        return False
-
-    def has_phrase(self, phrase: str) -> Optional[TriggerCategory]:
-        """Return the category of the phrase if found, else None."""
-        for category in TriggerCategory:
-            lst = getattr(self, category.value, [])
-            if phrase in lst: return category
-        return None
-
-    def list_phrases(self, category: Optional[TriggerCategory | Literal["discuss", "implement", "create", "start", "complete", "compact"]] = None) -> Dict[str, List[str]]:
-        """Return all phrases, or those in the specified category."""
-        if category:
-            if isinstance(category, str): category = self._coax_phrase_type(category)
-            lst = getattr(self, category.value, None)
-            if lst is None or not isinstance(lst, list): raise ValueError(f"Unknown trigger category: {category}")
-            return {category.value: lst}
-        return {
-            TriggerCategory.IMPLEMENTATION_MODE.value: self.implementation_mode,
-            TriggerCategory.DISCUSSION_MODE.value: self.discussion_mode,
-            TriggerCategory.TASK_CREATION.value: self.task_creation,
-            TriggerCategory.TASK_STARTUP.value: self.task_startup,
-            TriggerCategory.TASK_COMPLETION.value: self.task_completion,
-            TriggerCategory.CONTEXT_COMPACTION.value: self.context_compaction,
-        }
-
-@dataclass
-class GitPreferences:
-    add_pattern: GitAddPattern = GitAddPattern.ASK
-    default_branch: str = "main"
-    commit_style: GitCommitStyle = GitCommitStyle.CONVENTIONAL
-    auto_merge: bool = False
-    auto_push: bool = False
-    has_submodules: bool = False
-
-@dataclass
-class SessionsEnv:
-    os: UserOS = UserOS.LINUX
-    shell: UserShell = UserShell.BASH
-    developer_name: str = "developer"
-
-    def is_windows(self) -> bool:
-        return self.os == UserOS.WINDOWS
-
-    def is_unix(self) -> bool:
-        return self.os in (UserOS.LINUX, UserOS.MACOS)
-
-@dataclass
-class BlockingPatterns:
-    implementation_only_tools: List[CCTools] = field(default_factory=lambda: [CCTools.EDIT, CCTools.WRITE, CCTools.MULTIEDIT, CCTools.NOTEBOOKEDIT])
-    custom_blocked_patterns: List[str] = field(default_factory=list) # Bash/CLI patterns user wants blocked in discussion mode
-    extrasafe: bool = False
-
-    def _coax_cc_tool(self, tool: str) -> CCTools:
-        try: return CCTools(tool)
-        except ValueError: raise ValueError(f"Unknown tool: {tool}")
-
-    def is_tool_blocked(self, tool: CCTools | str) -> bool:
-        """Return True if the tool is blocked in discussion mode."""
-        if isinstance(tool, str): tool = self._coax_cc_tool(tool)
-        return tool in self.implementation_only_tools
-
-    def matches_custom_pattern(self, cli_string: str) -> bool:
-        """Return True if the cli_string matches any custom blocked pattern."""
-        for pattern in self.custom_blocked_patterns:
-            if pattern in cli_string: return True
-        return False
-
-    def add_blocked_tool(self, tool: CCTools) -> bool:
-        """Add a tool to the blocked list. Returns True if added, False if already present."""
-        if isinstance(tool, str): tool = self._coax_cc_tool(tool)
-        if tool in self.implementation_only_tools: return False
-        self.implementation_only_tools.append(tool)
-        return True
-
-    def remove_blocked_tool(self, tool: CCTools) -> bool:
-        """Remove a tool from the blocked list. Returns True if removed, False if not found."""
-        if isinstance(tool, str): tool = self._coax_cc_tool(tool)
-        if tool in self.implementation_only_tools:
-            self.implementation_only_tools.remove(tool)
-            return True
-        return False
-
-    def add_custom_pattern(self, pattern: str) -> bool:
-        """Add a custom pattern to the blocked list. Returns True if added, False if already present."""
-        if pattern in self.custom_blocked_patterns: return True
-        self.custom_blocked_patterns.append(pattern)
-        return True
-
-    def remove_custom_pattern(self, pattern: str) -> None:
-        """Remove a custom pattern from the blocked list. Returns True if removed, False if not found."""
-        if pattern in self.custom_blocked_patterns: self.custom_blocked_patterns.remove(pattern)
-
-@dataclass
-class ContextWarnings:
-    warn_85: bool = True
-    warn_90: bool = True
-
-@dataclass
-class EnabledFeatures:
-    branch_enforcement: bool = True
-    task_detection: bool = True
-    auto_ultrathink: bool = True
-    context_warnings: ContextWarnings = field(default_factory=ContextWarnings)
-#!<
-
-#!> Config object
-@dataclass
-class SessionsConfig:
-    trigger_phrases: TriggerPhrases = field(default_factory=TriggerPhrases)
-    git_preferences: GitPreferences = field(default_factory=GitPreferences)
-    environment: SessionsEnv = field(default_factory=SessionsEnv)
-    blocked_actions: BlockingPatterns = field(default_factory=BlockingPatterns)
-    features: EnabledFeatures = field(default_factory=EnabledFeatures)
-
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "SessionsConfig":
-        return cls(
-            trigger_phrases=TriggerPhrases(**d.get("trigger_phrases", {})),
-            git_preferences=GitPreferences(**d.get("git_preferences", {})),
-            environment=SessionsEnv(**d.get("environment", {})),
-            blocked_actions=BlockingPatterns(**d.get("blocked_actions", {})),
-            features=EnabledFeatures(**d.get("features", {})))
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
-#!<
 
 #!> State components
 @dataclass
@@ -339,13 +110,11 @@ class TaskState:
         return d
 
     @classmethod
-    def load_task(cls, path: Optional[Path] = None, file: Optional[str] = None) -> "TaskState":
-        if not file and not path: raise ValueError("Either file or path must be provided.")
+    def load_task(cls, path: Path) -> "TaskState":
         tasks_root = PROJECT_ROOT / 'sessions' / 'tasks'
-        if file and not path: path = tasks_root / file
-        if path and not path.exists(): raise FileNotFoundError(f"Task file {path} does not exist.")
+        if not path.exists(): raise FileNotFoundError(f"Task file {path} does not exist.")
         # Parse task file frontmatter into fields
-        if path: content = path.read_text(encoding="utf-8")
+        content = path.read_text(encoding="utf-8")
         if not (fm_start := content.find("---")) == 0: raise StateError(f"Task file {path} missing frontmatter.")
         fm_end = content.find("---", fm_start + 3)
         if fm_end == -1: raise StateError(f"Task file {path} missing frontmatter end.")
@@ -356,14 +125,10 @@ class TaskState:
             key, value = line.split(':', 1)
             key = key.strip()
             value = value.strip()
-            if key == "submodules":
-                value = value.strip('[]')
-                data[key] = [s.strip() for s in value.split(',')]
+            if key == "submodules": data[key] = [s.strip() for s in value.split(',') if s.strip()]
             else: data[key] = value or None
-        if not file and path: 
-            try: rel = path.relative_to(tasks_root); data["file"] = str(rel)
-            except ValueError: data["file"] = path.name
-        else: data["file"] = file
+        try: rel = path.relative_to(tasks_root); data["file"] = str(rel)
+        except ValueError: data["file"] = path.name
         return cls(**data)
 
 @dataclass
@@ -405,11 +170,11 @@ class SessionsTodos:
                     activeForm=t.get('activeForm'),
                     status=TodoStatus(t.get('status', 'pending')) if 'status' in t else TodoStatus.PENDING))
             return True
-        except Exception as e: print(f"Error loading todos: {e}", file=sys.stderr); return False
+        except Exception as e: print(f"Error loading todos: {e}"); return False
 
     def all_complete(self) -> bool:
         """True if every active todo is COMPLETED (ignores stashed)."""
-        return bool(self.active) and all(t.status is TodoStatus.COMPLETED for t in self.active)
+        return all(t.status is TodoStatus.COMPLETED for t in self.active)
 
     def stash_active(self, *, force: bool = True) -> int:
         """
@@ -524,8 +289,6 @@ class SessionsState:
 # ===== FUNCTIONS ===== #
 
 ## ===== STATE PROTECTION ===== ##
-"""Neither state protection function is dependent on type (can be SessionsState.to_dict() or SessionsConfig.to_dict())""""
-
 def _the_ol_in_out(path: Path, obj: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", delete=False, dir=str(path.parent), encoding="utf-8") as tmp:
@@ -543,11 +306,14 @@ def _lock(lock_dir: Path, timeout: float = 5.0, poll: float = 0.05) -> Iterator[
             lock_dir.mkdir(exist_ok=False)  # atomic lock acquire
             break
         except FileExistsError:
-            if monotonic() - start > timeout: raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s")
+            if monotonic() - start > timeout:
+                raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s")
             sleep(poll)
-    try: yield
+    try:
+        yield
     finally:
-        with suppress(Exception): shutil.rmtree(lock_dir)
+        with suppress(Exception):
+            shutil.rmtree(lock_dir)
 ##-##
 
 ## ===== GEIPI ===== ##
@@ -556,30 +322,17 @@ def load_state() -> SessionsState:
         initial = SessionsState()
         _the_ol_in_out(STATE_FILE, initial.to_dict())
         return initial
-    try: data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         # Corrupt file: back it up once and start fresh
         backup = STATE_FILE.with_suffix(".bad.json")
-        with suppress(Exception): STATE_FILE.replace(backup)
+        with suppress(Exception):
+            STATE_FILE.replace(backup)
         fresh = SessionsState()
         _the_ol_in_out(STATE_FILE, fresh.to_dict())
         return fresh
     return SessionsState.from_dict(data)
-
-def load_config() -> SessionsConfig:
-    if not CONFIG_FILE.exists(): 
-        initial = SessionsConfig()
-        _the_ol_in_out(CONFIG_FILE, initial.to_dict())
-        return initial
-    try: data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        # Corrupt file: back it up once and start fresh
-        backup = CONFIG_FILE.with_suffix(".bad.json")
-        with suppress(Exception): CONFIG_FILE.replace(backup)
-        fresh = SessionsConfig()
-        _the_ol_in_out(CONFIG_FILE, fresh.to_dict())
-        return fresh
-    return SessionsConfig.from_dict(data)
 
 @contextmanager
 def edit_state() -> Iterator[SessionsState]:
@@ -589,15 +342,6 @@ def edit_state() -> Iterator[SessionsState]:
         try: yield state
         except Exception: raise
         else: _the_ol_in_out(STATE_FILE, state.to_dict())
-
-@contextmanager
-def edit_config() -> Iterator[SessionsConfig]:
-    # Acquire lock, reload (so we operate on latest), yield, then save atomically
-    with _lock(LOCK_DIR):
-        config = load_config()
-        try: yield config
-        except Exception: raise
-        else: _the_ol_in_out(CONFIG_FILE, config.to_dict())
 ##-##
 
 #-#

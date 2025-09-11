@@ -3,44 +3,29 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-import json
+from importlib.metadata import version, PackageNotFoundError
+import requests, json, sys, shutil
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import PROJECT_ROOT, ensure_state_dir, get_task_state, restore_stashed_todos
+from shared_state import edit_state, PROJECT_ROOT, load_config
 ##-##
 
 #-#
 
 # ===== GLOBALS ===== #
-# Get developer name from config
-try:
-    CONFIG_FILE = PROJECT_ROOT / 'sessions' / 'sessions-config.json'
-    if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, 'r') as f:
-            config = json.load(f)
-            developer_name = config.get('developer_name', 'the developer')
-    else:
-        developer_name = 'the developer'
-except:
-    developer_name = 'the developer'
-
 sessions_dir = PROJECT_ROOT / 'sessions'
 
-daic_state_file = sessions_dir / 'state' / 'daic-mode.json'
-subagent_flag = sessions_dir / 'state' / 'in_subagent_context.flag'
-warning_85_flag = sessions_dir / 'state' / 'context-warning-85.flag'
-warning_90_flag = sessions_dir / 'state' / 'context-warning-90.flag'
-active_todos_file = sessions_dir / 'state' / 'active-todos.json'
-stashed_todos_file = sessions_dir / 'state' / 'stashed-todos.json'
+STATE = None
+CONFIG = load_config()
+
+developer_name = CONFIG.environment.developer_name
 
 # Initialize context
-context = f"""You are beginning a new context window with the developer, {developer_name}.
-
-"""
+context = f"You are beginning a new context window with the developer, {developer_name}.\n\n"
 
 # Quick configuration checks
 needs_setup = False
@@ -67,121 +52,109 @@ Initializes session state and loads task context:
 
 # ===== EXECUTION ===== #
 
-#!> 1. Check if daic command exists
-# Placeholder as daic approach will be refactored soon
+#!> 1. Clear flags and todos for new session
+with edit_state() as s: 
+    s.flags.clear_flags()
+    s.todos.clear_active()
+    restored = s.todos.restore_stashed()
+    STATE = s
+context += "Cleared session flags and active todos for new session.\n\n"
+
+if restored:
+    context += f"""Restored {restored} stashed todos from previous session:\n\n{STATE.todos.active}\n\nTo clear, use `cd .claude/hooks && python -c \"from shared_state import edit_state; with edit_state() as s: s.todos.clear_stashed()\"`\n\n"""
 #!<
 
-#!> 2. Check if tiktoken is installed (required for subagent transcript chunking)
-try: import tiktoken
-except ImportError: needs_setup = True; quick_checks.append("tiktoken (pip install tiktoken)")
+#!> 2. Nuke transcripts dir
+transcripts_dir = sessions_dir / 'transcripts'
+if transcripts_dir.exists(): shutil.rmtree(transcripts_dir, ignore_errors=True)
 #!<
 
-#!> 3. Check if DAIC state file exists (create if not)
-ensure_state_dir()
-if not daic_state_file.exists():
-    with open(daic_state_file, 'w') as f: json.dump({"mode": "discussion"}, f, indent=2)
-#!<
+#!> 3. Load current task or list available tasks
+# Check for active task
+if (task_file := STATE.current_task.file_path) and task_file.exists():
+    # Check if task status is pending and update to in-progress
+    task_content = task_file.read_text()
+    task_updated = False
 
-#!> 4. Clear flags and todos for new session
-if warning_85_flag.exists(): warning_85_flag.unlink()
-if warning_90_flag.exists(): warning_90_flag.unlink()
-if active_todos_file.exists(): active_todos_file.unlink()
-if subagent_flag.exists(): subagent_flag.unlink()
-#!<
+    # Parse task frontmatter to check status
+    if task_content.startswith('---'):
+        lines = task_content.split('\n')
+        for i, line in enumerate(lines[1:], 1):
+            if line.startswith('---'):
+                break
+            if line.startswith('status: pending'):
+                lines[i] = 'status: in-progress'
+                task_updated = True
+                # Write back the updated content
+                task_file.write_text('\n'.join(lines))
+                task_content = '\n'.join(lines)
+                break
 
-#!> 5. Restore stashed todos if present
-if stashed_todos_file.exists():
-    todos = restore_stashed_todos()
-    context += f"The following TODOs were restored from a previous session:\n{json.dumps(todos, indent=2)}\nIf the user wishes to continue from where they left off, you may use these todos exactly."
-#!<
-
-#!> 6. Load current task or list available tasks
-if sessions_dir.exists():
-    # Check for active task
-    task_state = get_task_state()
-    if task_state.get("task"):
-        task_file = sessions_dir / 'tasks' / f"{task_state['task']}.md"
-        if task_file.exists():
-            # Check if task status is pending and update to in-progress
-            task_content = task_file.read_text()
-            task_updated = False
-
-            # Parse task frontmatter to check status
-            if task_content.startswith('---'):
-                lines = task_content.split('\n')
-                for i, line in enumerate(lines[1:], 1):
-                    if line.startswith('---'):
-                        break
-                    if line.startswith('status: pending'):
-                        lines[i] = 'status: in-progress'
-                        task_updated = True
-                        # Write back the updated content
-                        task_file.write_text('\n'.join(lines))
-                        task_content = '\n'.join(lines)
-                        break
-
-            # Output the full task state
-            context += f"""Current task state:
+        # Output the full task state
+        context += f"""Current task state:
 ```json
-{json.dumps(task_state, indent=2)}
+{json.dumps(STATE.current_task.task_state, indent=2)}
 ```
 
-Loading task file: {task_state['task']}.md
+Loading task file: {STATE.current_task.file}
 {"=" * 60}
 {task_content}
 {"=" * 60}
 """
 
-            if task_updated: context += """
-[Note: Task status updated from 'pending' to 'in-progress']
-Follow the task-startup protocol to create branches and set up the work environment.
-"""
-            else: context += """
-Review the Work Log at the end of the task file above.
-Continue from where you left off, updating the work log as you progress.
-"""
-    else:
-        # No active task - list available tasks
-        tasks_dir = sessions_dir / 'tasks'
-        task_files = []
-        if tasks_dir.exists(): task_files = sorted([f for f in tasks_dir.glob('*.md') if f.name != 'TEMPLATE.md'])
+        if task_updated: context += "[Note: Task status updated from 'pending' to 'in-progress']\n\nFollow the task-startup protocol to create branches and set up the work environment.\n\n"
+        else: context += "Review the Work Log at the end of the task file above and continue the task.\n\n"
+else:
+    # No active task - list available tasks
+    tasks_dir = sessions_dir / 'tasks'
+    task_files = []
 
-        if task_files:
-            context += "No active task set. Available tasks:\n"
-            for task_file in task_files:
-                # Read first few lines to get task info
-                with open(task_file, 'r') as f:
-                    lines = f.readlines()[:10]
-                    task_name = task_file.stem
-                    status = 'unknown'
-                    for line in lines:
-                        if line.startswith('status:'):
-                            status = line.split(':')[1].strip()
-                            break
-                    context += f"  • {task_name} ({status})\n"
+    if tasks_dir.exists(): task_files = sorted([f for f in tasks_dir.glob('*.md') if f.name != 'TEMPLATE.md'])
+    for task_dir in sorted([d for d in tasks_dir.iterdir() if d.is_dir() and d.name != 'done']):
+        readme_file = task_dir / 'README.md'
+        if readme_file.exists(): task_files.append(task_dir)
+        subtask_files = sorted([f for f in task_dir.glob('*.md') if f.name not in ['TEMPLATE.md', 'README.md']])
+        task_files.extend(subtask_files)
 
-            context += """
+    if task_files:
+        context += "No active task set. Available tasks:\n"
+        for task_file in task_files:
+            fpath = task_file / 'README.md' if task_file.is_dir() else task_file
+            if not fpath.exists(): continue
+            # Read first few lines to get task info
+            with fpath.open('r', encoding='utf-8') as f: lines = f.readlines()[:10]
+            task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
+            status = 'unknown'
+            for line in lines:
+                if line.startswith('status:'): status = line.split(':')[1].strip(); break
+            context += f"  • {task_name} ({status})\n"
+
+        context += """
 To select a task:
 1. Update sessions/state/current-task.json with the task name
 2. Or create a new task following sessions/protocols/task-creation.md
 """
-        else: context += """No tasks found. 
+    else: context += """No tasks found. 
 
 To create your first task:
 1. Copy the template: cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name].md
-   Priority prefixes: h- (high), m- (medium), l- (low), ?- (investigate)
+Priority prefixes: h- (high), m- (medium), l- (low), ?- (investigate)
 2. Fill in the task details
 3. Update sessions/state/current-task.json
 4. Follow sessions/protocols/task-startup.md
 """
-else: # Sessions directory doesn't exist - likely first run
-    context += """Sessions system is not yet initialized.
+#!<
 
-Run the install script to set up the sessions framework:
-sessions/sessions-setup.sh
-
-Or follow the manual setup in the documentation.
-"""
+#!> 4. Check cc-sessions version
+try: current_version = version('cc-sessions')
+except PackageNotFoundError: current_version = None
+try:
+    resp = requests.get("https://pypi.org/pypi/cc-sessions/json", timeout=2)
+    if resp.ok:
+        latest_version = resp.json().get("info", {}).get("version")
+        if current_version and current_version != latest_version:
+            context += f"Update available for cc-sessions: {current_version} → {latest_version}. Run `pip install --upgrade cc-sessions` to update."
+except requests.RequestException: pass
 #!<
 
 #-#
@@ -193,3 +166,5 @@ output = {
     }
 }
 print(json.dumps(output))
+
+sys.exit(0)

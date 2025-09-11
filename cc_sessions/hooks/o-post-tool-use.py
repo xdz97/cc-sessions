@@ -13,7 +13,8 @@ import sys
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import load_state, edit_state, Mode, PROJECT_ROOT
+from shared_state import (  check_todos_complete, set_daic_mode, clear_active_todos,
+                            check_daic_mode_bool, PROJECT_ROOT, get_active_todos)
 ##-##
 
 #-#
@@ -25,7 +26,15 @@ tool_input = input_data.get("tool_input", {})
 cwd = input_data.get("cwd", "")
 mod = False
 
-STATE = load_state()
+# Check if we're in a subagent context
+if tool_name == "Task": task_log = PROJECT_ROOT / 'sessions' / 'state' / 'task_tool_events.log'
+
+## ===== FLAGS ===== ##
+subagent_flag = PROJECT_ROOT / 'sessions' / 'state' / 'in_subagent_context.flag'
+in_subagent = subagent_flag.exists()
+discussion_mode = check_daic_mode_bool()
+##-##
+
 #-#
 
 """
@@ -46,46 +55,47 @@ Handles post-tool execution cleanup and state management:
 
 # ===== EXECUTION ===== #
 
+#!> Subagent cleanup
+if tool_name == "Task" and in_subagent:
+    # Clear the subagent flag
+    subagent_flag.unlink()
+
+    # Clean up agent transcript directory
+    subagent_type = tool_input.get("subagent_type", "shared")
+    agent_dir = PROJECT_ROOT / 'sessions' / 'state' / subagent_type
+
+    if agent_dir.exists():
+        try: shutil.rmtree(agent_dir)
+        except: pass  # Ignore cleanup failures silently
+#!<
+
+#!> Todo completion (daic auto-return)
+if not discussion_mode and tool_name == "TodoWrite" and not in_subagent:
+    # Check if all todos are complete
+    if check_todos_complete():
+        set_daic_mode(True)  # Auto-return to discussion mode
+        clear_active_todos()  # Clear the approved todo list
+        print("[DAIC] All todos complete - returning to discussion mode", file=sys.stderr)
+        mod = True
+#!<
+
+#!> Implementation mode + no Todos enforcement
+if not discussion_mode and not in_subagent:
+    active_todos = get_active_todos()
+    if not active_todos:
+        # In implementation mode but no todos - show reminder
+        print("[Reminder] You're in implementation mode without approved todos. "
+              "If you proposed todos that were approved, add them. "
+              "If the user asked you to do something without todo proposal/approval, translate *only the remaining work* to todos and add them (all 'pending'). "
+              "In any case, return to discussion mode after completing approved implementation.", 
+              file=sys.stderr)
+        mod = True
+#!<
+
 #!> Claude compass (directory position reminder)
 if tool_name == "Bash":
     command = tool_input.get("command", "")
     if "cd " in command: print(f"[You are in: {cwd}]", file=sys.stderr); mod = True
-#!<
-
-#!> Subagent cleanup
-if tool_name == "Task" and STATE.flags.subagent:
-    with edit_state() as s: s.flags.subagent = False; STATE = s
-    # Clean up agent transcript directory
-    subagent_type = tool_input.get("subagent_type", "shared")
-    agent_dir = PROJECT_ROOT / 'sessions' / 'transcripts' / subagent_type
-    if agent_dir.exists(): shutil.rmtree(agent_dir)
-    sys.exit(0)
-#!<
-
-#!> Todo completion
-if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_complete():
-    # Check if all complete (names already verified to match if active_todos existed)
-    print("[DAIC: Todos Complete] All todos completed.\n\n", file=sys.stderr)
- 
-    if STATE.todos.stashed:
-        with edit_state() as s: num_restored = s.todos.restore_stashed(); restored = [t.content for t in s.todos.active]; STATE = s
-        # TODO: Replace printed command hint for clearing active todos with less verbose agent API (expose critical functions/methods to the agent directly with python/TS|JS script + args)
-        if num_restored:
-            print(f"Your previous {num_restored} todos have been restored to active and you may immediately resume completing them.\nFor reference, those todos are:\n\n{json.dumps(restored, indent=2)}\n\nIf you don't need these, just run `cd .claude/hooks && python -c \"from shared_state import edit_state; with edit_state() as s: s.todos.clear_active\"` to clear them.\n\n", file=sys.stderr)
-    else:
-        with edit_state() as s: s.todos.active = []; s.mode = Mode.NO; STATE = s
-        print("You have returned to discussion mode. You may now discuss next steps with the user.\n\n", file=sys.stderr)
-    mod = True
-#!<
-
-#!> Implementation mode + no Todos enforcement
-if STATE.mode is Mode.GO and not STATE.flags.subagent and not STATE.todos.active:
-    # In implementation mode but no todos - show reminder
-    print("[Reminder] You're in implementation mode without approved todos. "
-            "If you proposed todos that were approved, add them. "
-            "If the user asked you to do something without todo proposal/approval, translate *only the remaining work* to todos and add them (all 'pending'). "
-            "In any case, return to discussion mode after completing approved implementation.", file=sys.stderr)
-    mod = True
 #!<
 
 #-#

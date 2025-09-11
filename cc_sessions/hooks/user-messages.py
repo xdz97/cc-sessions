@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
@@ -11,9 +12,7 @@ import os
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import (  check_daic_mode_bool, set_daic_mode, store_active_todos, 
-                            get_current_model, clear_active_todos, PROJECT_ROOT,
-                            stash_active_todos )
+from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, TaskState, edit_config, load_config
 ##-##
 
 #-#
@@ -21,65 +20,43 @@ from shared_state import (  check_daic_mode_bool, set_daic_mode, store_active_to
 # ===== GLOBALS ===== #
 input_data = json.load(sys.stdin)
 prompt = input_data.get("prompt", "")
+transcript_path = input_data.get("transcript_path", "")
+
+STATE = load_state()
+CONFIG = load_config()
 
 # Check if this is any /add-*-trigger command
 prompt_stripped = prompt.strip()
-is_add_trigger_command = (prompt_stripped.startswith('/add-') and '-trigger' in prompt_stripped.split()[0] if prompt_stripped else False)
-
-# Check current DAIC mode
-current_mode = check_daic_mode_bool()
-
-CURRENT_MODEL = get_current_model()
+is_add_trigger_command = (prompt_stripped.startswith('/add-trigger') if prompt_stripped else False)
 
 # Only add ultrathink if not /add-trigger command
-context = "" if is_add_trigger_command else "[[ ultrathink ]]\n"
-transcript_path = input_data.get("transcript_path", "")
-
-active_todos_file = PROJECT_ROOT / 'sessions' / 'state' / 'active-todos.json'
+if CONFIG.features.auto_ultrathink and not is_add_trigger_command: context = "[[ ultrathink ]]\n\n"
+else: context = ""
 
 #!> Trigger phrase detection
-daic_phrases = ["run that", "yert", "make it so"]
-task_creation_phrases = []
-task_completion_phrases = []
-task_start_phrases = []
-compaction_phrases = ["lets compact"]
+implementation_phrase_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.implementation_mode)
+discussion_phrase_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.discussion_mode)
+task_creation_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.task_creation)
+task_completion_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.task_completion)
+task_start_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.task_startup)
+compaction_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.context_compaction)
+#!<
 
-try:
-    if USER_CONFIG:
-        daic_phrases += USER_CONFIG.get('trigger_phrases', [])
-        task_creation_phrases += USER_CONFIG.get('task_creation_phrases', [])
-        task_completion_phrases += USER_CONFIG.get('task_completion_phrases', [])
-        task_start_phrases += USER_CONFIG.get('task_start_phrases', [])
-        compaction_phrases += USER_CONFIG.get('compaction_phrases', [])
-except Exception as e: print(f"[DEBUG] Error loading trigger phrases: {e}", file=sys.stderr)
-
-daic_toggle_detected = any(phrase.lower() in prompt.lower() for phrase in daic_phrases)
-task_creation_detected = any(phrase.lower() in prompt.lower() for phrase in task_creation_phrases)
-task_completion_detected = any(phrase.lower() in prompt.lower() for phrase in task_completion_phrases)
-task_start_detected = any(phrase.lower() in prompt.lower() for phrase in task_start_phrases)
-compaction_detected = any(phrase.lower() in prompt.lower() for phrase in compaction_phrases)
-
-if task_start_detected:
-    task_startup_protocol_file = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
-    task_reference = None
-    words = prompt.split()
-    for word in words:
-        if word.startswith("@") and ("sessions/tasks/" in word) and word.endswith(".md"):
-            task_reference = word.split('sessions/tasks/')[-1]
-            break
+#!> Flags
+had_active_todos = False
 #!<
 
 #-#
 
 """
-╔═══════════════════════════════════════════════════════════════════════════════════════════════╗
-║ ██╗   ██╗ ██████╗██████╗██████╗   ███╗   ███╗██████╗ ██████╗ ██████╗ █████╗  ██████╗██████╗ ║
-║ ██║   ██║██╔════╝██╔═══╝██╔══██╗  ████╗ ████║██╔═══╝██╔════╝██╔════╝██╔══██╗██╔════╝██╔═══╝ ║
-║ ██║   ██║███████╗█████╗ ██████╔╝  ██╔████╔██║█████╗ ███████╗███████╗███████║██║  ██╗█████╗  ║
-║ ██║   ██║╚════██║██╔══╝ ██╔══██╗  ██║╚██╔╝██║██╔══╝ ╚════██║╚════██║██╔══██║██║  ██║██╔══╝  ║
-║ ╚██████╔╝██████╔╝██████╗██║  ██║  ██║ ╚═╝ ██║██████╗██████╔╝██████╔╝██║  ██║╚██████╔╝██████╗ ║
-║  ╚═════╝ ╚═════╝ ╚═════╝╚═╝  ╚═╝  ╚═╝     ╚═╝╚═════╝╚═════╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ║
-╚═══════════════════════════════════════════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════════════════════════════╗
+║ ██████╗ █████╗  █████╗ ███╗  ███╗██████╗ ██████╗  ██╗  ██╗ █████╗  █████╗ ██╗  ██╗██████╗ ║
+║ ██╔══██╗██╔═██╗██╔══██╗████╗████║██╔══██╗╚═██╔═╝  ██║  ██║██╔══██╗██╔══██╗██║ ██╔╝██╔═══╝ ║
+║ ██████╔╝█████╔╝██║  ██║██╔███║██║██████╔╝  ██║    ███████║██║  ██║██║  ██║█████╔╝ ██████╗ ║
+║ ██╔═══╝ ██╔═██╗██║  ██║██║╚══╝██║██╔═══╝   ██║    ██╔══██║██║  ██║██║  ██║██╔═██╗ ╚═══██║ ║
+║ ██║     ██║ ██║╚█████╔╝██║    ██║██║       ██║    ██║  ██║╚█████╔╝╚█████╔╝██║  ██╗██████║ ║
+║ ╚═╝     ╚═╝ ╚═╝ ╚════╝ ╚═╝    ╚═╝╚═╝       ╚═╝    ╚═╝  ╚═╝ ╚════╝  ╚════╝ ╚═╝  ╚═╝╚═════╝ ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════╝
 UserPromptSubmit Hook
 
 Manages DAIC mode transitions and protocol triggers:
@@ -135,30 +112,24 @@ if transcript_path and os.path.exists(transcript_path):
     if context_length > 0:
         # Calculate percentage of usable context (opus 160k/sonnet 800k practical limit before auto-compact)
         usable_tokens = 160000
-        if CURRENT_MODEL == "sonnet": usable_tokens = 800000
+        if STATE.model == "sonnet": usable_tokens = 800000
         usable_percentage = (context_length / usable_tokens) * 100
 
-        # Check for warning flag files to avoid repeating warnings
-        warning_85_flag = PROJECT_ROOT / "sessions" / "state" / "context-warning-85.flag"
-        warning_90_flag = PROJECT_ROOT / "sessions" / "state" / "context-warning-90.flag"
-
         # Token warnings (only show once per session)
-        if usable_percentage >= 90 and not warning_90_flag.exists():
+        if usable_percentage >= 90 and not STATE.flags.context_90 and CONFIG.features.context_warnings.warn_90:
             context += f"\n[90% WARNING] {context_length:,}/{usable_tokens:,} tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
-            warning_90_flag.parent.mkdir(parents=True, exist_ok=True)
-            warning_90_flag.touch()
-        elif usable_percentage >= 85 and not warning_85_flag.exists():
+            with edit_state() as s: s.flags.context_90 = True; STATE = s
+        elif usable_percentage >= 85 and not STATE.flags.context_85 and CONFIG.features.context_warnings.warn_85:
             context += f"\n[Warning] Context window is {usable_percentage:.1f}% full ({context_length:,}/{usable_tokens:,} tokens). The danger zone is >90%. You will receive another warning when you reach 90% - don't panic but gently guide towards context compaction or task completion (if task is nearly complete). Task completion often satisfies compaction requirements and should allow the user to clear context safely, so you do not need to worry about fitting in both processes.\n"
-            warning_85_flag.parent.mkdir(parents=True, exist_ok=True)
-            warning_85_flag.touch()
+            with edit_state() as s: s.flags.context_85 = True; STATE = s
 ##-##
 
 ## ===== CONTEXT MUTATIONS ===== ##
 
 #!> DAIC mode toggling
 # Implementation triggers (only work in discussion mode, skip for /add-trigger)
-if not is_add_trigger_command and current_mode and daic_toggle_detected:
-    set_daic_mode(False)  # Switch to implementation
+if not is_add_trigger_command and STATE.mode is Mode.NO and implementation_phrase_detected:
+    with edit_state() as s: s.mode = Mode.GO; STATE = s
     context += """[DAIC: Implementation Mode Activated]
 CRITICAL RULES:
 - Convert your proposed todos to TodoWrite EXACTLY as written
@@ -171,37 +142,48 @@ CRITICAL RULES:
 """
 
 # Emergency stop (works in any mode)
-if any(word in prompt for word in ["SILENCE", "STOP"]):  # Case sensitive
-    set_daic_mode(True)  # Force discussion mode
-    clear_active_todos()  # Clear any active todo list
+if discussion_phrase_detected:  # Case sensitive
+    with edit_state() as s: s.mode = Mode.NO; s.todos.clear_active(); STATE = s
     context += "[DAIC: EMERGENCY STOP] All tools locked. You are now in discussion mode. Re-align with your pair programmer.\n"
 #!<
 
 #!> Task creation
 if not is_add_trigger_command and task_creation_detected:
     task_creation_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-creation.md'
-    set_daic_mode(False)
-    had_active_todos = False
-    if active_todos_file.exists(): had_active_todos = True; stash_active_todos()
-
-    # Auto-load protocol todos
-    protocol_todos = [
-        {'content': 'Determine task priority and type prefix', 'status': 'pending', 'activeForm': 'Determining task priority and type prefix'},
-        {'content': 'Decide if task needs file or directory structure', 'status': 'pending', 'activeForm': 'Deciding if task needs file or directory structure'},
-        {'content': 'Create task file with proper frontmatter', 'status': 'pending', 'activeForm': 'Creating task file with proper frontmatter'},
-        {'content': 'Write clear problem statement and success criteria', 'status': 'pending', 'activeForm': 'Writing clear problem statement and success criteria'},
-        {'content': 'Run context-gathering agent to create context manifest', 'status': 'pending', 'activeForm': 'Running context-gathering agent to create context manifest'},
-        {'content': 'Update appropriate service index files', 'status': 'pending', 'activeForm': 'Updating appropriate service index files'},
-        {'content': 'Commit the new task file', 'status': 'pending', 'activeForm': 'Committing the new task file'}
-    ]
-    store_active_todos(protocol_todos)
+    with edit_state() as s: 
+        s.mode = Mode.GO
+        if s.todos.active: had_active_todos = True; s.todos.stash_active()
+        # Auto-load protocol todos
+        s.todos.active = [
+            CCTodo(
+                content='Determine task priority and type prefix',
+                activeForm='Determining task priority and type prefix'),
+            CCTodo(
+                content='Decide if task needs file or directory structure',
+                activeForm='Deciding if task needs file or directory structure'),
+            CCTodo(
+                content='Create task file from template',
+                activeForm='Creating task file'),
+            CCTodo(
+                content='Write clear problem statement and success criteria',
+                activeForm='Writing clear problem statement and success criteria'),
+            CCTodo(
+                content='Run context-gathering agent to create context manifest',
+                activeForm='Running context-gathering agent to create context manifest'),
+            CCTodo(
+                content='Update appropriate service index files',
+                activeForm='Updating appropriate service index files'),
+            CCTodo(
+                content='Commit the new task file',
+                activeForm='Committing the new task file')]
+        STATE = s
 
     # Add task detection note
     context += f"""[Task Detection Notice]
 Language in the user prompt indicates that the user may want to create a task or the message may reference something that could be a task.
 
 Assess whether the user has explicitly asked to create a task, often evidenced by the use of one of the following trigger phrases:
-{task_creation_phrases if task_creation_phrases else 'No custom trigger phrases defined.'}
+{CONFIG.trigger_phrases.task_creation if CONFIG.trigger_phrases.task_creation else 'No custom trigger phrases defined.'}
 
 **If and only if appropriate**, lightly attempt to dissuade the user from tasks that would be more like a major version than a line item of one or a minor patch.
 
@@ -212,64 +194,85 @@ If you can't be sure, read the protocol after confirmation from the user.
 """
 
     if had_active_todos:
-        context += """Your previous todos have been stashed and task creation protocol todos have been made active. Your previous todos will be restored after the task creation todos are complete. Do not attempt to update or complete them until after the task creation protocol todos have been completed.
-
-"""
+        context += "Your previous todos have been stashed and task creation protocol todos have been made active. Your previous todos will be restored after the task creation todos are complete. Do not attempt to update or complete them until after the task creation protocol todos have been completed.\n\n"
 #!<
 
 #!> Task completion
 if not is_add_trigger_command and task_completion_detected:
     task_completion_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-completion.md'
-    set_daic_mode(False)
+    with edit_state() as s:
+        s.mode = Mode.GO
  
-    # Auto-load protocol todos
-    protocol_todos = [
-        {'content': 'Verify all success criteria are checked off', 'status': 'pending', 'activeForm': 'Verifying all success criteria are checked off'},
-        {'content': 'Run code-review agent and address any critical issues', 'status': 'pending', 'activeForm': 'Running code-review agent and addressing critical issues'},
-        {'content': 'Run logging agent to consolidate work logs', 'status': 'pending', 'activeForm': 'Running logging agent to consolidate work logs'},
-        {'content': 'Run service-documentation agent to update CLAUDE.md files and other documentation', 'status': 'pending', 'activeForm': 'Running service-documentation agent to update documentation'},
-        {'content': 'Mark task file complete and move to tasks/done/', 'status': 'pending', 'activeForm': 'Archiving task file'},
-        {'content': 'Commit all changes with comprehensive message and (USER OPTION: merge to main)', 'status': 'pending', 'activeForm': 'Committing and merging'},
-        {'content': 'USER OPTION: Push changes to remote', 'status': 'pending', 'activeForm': 'Asking user about pushing changes'},
-    ]
-    store_active_todos(protocol_todos)
+        # Auto-load protocol todos
+        s.todos.active = [
+            CCTodo(
+                content='Verify all success criteria are checked off',
+                activeForm='Verifying status of success criteria'),
+            CCTodo(
+                content='Run code-review agent and address any critical issues',
+                activeForm='Running code-review agent'),
+            CCTodo(
+                content='Run logging agent to consolidate work logs',
+                activeForm='Running logging agent to consolidate work logs'),
+            CCTodo(
+                content='Run service-documentation agent to update CLAUDE.md files and other documentation',
+                activeForm='Running service-documentation agent to update documentation'),
+            CCTodo(
+                content='Mark task file complete and move to tasks/done/',
+                activeForm='Archiving task file'),
+            CCTodo(
+                content='Commit all changes with comprehensive message and (USER OPTION: merge to main)',
+                activeForm='Committing and merging'),
+            CCTodo(
+                content='USER OPTION: Push changes to remote',
+                activeForm='Asking user about pushing changes')
+        ]
+        STATE = s
 
     # Add task completion note
-    context += f"""[Task Completion Notice]
-Language in the user prompt indicates that the user may want to complete the current task.
-IF you or the user believe that the current task is complete, or IF the user has explicitly asked to complete the task, check the current task file and report back on its completion status.
-
-If you are ready to complete the task, you *MUST* read {task_completion_protocol_path} and follow the instructions therein to complete the task.
-
-"""
+    context += f"[Task Completion Notice]\nLanguage in the user prompt indicates that the user may want to complete the current task.\n\nIF you or the user believe that the current task is complete, or IF the user has explicitly asked to complete the task, check the current task file and report back on its completion status.\n\n If you are ready to complete the task, you *MUST* read {task_completion_protocol_path} and follow the instructions therein to complete the task.\n\n"
 #!<
 
 #!> Task startup
 if not is_add_trigger_command and task_start_detected:
+    task_reference = None
+    words = prompt.split()
+    for word in words:
+        if word.startswith("@") and ("sessions/tasks/" in word) and word.endswith(".md"):
+            task_reference = word.split('sessions/tasks/')[-1]
+            break
     task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
-    clear_active_todos()
-    set_daic_mode(False)
-
-    # Auto-load protocol todos
-    protocol_todos = [
-        {'content': 'Check git status and handle any uncommitted changes', 'status': 'pending', 'activeForm': 'Checking git status and handling uncommitted changes'},
-        {'content': 'Create/checkout task branch and matching submodule branches', 'status': 'pending', 'activeForm': 'Creating/checking out task branch(es)'},
-        {'content': 'Update sessions/state/current-task.json with new task', 'status': 'pending', 'activeForm': 'Updating sessions/state/current-task.json'},
-        {'content': 'Load task context manifest and verify understanding', 'status': 'pending', 'activeForm': 'Loading task context manifest and verifying understanding'},
-        {'content': 'Update task status to in-progress and add started date', 'status': 'pending', 'activeForm': 'Updating task status to in-progress and adding started date'},
-    ]
-    store_active_todos(protocol_todos)
+    with edit_state() as s: 
+        s.mode = Mode.GO
+        s.todos.clear_active()
+        s.todos.active = [
+            CCTodo(
+                content='Check git status and handle any uncommitted changes',
+                activeForm='Checking git status and handling uncommitted changes'),
+            CCTodo(
+                content='Create/checkout task branch and matching submodule branches',
+                activeForm='Creating/checking out task branch(es)'),
+            CCTodo(
+                content='Update current-task.json with new task',
+                activeForm='Updating current-task.json'),
+            CCTodo(
+                content='Load task context manifest and verify understanding',
+                activeForm='Loading task context manifest and verifying understanding'),
+            CCTodo(
+                content='Update task status to in-progress and add started date',
+                activeForm='Updating task status to in-progress and adding started date')]
+        STATE = s
 
     protocol_content = None
-    if task_startup_protocol_file.exists():
-        with open(task_startup_protocol_file, 'r') as f: protocol_content = f.read()
+    if task_start_protocol_path.exists():
+        with open(task_start_protocol_path, 'r') as f: protocol_content = f.read()
 
     context += f"[Task Startup Notice]\nLanguage in the user prompt indicates that the user may want to start a new task. "
 
     if task_reference: 
-        current_task_data = {"task": task_reference}
-        with open(currrent_task_file, 'w') as f: json.dump(current_task_data, f, indent=4)
-        context += f"A potential task reference was detected in the user prompt: {task_reference}. This task has been set as the current task in sessions/state/current-task.json. "
+        task_data = TaskState.load_task(file=task_reference)
+        with edit_state() as s: s.current_task = task_data; STATE = s
+        context += f"A potential task reference was detected in the user prompt: {task_reference}. This task has been set as the current task."
 
     context += "If the user wants to begin a new task, you *MUST* follow the task startup protocol:\n"
 
@@ -280,27 +283,32 @@ if not is_add_trigger_command and task_start_detected:
 #!> Context compaction
 if not is_add_trigger_command and compaction_detected:
     compaction_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'context-compaction.md'
-    had_active_todos = False
-    if active_todos_file.exists(): had_active_todos = True; stash_active_todos()
-    set_daic_mode(False)
+    if STATE.todos.active: 
+        had_active_todos = True
+        with edit_state() as s: s.mode = Mode.GO; s.todos.stash_active(); STATE = s
     # Auto-load protocol todos
-    protocol_todos = [
-        {'content': 'Run logging agent to update work logs', 'status': 'pending', 'activeForm': 'Running logging agent to update work logs'},
-        {'content': 'Run context-refinement agent to check for discoveries', 'status': 'pending', 'activeForm': 'Running context-refinement agent to check for discoveries'},
-        {'content': 'Run service-documentation agent if service interfaces changed', 'status': 'pending', 'activeForm': 'Running service-documentation agent if service interfaces changed'},
-        {'content': 'Verify/update sessions/state/current-task.json', 'status': 'pending', 'activeForm': 'Verifying/updating sessions/state/current-task.json'},
-        {'content': 'Announce readiness for context clear', 'status': 'pending', 'activeForm': 'Announcing readiness for context clear'}
-    ]
-    store_active_todos(protocol_todos)
+    with edit_state() as s: s.todos.active = [
+        CCTodo(
+            content='Run logging agent to update work logs',
+            activeForm='Running logging agent to update work logs'),
+        CCTodo(
+            content='Run context-refinement agent to check for discoveries',
+            activeForm='Running context-refinement agent to check for discoveries'),
+        CCTodo(
+            content='Run service-documentation agent (if service interfaces changed)',
+            activeForm='Running service-documentation agent if service interfaces changed'),
+        CCTodo(
+            content='Verify/update current task state',
+            activeForm='Verifying/updating current task'),
+        CCTodo(
+            content='Announce readiness for context clear',
+            activeForm='Announcing readiness for context clear')]
+    STATE = s
 
     # Add context compaction note
-    context += f"""[Context Compaction Notice]
-Language in the user prompt indicates that the user may want to compact context. You *MUST* read {compaction_protocol_path} and follow the instructions therein to compact context properly.
+    context += f"[Context Compaction Notice]\nLanguage in the user prompt indicates that the user may want to compact context. You *MUST* read {compaction_protocol_path} and follow the instructions therein to compact context properly.\n"
 
-"""
-    if had_active_todos: context += """Your todos have been stashed and will be restored in the next session after the user clears context. Do not attempt to update or complete your previous todo list (context compaction todos are now active).
-
-"""
+    if had_active_todos: context += "Your todos have been stashed and will be restored in the next session after the user clears context. Do not attempt to update or complete your previous todo list (context compaction todos are now active).\n"
 #!<
 
 #!> Iterloop detection

@@ -1,29 +1,31 @@
 # cc-sessions CLAUDE.md
 
 ## Purpose
-Complete Claude Code Sessions framework that enforces Discussion-Alignment-Implementation-Check (DAIC) methodology for AI pair programming workflows.
+Complete Claude Code Sessions framework that enforces Discussion-Alignment-Implementation-Check (DAIC) methodology for AI pair programming workflows with comprehensive user configurability.
 
 ## Narrative Summary
 
 The cc-sessions package transforms Claude Code from a basic AI coding assistant into a sophisticated workflow management system. It enforces structured collaboration patterns where Claude must discuss approaches before implementing code, maintains persistent task context across sessions, and provides specialized agents for complex operations.
 
-The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enforcement through Python hooks that cannot be bypassed. When Claude attempts to edit code without explicit user approval ("go ahead", "make it so", etc.), the hooks block the tools and require discussion first. The system now uses todo-based execution boundaries where approved TodoWrite lists define the exact scope of implementation work. This prevents both over-implementation and "execution anxiety" from per-tool reminders.
+The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enforcement through Python hooks that cannot be bypassed. When Claude attempts to edit code without explicit user approval ("go ahead", "make it so", etc.), the hooks block the tools and require discussion first. The system uses todo-based execution boundaries where approved TodoWrite lists define the exact scope of implementation work. This prevents both over-implementation and "execution anxiety" from per-tool reminders.
+
+Recent architectural enhancement (v0.3.0) introduced comprehensive user configuration through the SessionsConfig system. Users can now customize trigger phrases, blocked tools, developer preferences, git workflows, and environment settings. This 320+ line configuration architecture provides type-safe, atomic configuration management with the same reliability as the core state system.
 
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
+- `cc_sessions/hooks/shared_state.py` - Core state and configuration management with SessionsConfig system
+- `cc_sessions/hooks/sessions-enforce.py` - DAIC enforcement with user-configurable tool blocking
+- `cc_sessions/hooks/session-start.py` - Session initialization with configuration integration
+- `cc_sessions/hooks/user-messages.py` - Configurable trigger phrase detection and mode switching
+- `cc_sessions/hooks/post-tool-use.py` - Todo completion detection and automated mode transitions
+- `cc_sessions/hooks/subagent-hooks.py` - Subagent context management and flag handling
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
-- `cc_sessions/hooks/sessions-enforce.py` - Core DAIC enforcement and branch protection
-- `cc_sessions/hooks/session-start.py` - Automatic task context loading
-- `cc_sessions/hooks/user-messages.py` - Trigger phrase detection and mode switching
-- `cc_sessions/hooks/post-tool-use.py` - Todo completion detection with subagent guards and auto-return to discussion
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
-- `cc_sessions/agents/logging.md` - Session work log consolidation agent
+- `cc_sessions/agents/service-documentation.md` - Service documentation maintenance agent
 - `cc_sessions/protocols/task-creation.md` - Structured task creation workflow
-- `cc_sessions/templates/CLAUDE.sessions.md` - Behavioral guidance template
-- `cc_sessions/knowledge/hooks-reference.md` - Hook system documentation
 - `pyproject.toml` - Package configuration with console script entry points
 
 ## Installation Methods
@@ -74,46 +76,99 @@ The framework includes persistent task management with git branch enforcement, c
 - Git for branch management and enforcement
 - Python 3.8+ with tiktoken for token counting
 - Shell environment for command execution (Bash/PowerShell/Command Prompt)
+- File system locks for atomic state/configuration operations
 
 ### Provides
-- `/add-trigger` - Dynamic trigger phrase configuration
+- `/add-trigger` - Dynamic trigger phrase configuration with persistent storage
 - `daic` - Manual mode switching command
-- Hook-based tool blocking and behavioral enforcement
+- Hook-based tool blocking with user-configurable patterns
 - Task file templates and management protocols
 - Agent-based specialized operations
+- SessionsConfig API for runtime configuration management
+- SessionsState API for unified state management
 
 ## Configuration
 
-Primary configuration in `sessions/sessions-config.json`:
-- `developer_name` - How Claude addresses the user
-- `trigger_phrases` - Phrases that switch to implementation mode
-- `blocked_tools` - Tools blocked in discussion mode
-- `branch_enforcement.enabled` - Enable/disable git branch checking
-- `task_detection.enabled` - Enable/disable task-based workflows
+### SessionsConfig Architecture (v0.3.0+)
+Primary configuration in `sessions/sessions-config.json` with comprehensive user customization:
 
-State files in `sessions/state/`:
-- `current-task.json` - Active task file path (below sessions/tasks)
-- `daic-mode.json` - Current discussion/implementation mode
-- `active-todos.json` - Approved TodoWrite execution scope
+**Environment Settings (`environment`):**
+- `developer_name` - How Claude addresses the user (default: "developer")
+- `os` - User operating system (linux, macos, windows)
+- `shell` - User shell preference (bash, zsh, fish, powershell, cmd)
 
-Windows-specific configuration in `.claude/settings.json`:
+**Trigger Phrases (`trigger_phrases`):**
+- `implementation_mode` - Phrases that switch to implementation mode (default: ["yert", "make it so", "run that"])
+- `discussion_mode` - Phrases that return to discussion mode (default: ["stop", "silence"])
+- `task_creation` - Phrases that trigger task creation (default: ["mek:", "mekdis"])
+- `task_startup` - Phrases for task startup (default: ["start^", "begin task:"])
+- `task_completion` - Phrases for task completion (default: ["finito"])
+- `context_compaction` - Phrases for context compaction (default: ["lets compact", "squish"])
+
+**Blocked Actions (`blocked_actions`):**
+- `implementation_only_tools` - Tools blocked in discussion mode (default: Edit, Write, MultiEdit, NotebookEdit)
+- `custom_blocked_patterns` - User-defined CLI patterns blocked in discussion mode
+- `extrasafe` - Enhanced blocking mode
+
+**Git Preferences (`git_preferences`):**
+- `add_pattern` - Git add behavior (ask, all, modified)
+- `default_branch` - Main branch name (default: "main")
+- `commit_style` - Commit message style (conventional, simple, detailed)
+- `auto_merge` - Automatic merge to main branch
+- `auto_push` - Automatic push to remote
+- `has_submodules` - Repository has submodules
+
+**Feature Toggles (`features`):**
+- `branch_enforcement` - Git branch validation
+- `task_detection` - Task-based workflow automation
+- `auto_ultrathink` - Enhanced AI reasoning
+- `context_warnings` - Token usage warnings at 85%/90%
+
+### State Management
+Unified state in `sessions/sessions-state.json`:
+- `current_task` - Active task metadata with frontmatter integration
+- `mode` - Current DAIC mode (discussion/implementation)
+- `todos` - Active and stashed todo lists with completion tracking
+- `flags` - Context warnings, subagent status, session flags
+- `metadata` - Freeform runtime state
+
+### Windows Integration
+Configuration in `.claude/settings.json`:
 - Hook commands use Windows-style paths with `%CLAUDE_PROJECT_DIR%`
 - Python interpreter explicitly specified for `.py` hook execution
 - Native `.cmd` and `.ps1` script support for daic command
 
+## Architecture Changes (v0.3.0)
+
+### Unified State System
+- **Migration from Multi-File to Single-File**: Replaced 6+ individual state files (`daic-mode.json`, `current-task.json`, `active-todos.json`, etc.) with unified `sessions/sessions-state.json`
+- **Atomic Operations**: All state changes use file locking and atomic writes through `edit_state()` context manager
+- **Type-Safe State Management**: SessionsState dataclass with comprehensive validation and enum-based modes
+- **Backward Compatibility**: Seamless migration from old state file structure
+
+### Comprehensive Configuration Architecture  
+- **SessionsConfig System**: 320+ lines of type-safe configuration management with nested dataclasses
+- **User Customization**: Complete customization of trigger phrases, blocked tools, git preferences, environment settings
+- **Configuration Validation**: Automatic type coercion, error handling, and default fallbacks
+- **Atomic Configuration Updates**: Same reliability guarantees as state management through `edit_config()` context manager
+
+### Enhanced Hook Integration
+- **Configuration-Driven Behavior**: All hooks now load user configuration and respect customized preferences
+- **Unified Import Pattern**: Consistent `load_config()` and `load_state()` imports across all hook files
+- **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
+
 ## Key Patterns
 
 ### Hook Architecture
-- Pre-tool-use hooks for enforcement (sessions-enforce.py)
-- TodoWrite validation enforces exact scope matching on approved todo lists
-- Post-tool-use hooks detect todo completion and auto-return to discussion
-- User message hooks for trigger detection and mode switching (user-messages.py)
-- Session start hooks for context loading (session-start.py)
-- Shared state management including active todos tracking (shared_state.py)
-- Subagent context detection via in_subagent_context.flag file
-- Automatic subagent flag cleanup on Task tool completion
-- Cross-platform path handling using pathlib.Path throughout
-- Windows-specific command prefixing with explicit python interpreter
+- **Unified State Management**: SessionsState class manages all runtime state in single JSON file with atomic operations
+- **Configuration-Driven Enforcement**: SessionsConfig system provides type-safe user customization of all behavioral patterns
+- **Pre-tool-use Validation**: sessions-enforce.py uses configurable patterns for tool blocking and branch validation
+- **Post-tool-use Automation**: Automatic todo completion detection and mode transitions based on user preferences
+- **Configurable Trigger Detection**: user-messages.py supports user-defined trigger phrases for all workflow transitions
+- **Session Initialization**: session-start.py integrates configuration with task context loading
+- **Subagent Protection**: Automatic subagent context detection and flag management with cleanup
+- **Atomic File Operations**: File locking and atomic writes prevent state corruption across all operations
+- **Cross-platform Compatibility**: pathlib.Path throughout with Windows-specific handling
 
 ### Agent Delegation
 - Heavy file operations delegated to specialized agents
@@ -121,11 +176,21 @@ Windows-specific configuration in `.claude/settings.json`:
 - Agent results returned to main conversation thread
 - Agent state isolated in separate context windows
 
+### Configuration Management
+- **Type-Safe Enums**: CCTools, TriggerCategory, GitCommitStyle, UserOS, UserShell for validation
+- **Nested Dataclasses**: TriggerPhrases, BlockingPatterns, GitPreferences, SessionsEnv for organization
+- **Runtime Configuration Methods**: Add/remove trigger phrases, manage blocked tools, update preferences programmatically
+- **Atomic Configuration Updates**: edit_config() context manager with file locking prevents configuration corruption
+- **Configuration Validation**: Automatic type coercion and error handling for user inputs
+- **Default Fallbacks**: Comprehensive defaults ensure system functionality without configuration
+- **User Preference Persistence**: All configuration changes automatically saved to sessions/sessions-config.json
+
 ### Task Structure
-- Markdown files with standardized sections (Purpose, Context, Success Criteria, Work Log)
+- Markdown files with frontmatter integration into TaskState class
 - Directory-based tasks for complex multi-phase work
 - File-based tasks for focused single objectives
 - Automatic branch mapping from task naming conventions
+- Git submodule awareness through task frontmatter
 
 ### Subagent Protection
 - Detection mechanism prevents DAIC reminders in subagent contexts
@@ -175,7 +240,9 @@ Windows-specific configuration in `.claude/settings.json`:
 - Todo-based execution boundaries prevent scope creep
 - Exact scope matching required for TodoWrite operations
 - Auto-return to discussion when implementation complete
-- State file protection from unauthorized changes
+- **Atomic State Protection**: File locking prevents state corruption and race conditions
+- **Configuration Validation**: Type-safe configuration prevents invalid behavioral patterns
+- **Backup and Recovery**: Automatic backup of corrupted configuration/state files
 - Chronological work log maintenance
 - Task scope enforcement through structured protocols
 

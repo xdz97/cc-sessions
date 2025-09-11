@@ -3,15 +3,17 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-import json, sys, math, bisect
 from collections import deque
+import tiktoken
+import json
+import sys
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, PROJECT_ROOT
+from shared_state import PROJECT_ROOT
 ##-##
 
 #-#
@@ -53,14 +55,11 @@ This module handles PreToolUse processing for the Task tool:
 
 # ===== EXECUTION ===== #
 
-#!> Set subagent flag
-with edit_state() as s: s.flags.subagent = True; STATE = s
-#!<
-
 #!> Trunc + clean transcript
 # Remove any pre-work transcript entries
 start_found = False
 while not start_found and transcript:
+    # OPTIMIZE: Use deque for efficient pops from the front
     entry = transcript.popleft()
     message = entry.get('message')
     if message:
@@ -84,72 +83,53 @@ for entry in transcript:
 
 #!> Prepare subagent dir for transcript files
 subagent_type = 'shared'
-if not clean_transcript: print("[Subagent] No relevant transcript entries found, skipping snapshot."); sys.exit(0)
 task_call = clean_transcript[-1]
-content = task_call.get('content')
-if isinstance(content, list):
-    for block in content:
-        if block.get('type') == 'tool_use' and block.get('name') == 'Task':
-            task_input = block.get('input') or {}
-            subagent_type = task_input.get('subagent_type', subagent_type)
+for block in task_call.get('content'):
+    if block.get('type') == 'tool_use' and block.get('name') == 'Task':
+        task_input = block.get('input')
+        subagent_type = task_input.get('subagent_type')
 
 # Clear the current transcript directory
-BATCH_DIR = PROJECT_ROOT / 'sessions' / 'transcripts' / subagent_type
+BATCH_DIR = PROJECT_ROOT / 'sessions' / 'state' / subagent_type
 BATCH_DIR.mkdir(parents=True, exist_ok=True)
-for item in BATCH_DIR.iterdir():
+target_dir = BATCH_DIR
+for item in target_dir.iterdir():
     if item.is_file(): item.unlink()
 #!<
 
+#!> Set subagent flag
+subagent_flag = PROJECT_ROOT / 'sessions' / 'state' / 'in_subagent_context.flag'
+subagent_flag.touch()
+#!<
+
+#!> Prepare tiktoken
+enc = tiktoken.get_encoding('cl100k_base')
+def n_tokens(s: str) -> int:
+    return len(enc.encode(s))
+#!<
+
 #!> Chunk and save transcript batches
-MAX_BYTES = 24000
-usable_context = 160000
-if STATE.model == "sonnet": usable_context = 800000
-clean_transcript_text = json.dumps(list(clean_transcript), indent=2, ensure_ascii=False)
+MAX_TOKENS_PER_BATCH = 18_000
+transcript_batch, batch_tokens, file_index = [], 0, 1             
 
-chunks = []
-buf_chars = []
-buf_bytes = 0
-last_newline_idx = None
-last_space_idx = None
+while clean_transcript:
+    entry = clean_transcript.popleft()
+    entry_tokens = n_tokens(json.dumps(entry, ensure_ascii=False))
 
-for ch in clean_transcript_text:
-    ch_b = len(ch.encode("utf-8"))
+    if batch_tokens + entry_tokens > MAX_TOKENS_PER_BATCH and transcript_batch:
+        file_path = BATCH_DIR / f"current_transcript_{file_index:03}.json"
+        with file_path.open('w') as f:
+            json.dump(transcript_batch, f, indent=2, ensure_ascii=False)
+        file_index += 1
+        transcript_batch, batch_tokens = [], 0
 
-    # If overflowing, flush a chunk
-    if buf_bytes + ch_b > MAX_BYTES:
-        cut_idx = None
-        if last_newline_idx is not None: cut_idx = last_newline_idx
-        elif last_space_idx is not None: cut_idx = last_space_idx
-        if cut_idx is not None and cut_idx > 0:
-            # Emit chunk up to the breakpoint
-            chunks.append("".join(buf_chars[:cut_idx]))
-            remainder = buf_chars[cut_idx:]
-            buf_chars = remainder
-            buf_bytes = sum(len(c.encode("utf-8")) for c in buf_chars)
-        else:
-            # No breakpoints, hard cut what we got
-            if buf_chars: chunks.append("".join(buf_chars))
-            buf_chars = []
-            buf_bytes = 0
+    transcript_batch.append(entry)
+    batch_tokens += entry_tokens
 
-        last_newline_idx = None
-        last_space_idx = None
-
-    buf_chars.append(ch)
-    buf_bytes += ch_b
-
-    if ch == "\n": last_newline_idx = len(buf_chars); last_space_idx = None
-    elif ch == " " and last_newline_idx is None: last_space_idx = len(buf_chars)
-
-# Flush any remaining buffer
-if buf_chars: chunks.append("".join(buf_chars))
-
-assert all(len(c.encode("utf-8")) <= MAX_BYTES for c in chunks), "Chunking failed to enforce byte limit"
-
-for idx, chunk in enumerate(chunks, start=1):
-    part_name = f"current_transcript_{idx:03d}.txt"
-    part_path = BATCH_DIR / part_name
-    with part_path.open('w', encoding='utf-8', newline="\n") as f: f.write(chunk)
+if transcript_batch:
+    file_path = BATCH_DIR / f'current_transcript_{file_index:03}.json'
+    with file_path.open('w') as f:
+        json.dump(transcript_batch, f, indent=2, ensure_ascii=False)
 #!<
 
 #-#

@@ -138,6 +138,7 @@ class TodoStatus(str, Enum):
 class Model(str, Enum):
     OPUS = "opus"
     SONNET = "sonnet"
+    UNKNOWN = "unknown"
 #!<
 ##-##
 

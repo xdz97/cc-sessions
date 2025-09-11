@@ -8,7 +8,7 @@ import json, sys, subprocess
 ##-##
 
 ## ===== LOCAL ===== ##
-from hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_repo
+from hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_repo, load_state
 ##-##
 
 #-#
@@ -20,7 +20,7 @@ from hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_r
 data = json.load(sys.stdin)
 
 cwd = data.get("cwd", ".")
-model_name = data.get("model_name", "unknown")
+model_name = data.get("model", {}).get("display_name", "unknown")
 session_id = data.get("session_id", "unknown")
 
 task_dir = PROJECT_ROOT / "sessions" / "tasks"
@@ -40,14 +40,15 @@ reset = "\033[0m"
 #!> Determine model and context limit
 curr_model = None
 context_limit = 160000
-if "sonnet" in model_name.lower(): curr_model = Model.SONNET
-if "opus" in model_name.lower(): curr_model = Model.OPUS; context_limit = 800000
+if "sonnet" in model_name.lower(): curr_model = Model.SONNET; context_limit = 800000
+elif "opus" in model_name.lower(): curr_model = Model.OPUS
 else: curr_model = Model.UNKNOWN
 #!<
 
 #!> Update model in shared state
-STATE = None
-with edit_state() as s: s.model = curr_model; STATE = s
+STATE = load_state()
+if not STATE or STATE.model != curr_model:
+    with edit_state() as s: s.model = curr_model; STATE = s
 #!<
 
 #-#
@@ -148,7 +149,7 @@ curr_mode = "Implementation" if STATE.mode == Mode.GO else "Discussion"
 
 ## ===== COUNT EDITED & UNCOMMITTED ===== ##
 # Use subprocess to count edited and uncommitted files (unstaged or staged)
-if cwd.startswith(str(PROJECT_ROOT)): git_path = PROJECT_ROOT / ".git"
+if cwd == str(PROJECT_ROOT): git_path = PROJECT_ROOT / ".git"
 else: git_path = find_git_repo(cwd)
 total_edited = 0
 if git_path and git_path.exists():

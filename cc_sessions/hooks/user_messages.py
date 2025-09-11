@@ -25,12 +25,13 @@ transcript_path = input_data.get("transcript_path", "")
 STATE = load_state()
 CONFIG = load_config()
 
-# Check if this is any /add-*-trigger command
+# Check if this is a slash command we handle via API
 prompt_stripped = prompt.strip()
-is_add_trigger_command = (prompt_stripped.startswith('/add-trigger') if prompt_stripped else False)
+api_commands = ['/mode', '/state', '/config', '/add-trigger', '/remove-trigger']
+is_api_command = any(prompt_stripped.startswith(cmd) for cmd in api_commands) if prompt_stripped else False
 
-# Only add ultrathink if not /add-trigger command
-if CONFIG.features.auto_ultrathink and not is_add_trigger_command: context = "[[ ultrathink ]]\n\n"
+# Only add ultrathink if not an API command
+if CONFIG.features.auto_ultrathink and not is_api_command: context = "[[ ultrathink ]]\n\n"
 else: context = ""
 
 #!> Trigger phrase detection
@@ -128,7 +129,7 @@ if transcript_path and os.path.exists(transcript_path):
 
 #!> DAIC mode toggling
 # Implementation triggers (only work in discussion mode, skip for /add-trigger)
-if not is_add_trigger_command and STATE.mode is Mode.NO and implementation_phrase_detected:
+if not is_api_command and STATE.mode is Mode.NO and implementation_phrase_detected:
     with edit_state() as s: s.mode = Mode.GO; STATE = s
     context += """[DAIC: Implementation Mode Activated]
 CRITICAL RULES:

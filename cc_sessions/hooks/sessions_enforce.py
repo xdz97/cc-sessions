@@ -98,6 +98,11 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
 #!> Bash command handling
 # For Bash commands, check if it's a read-only operation
 if tool_name == "Bash" and STATE.mode is Mode.NO:
+    # Special case: Allow sessions.api commands in discussion mode
+    if command and ('python -m sessions.api' in command or 'python -m cc_sessions.scripts.api' in command):
+        # API commands are allowed in discussion mode for state inspection and safe config operations
+        sys.exit(0)
+    
     if not is_bash_read_only(command, fail_closed=True):
         print("[DAIC] Blocked write-like Bash command in Discussion mode. Switch to Implementation or explain what you intend to change.", file=sys.stderr); sys.exit(2)
     else: sys.exit(0)

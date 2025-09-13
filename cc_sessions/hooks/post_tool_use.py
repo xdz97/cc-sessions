@@ -3,10 +3,7 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-import datetime
-import shutil
-import json
-import sys
+import shutil, json, sys
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -71,7 +68,7 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
         with edit_state() as s: s.mode = Mode.NO; s.current_task.clear_task(); STATE = s
         print(list_open_tasks()); sys.exit(0)
 
-    if STATE.active_protocol:
+    if STATE.active_protocol is not None:
         with edit_state() as s: STATE.active_protocol = None; STATE = s
  
     if STATE.todos.stashed:

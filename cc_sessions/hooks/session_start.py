@@ -11,7 +11,7 @@ import requests, json, sys, shutil
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, PROJECT_ROOT, load_config
+from shared_state import edit_state, PROJECT_ROOT, load_config, list_open_tasks
 ##-##
 
 #-#
@@ -105,44 +105,7 @@ Loading task file: {STATE.current_task.file}
         if task_updated: context += "[Note: Task status updated from 'pending' to 'in-progress']\n\nFollow the task-startup protocol to create branches and set up the work environment.\n\n"
         else: context += "Review the Work Log at the end of the task file above and continue the task.\n\n"
 else:
-    # No active task - list available tasks
-    tasks_dir = sessions_dir / 'tasks'
-    task_files = []
-
-    if tasks_dir.exists(): task_files = sorted([f for f in tasks_dir.glob('*.md') if f.name != 'TEMPLATE.md'])
-    for task_dir in sorted([d for d in tasks_dir.iterdir() if d.is_dir() and d.name != 'done']):
-        readme_file = task_dir / 'README.md'
-        if readme_file.exists(): task_files.append(task_dir)
-        subtask_files = sorted([f for f in task_dir.glob('*.md') if f.name not in ['TEMPLATE.md', 'README.md']])
-        task_files.extend(subtask_files)
-
-    if task_files:
-        context += "No active task set. Available tasks:\n"
-        for task_file in task_files:
-            fpath = task_file / 'README.md' if task_file.is_dir() else task_file
-            if not fpath.exists(): continue
-            # Read first few lines to get task info
-            with fpath.open('r', encoding='utf-8') as f: lines = f.readlines()[:10]
-            task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
-            status = 'unknown'
-            for line in lines:
-                if line.startswith('status:'): status = line.split(':')[1].strip(); break
-            context += f"  • {task_name} ({status})\n"
-
-        context += """
-To select a task:
-1. Update sessions/state/current-task.json with the task name
-2. Or create a new task following sessions/protocols/task-creation.md
-"""
-    else: context += """No tasks found. 
-
-To create your first task:
-1. Copy the template: cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name].md
-Priority prefixes: h- (high), m- (medium), l- (low), ?- (investigate)
-2. Fill in the task details
-3. Update sessions/state/current-task.json
-4. Follow sessions/protocols/task-startup.md
-"""
+    context += list_open_tasks()
 #!<
 
 #!> 4. Check cc-sessions version

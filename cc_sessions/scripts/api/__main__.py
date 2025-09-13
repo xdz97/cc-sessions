@@ -13,10 +13,10 @@ from pathlib import Path
 ##-##
 
 ## ===== LOCAL ===== ##
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Add parent directory to path for imports (sessions directory)
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from hooks.shared_state import load_state, load_config, edit_state, edit_config, Mode
-from scripts.api.router import route_command
+from api.router import route_command
 ##-##
 
 #-#

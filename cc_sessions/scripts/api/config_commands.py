@@ -266,7 +266,7 @@ def handle_git_command(args: List[str], json_output: bool = False) -> Any:
                 try:
                     config.git_preferences.add_pattern = GitAddPattern(value)
                 except ValueError:
-                    raise ValueError(f"Invalid add_pattern: {value}. Valid values: ask, all, modified")
+                    raise ValueError(f"Invalid add_pattern: {value}. Valid values: ask, all")
             
             elif key == 'default_branch':
                 config.git_preferences.default_branch = value

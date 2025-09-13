@@ -42,7 +42,6 @@ DISCUSSION_MODE_MSG = "You are now in Discussion Mode and should focus on discus
 IMPLEMENTATION_MODE_MSG = "You are now in Implementation Mode and may use tools to execute the agreed upon actions - when you are done return immediately to Discussion Mode"
 #-#
 
-#!> Docstring section
 """
 ╔════════════════════════════════════════════════════════════════════════════════════════╗
 ║ ██████╗██╗  ██╗ █████╗ █████╗ ██████╗█████╗       ██████╗██████╗ █████╗ ██████╗██████╗ ║
@@ -63,7 +62,6 @@ Provides centralized state management for hooks:
 Release note (v0.3.0):
 So ppl are already asking about paralellism so we're going to maybe make this less pain in the dik by providing some locking and atomic writing despite not really needing it for the main thread rn. If it becomes super annoying then multi-session bros will have to take ritalin.
 """
-#!<
 
 # ===== DECLARATIONS ===== #
 
@@ -87,7 +85,6 @@ class TriggerCategory(str, Enum):
 class GitAddPattern(str, Enum):
     ASK = "ask"
     ALL = "all"
-    MOD = "modified"
 
 class GitCommitStyle(str, Enum):
     CONVENTIONAL = "conventional"
@@ -126,6 +123,12 @@ class CCTools(str, Enum):
 #!<
 
 #!> State enums
+class SessionsProtocol(str, Enum):
+    COMPACT = "context-compaction"
+    CREATE = "task-creation"
+    START = "task-startup"
+    COMPLETE = "task-completion"
+
 class Mode(str, Enum):
     NO = "discussion"
     GO = "implementation"
@@ -367,6 +370,16 @@ class TaskState:
         else: data["file"] = file
         return cls(**data)
 
+    def clear_task(self):
+        self.name = None
+        self.file = None
+        self.branch = None
+        self.status = None
+        self.created = None
+        self.started = None
+        self.updated = None
+        self.submodules = None
+
 @dataclass
 class CCTodo:
     content: str
@@ -455,7 +468,6 @@ class SessionsTodos:
         """Return the specified todo list as a list of dicts."""
         if which == 'active': out = [asdict(t) for t in self.active]
         elif which == 'stashed': out = [asdict(t) for t in self.stashed]
-        else: raise ValueError("which must be 'active' or 'stashed'")
 
         for t in out:
             if isinstance(t.get("status"), Enum): t["status"] = t["status"].value
@@ -466,6 +478,10 @@ class SessionsTodos:
         todos = self.active if which == 'active' else self.stashed
         return [t.content for t in todos]
 
+@dataclass
+class APIPerms:
+    startup_load: bool = False
+    completion: bool = False
 #!<
 
 #!> State object
@@ -473,6 +489,8 @@ class SessionsTodos:
 class SessionsState:
     version: str = "unknown"
     current_task: TaskState = field(default_factory=TaskState)
+    active_protocol: Optional[SessionsProtocol] = None
+    api: APIPerms = field(default_factory=APIPerms)
     mode: Mode = Mode.NO
     todos: SessionsTodos = field(default_factory=SessionsTodos)
     model: Model = Model.OPUS
@@ -491,9 +509,18 @@ class SessionsState:
     def from_dict(cls, d: Dict[str, Any]) -> "SessionsState":
         try: pkg_version = version("cc-sessions")
         except PackageNotFoundError: pkg_version = "unknown"
+
+        active_protocol = d.get("active_protocol")
+        if active_protocol and isinstance(active_protocol, str): active_protocol = SessionsProtocol(active_protocol)
+
+        api_data = d.get("api", {})
+        if api_data and isinstance(api_data, dict): api_perms = APIPerms(**api_data)
+        else: api_perms = APIPerms()
         return cls(
             version=d.get("version", pkg_version),
             current_task=TaskState(**d.get("current_task", {})),
+            active_protocol=active_protocol,
+            api=api_perms,
             mode=Mode(d.get("mode", Mode.NO)),
             todos=SessionsTodos(
                 active=[cls._coerce_todo(t) for t in d.get("todos", {}).get("active", [])],
@@ -511,10 +538,14 @@ class SessionsState:
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         d["mode"] = self.mode.value
+
         # Normalize enums in nested todos for JSON
         for bucket in ("active", "stashed"):
             for t in d["todos"][bucket]:
                 if isinstance(t.get("status"), Enum): t["status"] = t["status"].value
+
+        if self.active_protocol: d["active_protocol"] = self.active_protocol.value
+        else: d["active_protocol"] = None
         return d
 #!<
 
@@ -533,6 +564,48 @@ def find_git_repo(path: Path) -> Optional[Path]:
         if current == PROJECT_ROOT or current.parent == current: break
         current = current.parent
     return None
+
+def list_open_tasks() -> str:
+    # No active task - list available tasks
+    tasks_dir = PROJECT_ROOT / 'sessions' / 'tasks'
+    task_files = []
+
+    if tasks_dir.exists(): task_files = sorted([f for f in tasks_dir.glob('*.md') if f.name != 'TEMPLATE.md'])
+    for task_dir in sorted([d for d in tasks_dir.iterdir() if d.is_dir() and d.name != 'done']):
+        readme_file = task_dir / 'README.md'
+        if readme_file.exists(): task_files.append(task_dir)
+        subtask_files = sorted([f for f in task_dir.glob('*.md') if f.name not in ['TEMPLATE.md', 'README.md']])
+        task_files.extend(subtask_files)
+
+    task_startup_help = ""
+    if task_files:
+        task_startup_help += "No active task set. Available tasks:\n"
+        for task_file in task_files:
+            fpath = task_file / 'README.md' if task_file.is_dir() else task_file
+            if not fpath.exists(): continue
+            # Read first few lines to get task info
+            with fpath.open('r', encoding='utf-8') as f: lines = f.readlines()[:10]
+            task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
+            status = 'unknown'
+            for line in lines:
+                if line.startswith('status:'): status = line.split(':')[1].strip(); break
+            task_startup_help += f"  • {task_name} ({status})\n"
+        task_startup_help += f"""
+To select a task:
+- Type in one of your startup commands: {load_config().trigger_phrases.task_startup}
+- Include the task file you would like to start using `@`
+- Hit Enter to activate task startup
+"""
+    else: task_startup_help += f"""No tasks found. 
+
+To create your first task:
+- Type one of your task creation commands: {load_config().trigger_phrases.task_creation}
+- Write a brief explanation of the task you need to complete 
+- Answer any questions Claude has for you
+"""
+
+    return task_startup_help + "\n"
+
 ##-##
 
 ## ===== STATE PROTECTION ===== ##

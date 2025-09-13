@@ -37,7 +37,7 @@ if tool_name == "TodoWrite": incoming_todos = tool_input.get("todos", [])
 ## ===== PATTERNS ===== ##
 READONLY_FIRST = {  'cat','less','more','grep','egrep','fgrep','head','tail','sort','uniq',
                     'cut','awk','sed','wc','printf','echo','pwd','ls','find','which','type',
-                    'env','printenv','whoami','date','df','du','stat','basename','dirname' }
+                    'env','printenv','whoami','date','df','du','stat','basename','dirname','diff' }
 WRITE_FIRST = {'rm','mv','cp','chmod','chown','mkdir','rmdir','ln','install','tee','truncate','touch','chattr','setfacl'}
 REDIR = re.compile(r'(?:^|\s)(?:>>|>|<<?|<<<)\s')
 ##-##
@@ -103,7 +103,7 @@ if tool_name == "Bash" and STATE.mode is Mode.NO:
         # API commands are allowed in discussion mode for state inspection and safe config operations
         sys.exit(0)
     
-    if not is_bash_read_only(command, fail_closed=True):
+    if not is_bash_read_only(command):
         print("[DAIC] Blocked write-like Bash command in Discussion mode. Switch to Implementation or explain what you intend to change.", file=sys.stderr); sys.exit(2)
     else: sys.exit(0)
 #!<
@@ -114,7 +114,7 @@ if file_path and all([
     file_path.name == 'sessions-state.json',
     file_path.parent.name == 'sessions']):
     # Check if it's a modifying operation
-    if not is_bash_read_only(command, fail_closed=True):
+    if not is_bash_read_only(command):
         print("[Security] Direct modification of sessions-state.json is not allowed. "
                 "This file should only be modified through the TodoWrite tool and approved commands.", file=sys.stderr); sys.exit(2)
 #!<

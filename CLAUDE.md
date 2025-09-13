@@ -11,17 +11,23 @@ The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enfo
 
 Recent architectural enhancement (v0.3.0) introduced comprehensive user configuration through the SessionsConfig system. Users can now customize trigger phrases, blocked tools, developer preferences, git workflows, and environment settings. This 320+ line configuration architecture provides type-safe, atomic configuration management with the same reliability as the core state system.
 
+The v0.3.1+ enhancement introduces a templated protocol system where protocols auto-load content with configuration-based template variables, eliminating conditional instructions. Protocols adapt automatically based on user configuration (e.g., submodules support) without requiring manual decision-making. The `load_protocol_file()` helper function provides seamless protocol loading with template substitution.
+
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py` - Core state and configuration management with SessionsConfig system
-- `cc_sessions/hooks/sessions-enforce.py` - DAIC enforcement with user-configurable tool blocking
-- `cc_sessions/hooks/session-start.py` - Session initialization with configuration integration
-- `cc_sessions/hooks/user-messages.py` - Configurable trigger phrase detection and mode switching
-- `cc_sessions/hooks/post-tool-use.py` - Todo completion detection and automated mode transitions
-- `cc_sessions/hooks/subagent-hooks.py` - Subagent context management and flag handling
+- `cc_sessions/hooks/shared_state.py:1-50` - Core state and configuration management with unified SessionsConfig system
+- `cc_sessions/hooks/sessions_enforce.py` - DAIC enforcement with user-configurable tool blocking patterns
+- `cc_sessions/hooks/session_start.py` - Session initialization with configuration integration and dual-import pattern
+- `cc_sessions/hooks/user_messages.py:72-84` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting
+- `cc_sessions/hooks/user_messages.py:165-216` - Templated task creation protocol system with automatic todo loading
+- `cc_sessions/hooks/user_messages.py:316-414` - Task startup protocol with conditional API startup-load command
+- `cc_sessions/hooks/user_messages.py:218-314` - Task completion protocol with commit style templates and conditional todos
+- `cc_sessions/hooks/post_tool_use.py` - Todo completion detection and automated mode transitions
+- `cc_sessions/hooks/subagent_hooks.py` - Subagent context management and flag handling
 - `cc_sessions/scripts/api/__main__.py` - Sessions API entry point for programmatic access
-- `cc_sessions/scripts/api/router.py` - Command routing and argument parsing
+- `cc_sessions/scripts/api/router.py` - Command routing with protocol command support
+- `cc_sessions/scripts/api/protocol_commands.py:59-172` - Protocol-specific API commands with startup-load returning full task content
 - `cc_sessions/scripts/api/state_commands.py` - State inspection and limited write operations
 - `cc_sessions/scripts/api/config_commands.py` - Configuration management commands
 - `cc_sessions/commands/` - User slash commands (mode, state, config, triggers)
@@ -30,7 +36,10 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
 - `cc_sessions/agents/service-documentation.md` - Service documentation maintenance agent
-- `cc_sessions/protocols/task-creation.md` - Structured task creation workflow
+- `cc_sessions/protocols/task-creation/task-creation.md` - Main templated task creation protocol
+- `cc_sessions/protocols/task-startup/task-startup.md` - Main templated task startup protocol with conditional sections
+- `cc_sessions/protocols/task-completion/task-completion.md` - Main templated task completion protocol
+- `cc_sessions/protocols/task-completion/commit-style-*.md` - Commit style templates (conventional, simple, detailed)
 - `pyproject.toml` - Package configuration with console script entry points
 
 ## Installation Methods
@@ -69,9 +78,10 @@ The framework includes persistent task management with git branch enforcement, c
 - Specialized agents operate in separate contexts
 
 ### Sessions API
-- **State Inspection** - View current task, mode, todos, flags, and metadata
+- **State Inspection** - View current task, mode, todos, flags, metadata, and active protocol
 - **Configuration Management** - Manage trigger phrases, git preferences, environment settings
 - **Limited Write Operations** - One-way mode switching (implementation → discussion)
+- **Protocol Commands** - startup-load command for task loading during startup protocol
 - **JSON Output Support** - Machine-readable format for programmatic use
 - **Security Boundaries** - No access to safety-critical settings or todo manipulation
 - **Dual Access** - Same functionality available via Python module and user slash commands
@@ -83,6 +93,53 @@ The framework includes persistent task management with git branch enforcement, c
 - **context-refinement**: Updates context with session discoveries
 - **service-documentation**: Maintains CLAUDE.md files for services
 
+## Protocol Architecture (v0.3.1+)
+
+### Templated Protocol System
+The protocol system uses configuration-driven template substitution to eliminate conditional instructions. Instead of protocols containing "if you have submodules, do X, otherwise do Y" logic, protocol content adapts automatically based on user configuration.
+
+#### Template Variables
+- `{submodules_field}` - Conditional frontmatter field for submodules list
+- `{submodules_instruction}` - Conditional instructions for submodule management
+- `{default_branch}` - User's configured default branch name
+- `{submodule_branch_todo}` - Conditional text for branch creation todos
+- `{submodule_context}` - Conditional context references
+
+#### Protocol Loading Helper
+- `load_protocol_file(relative_path)` - Auto-loads and templates protocol content
+- `format_todos_for_protocol(todos)` - Centralized formatting of CCTodo objects for protocol display
+- Protocols reference `sessions/protocols/[protocol-name]/` directory structure
+- Main protocol files include conditional chunks based on configuration
+- Template substitution happens at runtime based on current user config
+
+#### Configuration-Driven Conditional Sections
+- **Submodules Support**: Entire sections appear/disappear based on `CONFIG.git_preferences.has_submodules`
+- **Repository Type**: Protocols adapt for super-repo vs standard repo structures
+- **User Preferences**: Branch naming, commit styles, and workflow preferences auto-populate
+
+### Protocol Directory Structure
+```
+protocols/
+├── task-creation/
+│   └── task-creation.md                    # Main templated protocol
+├── task-startup/
+│   ├── task-startup.md                     # Main templated protocol  
+│   ├── submodule-management.md             # Conditional chunk for submodules
+│   ├── resume-notes-standard.md            # Conditional chunk for standard repos
+│   └── resume-notes-superrepo.md           # Conditional chunk for super-repos
+├── task-completion/
+│   ├── task-completion.md                  # Main templated protocol
+│   ├── commit-style-conventional.md        # Conventional commit style template
+│   ├── commit-style-simple.md              # Simple commit style template
+│   ├── commit-style-detailed.md            # Detailed commit style template
+│   ├── commit-standard.md                  # Standard repo commit instructions
+│   ├── commit-superrepo.md                 # Super-repo commit instructions
+│   ├── staging-all.md                      # "Add all" staging instructions
+│   ├── staging-ask.md                      # "Ask user" staging instructions
+│   └── git-add-warning.md                  # Warning for "add all" pattern
+└── context-compaction.md                   # Simple protocol (no templating)
+```
+
 ## Integration Points
 
 ### Consumes
@@ -91,17 +148,20 @@ The framework includes persistent task management with git branch enforcement, c
 - Python 3.8+ with tiktoken for token counting
 - Shell environment for command execution (Bash/PowerShell/Command Prompt)
 - File system locks for atomic state/configuration operations
+- **CLAUDE_PROJECT_DIR environment variable** for symlinked development setup
 
-### Provides
+### Provides  
 - **Sessions API** - Programmatic access via `python -m sessions.api` or `python -m cc_sessions.scripts.api`
 - **User Slash Commands** - `/mode`, `/state`, `/config`, `/add-trigger`, `/remove-trigger`
+- **Protocol Commands** - `python -m sessions.api protocol startup-load <task-file>` returns full task file content for task loading
 - `/add-trigger` - Dynamic trigger phrase configuration with persistent storage
 - `daic` - Manual mode switching command
 - Hook-based tool blocking with user-configurable patterns
+- Templated protocol system with automatic content adaptation
 - Task file templates and management protocols
 - Agent-based specialized operations
 - SessionsConfig API for runtime configuration management
-- SessionsState API for unified state management
+- SessionsState API for unified state management with active protocol tracking
 
 ## Configuration
 
@@ -127,12 +187,12 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 - `extrasafe` - Enhanced blocking mode
 
 **Git Preferences (`git_preferences`):**
-- `add_pattern` - Git add behavior (ask, all, modified)
+- `add_pattern` - Git add behavior (ask, all) - "modified" pattern removed as impractical
 - `default_branch` - Main branch name (default: "main")
-- `commit_style` - Commit message style (conventional, simple, detailed)
-- `auto_merge` - Automatic merge to main branch
-- `auto_push` - Automatic push to remote
-- `has_submodules` - Repository has submodules
+- `commit_style` - Commit message style with templates (conventional, simple, detailed)
+- `auto_merge` - Automatic merge to main branch (controls commit/merge todos)
+- `auto_push` - Automatic push to remote (controls push todos)
+- `has_submodules` - Repository has submodules (drives protocol templating)
 
 **Feature Toggles (`features`):**
 - `branch_enforcement` - Git branch validation
@@ -142,11 +202,20 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 
 ### State Management
 Unified state in `sessions/sessions-state.json`:
-- `current_task` - Active task metadata with frontmatter integration
+- `current_task` - Active task metadata with frontmatter integration and automatic status updates
 - `mode` - Current DAIC mode (discussion/implementation)
-- `todos` - Active and stashed todo lists with completion tracking
+- `active_protocol` - Currently active protocol (CREATE/START/COMPLETE/COMPACT/None)
+- `api` - Protocol-specific API permissions (startup_load, completion)
+- `todos` - Active and stashed todo lists with completion tracking  
 - `flags` - Context warnings, subagent status, session flags
 - `metadata` - Freeform runtime state
+
+### Development Setup Integration
+Configuration in `.claude/settings.json` supports both package and symlinked setups:
+- **Package Installation**: Hook commands reference `cc_sessions.hooks.*`
+- **Symlinked Development**: Hook commands reference `sessions/hooks/*` 
+- **Dual-Context Import Pattern**: Code auto-detects CLAUDE_PROJECT_DIR for path resolution
+- **Real-Time Development**: Changes to cc-sessions package immediately available without reinstall
 
 ### Windows Integration
 Configuration in `.claude/settings.json`:
@@ -154,13 +223,36 @@ Configuration in `.claude/settings.json`:
 - Python interpreter explicitly specified for `.py` hook execution
 - Native `.cmd` and `.ps1` script support for daic command
 
-## Architecture Changes (v0.3.0)
+## Architecture Changes (v0.3.0+)
+
+### Major System Modernization (v0.3.2+)
+- **Git Workflow Simplification**: Removed impractical "modified" add pattern that forced manual file selection
+- **Protocol Organization Cleanup**: Consolidated duplicate protocol files into organized subdirectory structure
+- **State System Unification**: All protocols now reference unified `sessions/sessions-state.json` instead of deprecated separate files
+- **Automatic Task Status Management**: Task status updates (in-progress, completion) now handled automatically by state system
+- **Commit Style Templates**: Added templated commit message styles (conventional, simple, detailed) with branch-based selection
+- **Protocol Command Integration**: Enhanced `startup-load` API command returns full task file content instead of just metadata
+- **Conditional Todo System**: Todos automatically adapt based on user configuration (auto_merge, auto_push, etc.)
+
+### Protocol Automation Infrastructure (v0.3.2+)
+- **SessionsProtocol Enum**: Tracks active protocols (`COMPACT`, `CREATE`, `START`, `COMPLETE`) for protocol state management
+- **APIPerms Dataclass**: Protocol-specific command authorization with fields for `startup_load` and `completion` permissions
+- **Active Protocol State Field**: New `active_protocol` field in SessionsState enables protocol-driven automation and command filtering
+- **Protocol Command Infrastructure**: Enhanced Sessions API with protocol-specific command routing and permission validation
+- **Protocol State Management**: Framework for protocols to manage their own execution state and permitted operations
 
 ### Unified State System
 - **Migration from Multi-File to Single-File**: Replaced 6+ individual state files (`daic-mode.json`, `current-task.json`, `active-todos.json`, etc.) with unified `sessions/sessions-state.json`
 - **Atomic Operations**: All state changes use file locking and atomic writes through `edit_state()` context manager
 - **Type-Safe State Management**: SessionsState dataclass with comprehensive validation and enum-based modes
 - **Backward Compatibility**: Seamless migration from old state file structure
+
+### Templated Protocol System (v0.3.1+)
+- **Configuration-Driven Protocol Loading**: `load_protocol_file()` helper function auto-loads protocol content with template substitution
+- **Template Variables**: Protocols use format strings like `{submodules_field}` populated based on user configuration
+- **Conditional Section Rendering**: Entire protocol sections appear/disappear based on configuration (e.g., submodules support)
+- **Elimination of Manual Decisions**: Protocols adapt automatically without requiring conditional instructions
+- **Modular Protocol Architecture**: Main protocol files reference conditional chunks based on user setup
 
 ### Comprehensive Configuration Architecture  
 - **SessionsConfig System**: 320+ lines of type-safe configuration management with nested dataclasses
@@ -177,15 +269,24 @@ Configuration in `.claude/settings.json`:
 
 ### Hook Architecture
 - **Unified State Management**: SessionsState class manages all runtime state in single JSON file with atomic operations
-- **Configuration-Driven Enforcement**: SessionsConfig system provides type-safe user customization of all behavioral patterns
-- **Pre-tool-use Validation**: sessions-enforce.py uses configurable patterns for tool blocking and branch validation
+- **Configuration-Driven Enforcement**: SessionsConfig system provides type-safe user customization of all behavioral patterns  
+- **Protocol State Management**: SessionsProtocol enum and active_protocol field enable protocol-driven automation
+- **Protocol Command Authorization**: APIPerms dataclass provides protocol-specific command permission validation
+- **Pre-tool-use Validation**: sessions_enforce.py uses configurable patterns for tool blocking and branch validation
 - **Post-tool-use Automation**: Automatic todo completion detection and mode transitions based on user preferences
-- **Configurable Trigger Detection**: user-messages.py supports user-defined trigger phrases for all workflow transitions
-- **Session Initialization**: session-start.py integrates configuration with task context loading
+- **Configurable Trigger Detection**: user_messages.py supports user-defined trigger phrases for all workflow transitions
+- **Protocol Auto-Loading**: `load_protocol_file()` helper eliminates manual "read this file" instructions
+- **Centralized Protocol Todo System**: `format_todos_for_protocol()` provides consistent todo formatting across all protocols
+- **Template-Based Protocol System**: Protocols auto-adapt based on configuration without conditional instructions
+- **Automatic Task Status Updates**: Task lifecycle management through state system (status, started dates)
+- **Commit Style Templating**: Dynamic commit message templates based on user preferences and branch patterns  
+- **Conditional Todo Generation**: Protocol todos adapt automatically to user configuration (merge, push, submodules)
+- **Session Initialization**: session_start.py integrates configuration with task context loading
 - **Subagent Protection**: Automatic subagent context detection and flag management with cleanup
 - **Atomic File Operations**: File locking and atomic writes prevent state corruption across all operations
 - **Cross-platform Compatibility**: pathlib.Path throughout with Windows-specific handling
-- **API Command Integration**: Sessions API commands whitelisted in DAIC enforcement and bypass ultrathink detection
+- **API Command Integration**: Sessions API commands whitelisted in DAIC enforcement and bypass ultrathink detection  
+- **Dual-Context Import Pattern**: Supports both symlinked development and package installation through CLAUDE_PROJECT_DIR detection
 
 ### Agent Delegation
 - Heavy file operations delegated to specialized agents
@@ -201,6 +302,14 @@ Configuration in `.claude/settings.json`:
 - **Configuration Validation**: Automatic type coercion and error handling for user inputs
 - **Default Fallbacks**: Comprehensive defaults ensure system functionality without configuration
 - **User Preference Persistence**: All configuration changes automatically saved to sessions/sessions-config.json
+
+### Protocol Loading & Templating
+- **Auto-Loading Helper**: `load_protocol_file()` eliminates manual "read this file" instructions
+- **Template Variable Substitution**: Format strings populated from user configuration at runtime
+- **Conditional Content Rendering**: Entire protocol sections appear/disappear based on user setup
+- **Modular Protocol Architecture**: Main protocols reference conditional chunks (submodule-management.md, resume-notes-*.md)
+- **Configuration-Driven Adaptation**: Protocols automatically adapt without requiring conditional instructions
+- **Development-Time Flexibility**: Protocol changes immediately available in symlinked setups
 
 ### Task Structure
 - Markdown files with frontmatter integration into TaskState class
@@ -230,12 +339,20 @@ Configuration in `.claude/settings.json`:
 - Python package with pip/pipx/uv support
 - NPM package wrapper for JavaScript environments
 - Direct bash script for build-from-source installations
+- **Symlinked Development Setup**: Use cc-sessions package locally without installation via symlinks
 - Cross-platform compatibility (macOS, Linux, Windows 10/11)
+
+### Development Setup
+- **Symlink Structure**: `sessions/hooks/` → `cc-sessions/cc_sessions/hooks/` for real-time testing
+- **Dual-Import Compatibility**: Code works in both symlinked and installed contexts
+- **CLAUDE_PROJECT_DIR Detection**: Automatic path configuration for development environments
 
 ### Template System
 - Task templates for consistent structure
 - CLAUDE.sessions.md behavioral template
-- Protocol markdown files for complex workflows
+- **Templated Protocol Files**: Protocol content with format string variables
+- **Configuration-Based Template Variables**: Auto-populated based on user preferences
+- **Modular Protocol Architecture**: Main protocols reference conditional chunks
 - Agent prompt templates for specialized operations
 
 ## Quality Assurance Features
@@ -264,6 +381,21 @@ Configuration in `.claude/settings.json`:
 - Chronological work log maintenance
 - Task scope enforcement through structured protocols
 
+## Migration & Development Features
+
+### Local Hook Migration
+- **Configuration Extraction**: Automatic extraction of hardcoded values from local `.claude/hooks/` files
+- **Symlinked Development Setup**: Use package functionality without installation via symlink structure
+- **Dual-Context Compatibility**: Code works seamlessly in both development and production environments
+- **Agent Preservation**: Local agent customizations maintained during migration
+- **Protocol Reconciliation**: Intelligent merging of local and package protocol differences
+
+### Development Workflow
+- **Real-Time Testing**: Changes to cc-sessions package immediately available without reinstall cycles
+- **CLAUDE_PROJECT_DIR Detection**: Automatic environment detection for path resolution
+- **Import Pattern Flexibility**: Fallback import system supports both symlinked and installed contexts
+- **Configuration-First Approach**: All customizations preserved through configuration rather than code changes
+
 ## Related Documentation
 
 - docs/INSTALL.md - Detailed installation guide
@@ -271,6 +403,7 @@ Configuration in `.claude/settings.json`:
 - cc_sessions/knowledge/ - Internal architecture documentation
 - README.md - Marketing-focused feature overview
 - sessions/protocols/ - Workflow protocol specifications (in installed projects)
+- sessions/tasks/migration-audit.md - Documentation of local vs package differences
 
 ## Sessions API Usage
 
@@ -284,12 +417,18 @@ Configuration in `.claude/settings.json`:
 ### Programmatic API
 
 **State Operations:**
-- `python -m sessions.api state [--json]` - Full state inspection
-- `python -m sessions.api state <component> [--json]` - Specific component (mode/task/todos/flags)
+- `python -m sessions.api state [--json]` - Full state inspection including active protocol
+- `python -m sessions.api state <component> [--json]` - Specific component (mode/task/todos/flags/active_protocol/api)
+- `python -m sessions.api state active_protocol [--json]` - View currently active protocol
+- `python -m sessions.api state api [--json]` - View protocol-specific API permissions
 - `python -m sessions.api mode discussion` - One-way switch to discussion mode
 - `python -m sessions.api flags clear` - Reset behavioral flags
 - `python -m sessions.api status` - Human-readable state summary
 - `python -m sessions.api version` - Package version information
+
+**Protocol Operations:**
+- `python -m sessions.api protocol startup-load <task-file>` - Load task and return full file content during startup protocol
+- Permission-based access controlled by active_protocol and api.startup_load states
 
 **Configuration Operations:**
 - `python -m sessions.api config [--json]` - Full configuration inspection

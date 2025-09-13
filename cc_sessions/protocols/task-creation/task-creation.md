@@ -1,20 +1,15 @@
 # Task Creation Protocol
 
-## Protocol Todos
-<!-- Use TodoWrite to add these todos exactly as written -->
-□ Determine task priority and type prefix
-□ Decide if task needs file or directory structure
-□ Create task file from template
-□ Write clear problem statement and success criteria
-□ Run context-gathering agent to create context manifest
-□ Update appropriate service index files
-□ Commit the new task file
+{todos}
 
 ## Creating a Task
 Follow these numbered steps to complete each todo above:
 
-### 1: Determine task priority and type prefix
-Check `sessions/sessions-config.json` for user-configured prefixes. If none, use default prefixes:
+### 1: Create task file from template with appropriate priority, type, and structure
+
+#### First, determine task priority
+All task files MUST include a priority prefix before the task type:
+
 - `h-` → High priority
 - `m-` → Medium priority  
 - `l-` → Low priority
@@ -26,21 +21,20 @@ Examples:
 - `l-docs-api-reference.md`
 - `?-research-old-feature.md`
 
-Task type comes after priority prefix. Check `sessions/sessions-config.json` for branch mappings.
+#### Then, choose task type prefix based on the primary goal (comes after priority):
 
-Default mappings:
-- `implement-` → Creates feature/ branch
-- `fix-` → Creates fix/ branch  
-- `refactor-` → Creates feature/ branch
-- `research-` → No branch needed
-- `experiment-` → Creates experiment/ branch
-- `migrate-` → Creates feature/ branch
-- `test-` → Creates feature/ branch
-- `docs-` → Creates feature/ branch
+- `implement-` → New functionality (creates feature/ branch)
+- `fix-` → Bug fixes, corrections (creates fix/ branch)  
+- `refactor-` → Code improvements (creates feature/ branch)
+- `research-` → Investigation only (no branch needed)
+- `experiment-` → Proof of concepts (creates experiment/ branch)
+- `migrate-` → Moving/updating systems (creates feature/ branch)
+- `test-` → Adding tests (creates feature/ branch)
+- `docs-` → Documentation (creates feature/ branch)
 
-- Combine: `[priority]-[type]-[descriptive-name]`
+Combine: `[priority]-[type]-[descriptive-name]`
 
-### 2: Decide if task needs file or directory structure
+#### Next, decide if task needs file or directory structure
 
 **Use a FILE when**:
 - Single focused goal
@@ -60,7 +54,7 @@ Default mappings:
   - `m-migrate-to-postgres/` (schema + data + cutover)
   - `l-test-all-services/` (per-service test files)
 
-### 3: Create task file from template
+#### Finally, create the task file
 For file:
 ```bash
 cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name].md
@@ -71,31 +65,30 @@ mkdir sessions/tasks/[priority]-[task-name]
 cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name]/README.md
 ```
 
-### 4: Fill out task frontmatter
+Then fill out task frontmatter
   - task: Must match filename (including priority prefix)
   - branch: Based on task type (or 'none' for research)
   - status: Start as 'pending'
-  - created: Today's date
-  - submodules: If operating in a super-repo, list all submodules requiring git branches for the task (all that will be affected)
+  - created: Today's date{submodules_field}
 
-### 5: Write problem statement and success criteria
-  - Clear description of what we're solving/building in Problem/Goal section
-  - Specific, measurable success criteria with checkboxes
-  - Defines "done" unambiguously
+### 2: Write problem statement and success criteria
+First, clarify your understanding of the task with the user as needed. Then, write a clear description of what we're solving/building in Problem/Goal section.
 
-### 6: Run context-gathering agent or mark complete
+Propose specific, measurable success criteria to the user that unambiguously define "done" and adjust as needed based on user feedback. Once approved, record the success criteria with checkboxes in the text file.
+
+### 3: Run context-gathering agent or mark complete
   - Ask user: "Would you like to run the context-gathering agent now?"
   - If yes: Use context-gathering agent on sessions/tasks/[priority]-[task-name].md
   - If no: Mark this step complete and continue
   - Context manifest MUST be complete before work begins (if not now, during task startup)
 
-### 7: Update service index files if applicable
+### 4: Update service index files if applicable
   - Check if task relates to any task indexes (sessions/tasks/indexes)
   - If not, ask user if they would like to create a new index for any affected features, code paths, or services
   - Add task to relevant index files under appropriate priority section
   - Skip if no relevant index exists
 
-### 8: Commit the new task file
+### 5: Commit the new task file
 - Stage the task file and any updated index files
 - Commit with descriptive message about the new task
 
@@ -109,11 +102,11 @@ If a file task needs subtasks during work:
 4. Update active task reference if needed
   - ex:
   ```json
-  { "task": "some-task-dir/README.md" }
+  {{ "task": "some-task-dir/README.md" }}
   ```
   - ex:
   ```json
-  { "task": "some-task-dir/some-subtask.md" }
+  {{ "task": "some-task-dir/some-subtask.md" }}
   ```
 
 ## Important Note on Context

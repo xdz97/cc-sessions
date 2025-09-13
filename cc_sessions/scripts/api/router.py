@@ -10,8 +10,9 @@ from typing import Any, List, Optional, Dict
 ##-##
 
 ## ===== LOCAL ===== ##
-from scripts.api.state_commands import handle_state_command, handle_mode_command, handle_flags_command, handle_status_command, handle_version_command
-from scripts.api.config_commands import handle_config_command
+from api.state_commands import handle_state_command, handle_mode_command, handle_flags_command, handle_status_command, handle_version_command
+from api.config_commands import handle_config_command
+from api.protocol_commands import handle_protocol_command
 ##-##
 
 #-#
@@ -19,6 +20,7 @@ from scripts.api.config_commands import handle_config_command
 # ===== GLOBALS ===== #
 
 COMMAND_HANDLERS = {
+    'protocol': handle_protocol_command,
     'state': handle_state_command,
     'mode': handle_mode_command,
     'flags': handle_flags_command,

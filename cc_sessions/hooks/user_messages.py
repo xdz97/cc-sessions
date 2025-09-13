@@ -3,6 +3,7 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
+from datetime import date
 import json
 import sys
 import os
@@ -12,7 +13,7 @@ import os
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, TaskState, edit_config, load_config
+from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, TaskState, load_config, SessionsProtocol
 ##-##
 
 #-#
@@ -68,6 +69,19 @@ Manages DAIC mode transitions and protocol triggers:
 """
 
 # ===== FUNCTIONS ===== #
+def load_protocol_file(relative_path):
+    """Load a protocol file or chunk from sessions/protocols/"""
+    file_path = PROJECT_ROOT / 'sessions' / 'protocols' / relative_path
+    if not file_path.exists(): return ""
+    with open(file_path, 'r') as f: return f.read()
+
+def format_todos_for_protocol(todos):
+    """Format a list of CCTodo objects for display in protocols."""
+    lines = ["## Protocol Todos", "<!-- Use TodoWrite to add these todos exactly as written -->"]
+    for todo in todos:
+        lines.append(f"□ {todo.content}")
+    return "\n".join(lines)
+
 def get_context_length_from_transcript(transcript_path):
     """Get current context length from the most recent main-chain message in transcript"""
     try:
@@ -125,9 +139,9 @@ if transcript_path and os.path.exists(transcript_path):
             with edit_state() as s: s.flags.context_85 = True; STATE = s
 ##-##
 
-## ===== CONTEXT MUTATIONS ===== ##
+## ===== TRIGGER DETECTION ===== ##
 
-#!> DAIC mode toggling
+#!> Discussion/Implementation mode toggling
 # Implementation triggers (only work in discussion mode, skip for /add-trigger)
 if not is_api_command and STATE.mode is Mode.NO and implementation_phrase_detected:
     with edit_state() as s: s.mode = Mode.GO; STATE = s
@@ -143,152 +157,266 @@ CRITICAL RULES:
 """
 
 # Emergency stop (works in any mode)
-if discussion_phrase_detected:  # Case sensitive
+if STATE.mode is Mode.GO and discussion_phrase_detected:  # Case sensitive
     with edit_state() as s: s.mode = Mode.NO; s.todos.clear_active(); STATE = s
     context += "[DAIC: EMERGENCY STOP] All tools locked. You are now in discussion mode. Re-align with your pair programmer.\n"
 #!<
 
 #!> Task creation
-if not is_add_trigger_command and task_creation_detected:
-    task_creation_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-creation.md'
+if not is_api_command and task_creation_detected:
+    # Define todos for this protocol
+    todos = [
+        CCTodo(
+            content='Create task file from template with appropriate priority, type, and structure',
+            activeForm='Creating task file from template'),
+        CCTodo(
+            content='Write clear problem statement and success criteria',
+            activeForm='Writing clear problem statement and success criteria'),
+        CCTodo(
+            content='Run context-gathering agent to create context manifest',
+            activeForm='Running context-gathering agent to create context manifest'),
+        CCTodo(
+            content='Update appropriate service index files',
+            activeForm='Updating appropriate service index files'),
+        CCTodo(
+            content='Commit the new task file',
+            activeForm='Committing the new task file')]
+    
+    # Load and compose protocol based on config
+    protocol_content = load_protocol_file('task-creation/task-creation.md')
+
+    # Build template variables
+    if CONFIG.git_preferences.has_submodules: submodules_field = "\n  - submodules: List all submodules requiring git branches for the task (all that will be affected)"
+    else: submodules_field = ""
+ 
+    template_vars = {
+        'submodules_field': submodules_field,
+        'todos': format_todos_for_protocol(todos)
+    }
+
+    # Format protocol with template variables
+    if protocol_content: protocol_content = protocol_content.format(**template_vars)
+
     with edit_state() as s: 
-        s.mode = Mode.GO
+        s.mode = Mode.GO; s.active_protocol = SessionsProtocol.CREATE
         if s.todos.active: had_active_todos = True; s.todos.stash_active()
-        # Auto-load protocol todos
-        s.todos.active = [
-            CCTodo(
-                content='Determine task priority and type prefix',
-                activeForm='Determining task priority and type prefix'),
-            CCTodo(
-                content='Decide if task needs file or directory structure',
-                activeForm='Deciding if task needs file or directory structure'),
-            CCTodo(
-                content='Create task file from template',
-                activeForm='Creating task file'),
-            CCTodo(
-                content='Write clear problem statement and success criteria',
-                activeForm='Writing clear problem statement and success criteria'),
-            CCTodo(
-                content='Run context-gathering agent to create context manifest',
-                activeForm='Running context-gathering agent to create context manifest'),
-            CCTodo(
-                content='Update appropriate service index files',
-                activeForm='Updating appropriate service index files'),
-            CCTodo(
-                content='Commit the new task file',
-                activeForm='Committing the new task file')]
+        s.todos.active = todos
         STATE = s
 
-    # Add task detection note
-    context += f"""[Task Detection Notice]
-Language in the user prompt indicates that the user may want to create a task or the message may reference something that could be a task.
+    context += "[Task Creation Notice]\n"
 
-Assess whether the user has explicitly asked to create a task, often evidenced by the use of one of the following trigger phrases:
-{CONFIG.trigger_phrases.task_creation if CONFIG.trigger_phrases.task_creation else 'No custom trigger phrases defined.'}
-
-**If and only if appropriate**, lightly attempt to dissuade the user from tasks that would be more like a major version than a line item of one or a minor patch.
-
-If its an explicit task creation request, immediately read {task_creation_protocol_path} and follow the instructions therein to create the task.
-
-If you can't be sure, read the protocol after confirmation from the user.
-
-"""
+    if protocol_content:
+        context += f"User triggered task creation. Protocol:\n{protocol_content}\n"
+    else:
+        # Fallback to old behavior if protocol not found
+        context += f"User triggered task creation. Read sessions/protocols/task-creation.md\n"
 
     if had_active_todos:
-        context += "Your previous todos have been stashed and task creation protocol todos have been made active. Your previous todos will be restored after the task creation todos are complete. Do not attempt to update or complete them until after the task creation protocol todos have been completed.\n\n"
+        context += "\nYour previous todos have been stashed and will be restored after task creation is complete.\n"
 #!<
 
 #!> Task completion
-if not is_add_trigger_command and task_completion_detected:
-    task_completion_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-completion.md'
-    with edit_state() as s:
-        s.mode = Mode.GO
+if not is_api_command and task_completion_detected:
+    # Define todos for this protocol
+    todos = [
+        CCTodo(
+            content='Verify all success criteria are checked off',
+            activeForm='Verifying status of success criteria'),
+        CCTodo(
+            content='Run code-review agent and address any critical issues',
+            activeForm='Running code-review agent'),
+        CCTodo(
+            content='Run logging agent to consolidate work logs',
+            activeForm='Running logging agent to consolidate work logs'),
+        CCTodo(
+            content='Run service-documentation agent to update CLAUDE.md files and other documentation',
+            activeForm='Running service-documentation agent to update documentation'),
+        CCTodo(
+            content='Mark task file complete and move to tasks/done/',
+            activeForm='Archiving task file')
+    ]
+
+    # Build commit todo based on auto_merge preference
+    commit_content = 'Commit changes'
+    if CONFIG.git_preferences.auto_merge:
+        commit_content += f' and merge to {CONFIG.git_preferences.default_branch}'
+    else:
+        commit_content += f' and ask if user wants to merge to {CONFIG.git_preferences.default_branch}'
+
+    todos.append(CCTodo(
+        content=commit_content,
+        activeForm='Committing and handling merge'))
+
+    # Add push todo based on auto_push preference
+    if CONFIG.git_preferences.auto_push:
+        todos.append(CCTodo(
+            content='Push changes to remote',
+            activeForm='Pushing changes to remote'))
+    else:
+        todos.append(CCTodo(
+            content='Ask if user wants to push changes to remote',
+            activeForm='Asking about pushing to remote'))
+
+    # Load and compose protocol based on config
+    protocol_content = load_protocol_file('task-completion/task-completion.md')
  
-        # Auto-load protocol todos
-        s.todos.active = [
-            CCTodo(
-                content='Verify all success criteria are checked off',
-                activeForm='Verifying status of success criteria'),
-            CCTodo(
-                content='Run code-review agent and address any critical issues',
-                activeForm='Running code-review agent'),
-            CCTodo(
-                content='Run logging agent to consolidate work logs',
-                activeForm='Running logging agent to consolidate work logs'),
-            CCTodo(
-                content='Run service-documentation agent to update CLAUDE.md files and other documentation',
-                activeForm='Running service-documentation agent to update documentation'),
-            CCTodo(
-                content='Mark task file complete and move to tasks/done/',
-                activeForm='Archiving task file'),
-            CCTodo(
-                content='Commit all changes with comprehensive message and (USER OPTION: merge to main)',
-                activeForm='Committing and merging'),
-            CCTodo(
-                content='USER OPTION: Push changes to remote',
-                activeForm='Asking user about pushing changes')
-        ]
+    # Build template variables based on configuration
+    template_vars = {
+        'default_branch': CONFIG.git_preferences.default_branch,
+        'todos': format_todos_for_protocol(todos)
+    }
+
+    # Git add warning (only for add_pattern == "all")
+    if CONFIG.git_preferences.add_pattern == 'all': template_vars['git_add_warning'] = load_protocol_file('task-completion/git-add-warning.md')
+    else: template_vars['git_add_warning'] = ''
+
+    # Staging instructions based on add_pattern
+    if CONFIG.git_preferences.add_pattern == 'all': template_vars['staging_instructions'] = load_protocol_file('task-completion/staging-all.md')
+    else: template_vars['staging_instructions'] = load_protocol_file('task-completion/staging-ask.md')  # Default to 'ask' for safety
+
+    # Commit instructions based on has_submodules
+    if CONFIG.git_preferences.has_submodules: commit_instructions_content = load_protocol_file('task-completion/commit-superrepo.md')
+    else: commit_instructions_content = load_protocol_file('task-completion/commit-standard.md')
+ 
+    # Build merge and push instructions based on auto preferences
+    if CONFIG.git_preferences.auto_merge: merge_instruction = f'Merge into {CONFIG.git_preferences.default_branch}'
+    else: merge_instruction = f'Ask user if they want to merge into {CONFIG.git_preferences.default_branch}'
+
+    if CONFIG.git_preferences.auto_push: push_instruction = 'Push the merged branch to remote'
+    else: push_instruction = 'Ask user if they want to push to remote'
+
+    # Load commit style guidance based on preference
+    if CONFIG.git_preferences.commit_style == 'conventional':
+        template_vars['commit_style_guidance'] = load_protocol_file('task-completion/commit-style-conventional.md')
+    elif CONFIG.git_preferences.commit_style == 'simple':
+        template_vars['commit_style_guidance'] = load_protocol_file('task-completion/commit-style-simple.md')
+    elif CONFIG.git_preferences.commit_style == 'detailed':
+        template_vars['commit_style_guidance'] = load_protocol_file('task-completion/commit-style-detailed.md')
+    else:
+        # Default to conventional if not specified
+        template_vars['commit_style_guidance'] = load_protocol_file('task-completion/commit-style-conventional.md')
+
+    # Format commit instructions with merge/push
+    template_vars['commit_instructions'] = commit_instructions_content.format(merge_instruction=merge_instruction, push_instruction=push_instruction, commit_style_guidance=template_vars['commit_style_guidance'])
+
+    # Format protocol with all template variables
+    if protocol_content: protocol_content = protocol_content.format(**template_vars)
+
+    with edit_state() as s:
+        s.mode = Mode.GO; s.active_protocol = SessionsProtocol.COMPLETE
+        s.todos.active = todos
         STATE = s
 
-    # Add task completion note
-    context += f"[Task Completion Notice]\nLanguage in the user prompt indicates that the user may want to complete the current task.\n\nIF you or the user believe that the current task is complete, or IF the user has explicitly asked to complete the task, check the current task file and report back on its completion status.\n\n If you are ready to complete the task, you *MUST* read {task_completion_protocol_path} and follow the instructions therein to complete the task.\n\n"
+    context += "[Task Completion Notice]\n"
+
+    if protocol_content: context += f"User triggered task completion. Protocol:\n{protocol_content}\n"
+    else: context += f"User triggered task completion. Read sessions/protocols/task-completion.md\n"
 #!<
 
 #!> Task startup
-if not is_add_trigger_command and task_start_detected:
+if not is_api_command and task_start_detected:
     task_reference = None
     words = prompt.split()
     for word in words:
         if word.startswith("@") and ("sessions/tasks/" in word) and word.endswith(".md"):
             task_reference = word.split('sessions/tasks/')[-1]
             break
-    task_start_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'task-startup.md'
-    with edit_state() as s: 
-        s.mode = Mode.GO
-        s.todos.clear_active()
-        s.todos.active = [
-            CCTodo(
-                content='Check git status and handle any uncommitted changes',
-                activeForm='Checking git status and handling uncommitted changes'),
-            CCTodo(
-                content='Create/checkout task branch and matching submodule branches',
-                activeForm='Creating/checking out task branch(es)'),
-            CCTodo(
-                content='Update current-task.json with new task',
-                activeForm='Updating current-task.json'),
-            CCTodo(
-                content='Load task context manifest and verify understanding',
-                activeForm='Loading task context manifest and verifying understanding'),
-            CCTodo(
-                content='Update task status to in-progress and add started date',
-                activeForm='Updating task status to in-progress and adding started date')]
+
+    # Load and compose protocol based on config
+    protocol_content = load_protocol_file('task-startup/task-startup.md')
+
+    # Load conditional chunks
+    if CONFIG.git_preferences.has_submodules:
+        submodule_management = load_protocol_file('task-startup/submodule-management.md')
+        resume_notes = load_protocol_file('task-startup/resume-notes-superrepo.md')
+    else:
+        submodule_management = ""
+        resume_notes = load_protocol_file('task-startup/resume-notes-standard.md')
+
+    # Set todos based on config
+    todo_branch_content = 'Create/checkout task branch and matching submodule branches' if CONFIG.git_preferences.has_submodules else 'Create/checkout task branch'
+    todo_branch_active = 'Creating/checking out task branches' if CONFIG.git_preferences.has_submodules else 'Creating/checking out task branch'
+
+    # Build todos list - will add read task todo conditionally
+    todos = [
+        CCTodo(
+            content='Check git status and handle any uncommitted changes',
+            activeForm='Checking git status and handling uncommitted changes'),
+        CCTodo(
+            content=todo_branch_content,
+            activeForm=todo_branch_active),
+        CCTodo(
+            content='Verify context manifest for the task',
+            activeForm='Verifying context manifest'),
+        CCTodo(
+            content='Gather context for the task',
+            activeForm='Catching up to speed...')
+    ]
+
+    # Check if task will be auto-loaded
+    if task_reference:
+        try:
+            task_data = TaskState.load_task(file=task_reference)
+            # Auto-update status and started date
+            task_data.status = 'in-progress'
+            if not task_data.started: task_data.started = date.today().strftime('%Y-%m-%d')
+            with edit_state() as s: s.current_task = task_data; STATE = s
+
+            # Auto-output the task file content
+            task_file_path = PROJECT_ROOT / 'sessions' / 'tasks' / task_reference
+            with open(task_file_path, 'r') as f:
+                task_content = f.read()
+            context += f"[Task Startup Notice]\nTask loaded: {task_reference}\n\nTask file content:\n{task_content}\n\n"
+        except:
+            context += f"[Task Startup Notice]\nFailed to load task reference: {task_reference} - the file doesn't exist or contains invalid frontmatter.\n"
+            context += "Ask the user which task they want to start, verify the task file exists (ls sessions/tasks/), "
+            context += "then use: python -m sessions.api protocol startup-load <valid-task-file>\n\n"
+            task_reference = None  # Clear invalid reference
+    else:
+        context += "[Task Startup Notice]\nNo task reference detected. If the user mentioned which task to start:\n"
+        context += "1. Return to project root directory\n"
+        context += "2. Run: `python -m sessions.api protocol startup-load <task-file>`\n"
+        context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n"
+
+    # Build template variables for protocol
+    git_status_scope = 'in both super-repo and all submodules' if CONFIG.git_preferences.has_submodules else ''
+    
+    # Build git handling instructions based on add_pattern
+    if CONFIG.git_preferences.add_pattern == 'all':
+        git_handling = '- Commit ALL changes'
+    else:  # 'ask' pattern
+        git_handling = '- Either commit changes or explicitly discuss with user'
+    
+    template_vars = {
+        'default_branch': CONFIG.git_preferences.default_branch,
+        'submodule_branch_todo': ' and matching submodule branches' if CONFIG.git_preferences.has_submodules else '',
+        'submodule_context': ' (and submodules list)' if CONFIG.git_preferences.has_submodules else '',
+        'submodule_management_section': submodule_management,
+        'resume_notes': resume_notes,
+        'git_status_scope': git_status_scope,
+        'git_handling': git_handling,
+        'todos': format_todos_for_protocol(todos)
+    }
+
+    # Format protocol with template variables
+    if protocol_content: protocol_content = protocol_content.format(**template_vars)
+
+    # Set state with todos
+    with edit_state() as s:
+        s.mode = Mode.GO; s.active_protocol = SessionsProtocol.START
+        s.api.startup_load = True; s.todos.clear_active()
+        s.todos.active = todos
         STATE = s
 
-    protocol_content = None
-    if task_start_protocol_path.exists():
-        with open(task_start_protocol_path, 'r') as f: protocol_content = f.read()
-
-    context += f"[Task Startup Notice]\nLanguage in the user prompt indicates that the user may want to start a new task. "
-
-    if task_reference: 
-        task_data = TaskState.load_task(file=task_reference)
-        with edit_state() as s: s.current_task = task_data; STATE = s
-        context += f"A potential task reference was detected in the user prompt: {task_reference}. This task has been set as the current task."
-
-    context += "If the user wants to begin a new task, you *MUST* follow the task startup protocol:\n"
-
-    if protocol_content: context += f"{protocol_content}\n"
-    else: context += f"sessions/protocols/task-startup.md\n"
+    # Auto-load protocol content
+    if protocol_content: context += f"User triggered task startup. Protocol:\n{protocol_content}\n"
+    else: context += "User triggered task startup. Read sessions/protocols/task-startup.md\n"
 #!<
 
 #!> Context compaction
-if not is_add_trigger_command and compaction_detected:
-    compaction_protocol_path = PROJECT_ROOT / 'sessions' / 'protocols' / 'context-compaction.md'
-    if STATE.todos.active: 
-        had_active_todos = True
-        with edit_state() as s: s.mode = Mode.GO; s.todos.stash_active(); STATE = s
-    # Auto-load protocol todos
-    with edit_state() as s: s.todos.active = [
+if not is_api_command and compaction_detected:
+    # Define todos for this protocol
+    todos = [
         CCTodo(
             content='Run logging agent to update work logs',
             activeForm='Running logging agent to update work logs'),
@@ -296,18 +424,36 @@ if not is_add_trigger_command and compaction_detected:
             content='Run context-refinement agent to check for discoveries',
             activeForm='Running context-refinement agent to check for discoveries'),
         CCTodo(
-            content='Run service-documentation agent (if service interfaces changed)',
-            activeForm='Running service-documentation agent if service interfaces changed'),
-        CCTodo(
-            content='Verify/update current task state',
-            activeForm='Verifying/updating current task'),
-        CCTodo(
-            content='Announce readiness for context clear',
-            activeForm='Announcing readiness for context clear')]
-    STATE = s
+            content='Run service-documentation agent if service interfaces changed',
+            activeForm='Running service-documentation agent if service interfaces changed')]
 
-    # Add context compaction note
-    context += f"[Context Compaction Notice]\nLanguage in the user prompt indicates that the user may want to compact context. You *MUST* read {compaction_protocol_path} and follow the instructions therein to compact context properly.\n"
+    # Load protocol content
+    protocol_content = load_protocol_file('context-compaction/context-compaction.md')
+
+    # Build template variables
+    template_vars = {
+        'todos': format_todos_for_protocol(todos)
+    }
+
+    # Format protocol with template variables
+    if protocol_content: protocol_content = protocol_content.format(**template_vars)
+
+    if STATE.todos.active: 
+        had_active_todos = True
+        with edit_state() as s: s.todos.stash_active(); STATE = s
+
+    with edit_state() as s: 
+        s.mode = Mode.GO; s.active_protocol = SessionsProtocol.COMPACT
+        s.todos.active = todos
+        STATE = s
+
+    context += "[Context Compaction Notice]\n"
+
+    if protocol_content:
+        context += f"User triggered context compaction. Protocol:\n{protocol_content}\n"
+    else:
+        # Fallback to old behavior if protocol not found
+        context += f"User triggered context compaction. Read sessions/protocols/context-compaction.md\n"
 
     if had_active_todos: context += "Your todos have been stashed and will be restored in the next session after the user clears context. Do not attempt to update or complete your previous todo list (context compaction todos are now active).\n"
 #!<

@@ -13,7 +13,7 @@ import sys
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import load_state, edit_state, Mode, PROJECT_ROOT
+from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, SessionsProtocol, list_open_tasks
 ##-##
 
 #-#
@@ -66,16 +66,24 @@ if tool_name == "Task" and STATE.flags.subagent:
 if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_complete():
     # Check if all complete (names already verified to match if active_todos existed)
     print("[DAIC: Todos Complete] All todos completed.\n\n", file=sys.stderr)
+
+    if STATE.active_protocol is SessionsProtocol.COMPLETE: 
+        with edit_state() as s: s.mode = Mode.NO; s.current_task.clear_task(); STATE = s
+        print(list_open_tasks()); sys.exit(0)
+
+    if STATE.active_protocol:
+        with edit_state() as s: STATE.active_protocol = None; STATE = s
  
     if STATE.todos.stashed:
         with edit_state() as s: num_restored = s.todos.restore_stashed(); restored = [t.content for t in s.todos.active]; STATE = s
         # TODO: Replace printed command hint for clearing active todos with less verbose agent API (expose critical functions/methods to the agent directly with python/TS|JS script + args)
         if num_restored:
             print(f"Your previous {num_restored} todos have been restored to active and you may immediately resume completing them.\nFor reference, those todos are:\n\n{json.dumps(restored, indent=2)}\n\nIf you don't need these, just run `cd .claude/hooks && python -c \"from shared_state import edit_state; with edit_state() as s: s.todos.clear_active\"` to clear them.\n\n", file=sys.stderr)
+            mod = True
     else:
         with edit_state() as s: s.todos.active = []; s.mode = Mode.NO; STATE = s
         print("You have returned to discussion mode. You may now discuss next steps with the user.\n\n", file=sys.stderr)
-    mod = True
+        mod = True
 #!<
 
 #!> Implementation mode + no Todos enforcement

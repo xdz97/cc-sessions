@@ -8,7 +8,18 @@ import json, sys, subprocess
 ##-##
 
 ## ===== LOCAL ===== ##
-from hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_repo, load_state
+import os
+
+# Add sessions to path if CLAUDE_PROJECT_DIR is available (symlink setup)
+if 'CLAUDE_PROJECT_DIR' in os.environ:
+    sys.path.insert(0, os.path.join(os.environ['CLAUDE_PROJECT_DIR'], 'sessions'))
+
+try:
+    # Try direct import (works with sessions in path or package install)
+    from hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_repo, load_state
+except ImportError:
+    # Fallback to package import
+    from cc_sessions.hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_repo, load_state
 ##-##
 
 #-#

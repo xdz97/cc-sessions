@@ -2,13 +2,7 @@
 
 When context window reaches ~90%, you will be instructed to perform these steps:
 
-## Protocol Todos
-<!-- Use TodoWrite to add these todos exactly as written -->
-□ Run logging agent to update work logs
-□ Run context-refinement agent to check for discoveries
-□ Run service-documentation agent if service interfaces changed
-□ Verify/update sessions/state/current-task.json
-□ Announce readiness for context clear
+{todos}
 
 ## 1. Run Maintenance Agents
 
@@ -26,14 +20,6 @@ Before compacting, delegate to agents:
 3. **service-documentation agent** - Update CLAUDE.md files
    - Only if service interfaces changed significantly
    - Include list of modified services
-
-## 2. Verify/Update Task State
-
-Ensure that sessions/state/current-task.json contains the correct current task.
-
-## 3. Announce Readiness
-
-Announce to the user that the agents have completed their work, the task state is updated, and we are ready to clear context.
 
 ## Note on Context Refinement
 

@@ -373,7 +373,7 @@ if not is_api_command and task_start_detected:
             context += "then use: python -m sessions.api protocol startup-load <valid-task-file>\n\n"
             task_reference = None  # Clear invalid reference
     else:
-        context += "[Task Startup Notice]\nNo task reference detected. If the user mentioned which task to start:\n"
+        context += "[Task Startup Notice]\nNo task reference detected. **If the user mentioned which task to start, *YOU MUST***:\n"
         context += "1. Return to project root directory\n"
         context += "2. Run: `python -m sessions.api protocol startup-load <task-file>`\n"
         context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n"

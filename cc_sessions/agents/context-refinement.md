@@ -17,21 +17,15 @@ You've been called at the end of a work session to check if any new context was 
 ## Process
 
 1. **Read Transcript Files**
-   Follow these steps to find and read the transcript files:
-   
-   a. **Determine the parent directory** of the sessions/ directory in which the task file is stored
-   b. **List all files** in `[parent directory]/sessions/state/context-refinement/`
-   c. **Read every file** in that directory
-   
-   The transcript files contain the full conversation history that led to this point.
+   The full transcript is stored at `sessions/transcripts/context-refinement/`. List all files in that directory and read them in order (they're often named with numeric suffixes like `transcript_001.txt`, `transcript_002.txt`).
 
 2. **Analyze for Drift or Discoveries**
    Identify if any of these occurred:
-   - Component behavior different than documented
+   - Component/module/service behavior different than documented
    - Gotchas discovered that weren't documented
    - Hidden dependencies or integration points revealed
    - Wrong assumptions in original context
-   - Additional components/modules that needed modification
+   - Additional components/modules/services that needed modification
    - Environmental requirements not initially documented
    - Unexpected error handling requirements
    - Data flow complexities not originally captured
@@ -62,7 +56,7 @@ You've been called at the end of a work session to check if any new context was 
 ## What Qualifies as Worth Updating
 
 **YES - Update for these:**
-- Undocumented component interactions discovered
+- Undocumented component/service/module interactions discovered
 - Incorrect assumptions about how something works
 - Missing configuration requirements
 - Hidden side effects or dependencies
@@ -70,7 +64,7 @@ You've been called at the end of a work session to check if any new context was 
 - Performance constraints discovered
 - Security requirements found during implementation
 - Breaking changes in dependencies
-- Undocumented business rules
+- Undocumented business rules or domain logic
 
 **NO - Don't update for these:**
 - Minor typos or clarifications

@@ -60,13 +60,7 @@ Before making any changes:
    - List what to ADD (new from this session)
 
 ### Transcript Reading
-Follow these steps to find and read the transcript files:
-
-1. **Determine the parent directory** of the sessions/ directory in which the task file is stored
-2. **List all files** in `[parent directory]/sessions/state/logging/`
-3. **Read every file** in that directory
-
-The transcript files contain the full conversation history that led to this point.
+The full transcript of the session (all user and assistant messages) is stored at `sessions/transcripts/logging/`. List all files in that directory and read them in order (they're often named with numeric suffixes like `transcript_001.txt`, `transcript_002.txt`).
 
 ### Work Log Format
 

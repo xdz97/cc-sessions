@@ -19,7 +19,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/shared_state.py:1-50` - Core state and configuration management with unified SessionsConfig system
 - `cc_sessions/hooks/sessions_enforce.py` - DAIC enforcement with user-configurable tool blocking patterns
 - `cc_sessions/hooks/session_start.py` - Session initialization with configuration integration and dual-import pattern
-- `cc_sessions/hooks/user_messages.py:72-84` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting
+- `cc_sessions/hooks/user_messages.py:72-84` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting with improved task startup notices
 - `cc_sessions/hooks/user_messages.py:165-216` - Templated task creation protocol system with automatic todo loading
 - `cc_sessions/hooks/user_messages.py:316-414` - Task startup protocol with conditional API startup-load command
 - `cc_sessions/hooks/user_messages.py:218-314` - Task completion protocol with commit style templates and conditional todos
@@ -32,10 +32,14 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/config_commands.py` - Configuration management commands
 - `cc_sessions/commands/` - User slash commands (mode, state, config, triggers)
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
+- `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
 - `cc_sessions/agents/service-documentation.md` - Service documentation maintenance agent
+- `cc_sessions/agents/context-gathering.md` - Enhanced context-gathering with better pattern examples and comprehensive research methodology
+- `cc_sessions/agents/logging.md` - Improved logging agent with simplified transcript access and better cleanup patterns
+- `cc_sessions/agents/context-refinement.md` - Context refinement with streamlined transcript reading
 - `cc_sessions/protocols/task-creation/task-creation.md` - Main templated task creation protocol
 - `cc_sessions/protocols/task-startup/task-startup.md` - Main templated task startup protocol with conditional sections
 - `cc_sessions/protocols/task-completion/task-completion.md` - Main templated task completion protocol
@@ -87,10 +91,10 @@ The framework includes persistent task management with git branch enforcement, c
 - **Dual Access** - Same functionality available via Python module and user slash commands
 
 ### Specialized Agents
-- **context-gathering**: Creates comprehensive task context manifests
-- **logging**: Consolidates work logs with cleanup and chronological ordering
+- **context-gathering**: Creates comprehensive task context manifests with enhanced pattern examples and architectural insights
+- **logging**: Consolidates work logs with simplified transcript paths and improved chronological organization
 - **code-review**: Reviews implementations for quality and patterns
-- **context-refinement**: Updates context with session discoveries
+- **context-refinement**: Updates context with session discoveries using simplified transcript access
 - **service-documentation**: Maintains CLAUDE.md files for services
 
 ## Protocol Architecture (v0.3.1+)
@@ -289,10 +293,11 @@ Configuration in `.claude/settings.json`:
 - **Dual-Context Import Pattern**: Supports both symlinked development and package installation through CLAUDE_PROJECT_DIR detection
 
 ### Agent Delegation
-- Heavy file operations delegated to specialized agents
-- Agents receive full conversation transcript for context
-- Agent results returned to main conversation thread
+- Heavy file operations delegated to specialized agents with enhanced pattern recognition
+- Agents access conversation transcripts through dedicated `sessions/transcripts/[agent-name]/` directories
+- Agent results returned to main conversation thread with improved context preservation
 - Agent state isolated in separate context windows
+- Streamlined transcript access eliminates complex path management
 
 ### Configuration Management
 - **Type-Safe Enums**: CCTools, TriggerCategory, GitCommitStyle, UserOS, UserShell for validation
@@ -396,6 +401,35 @@ Configuration in `.claude/settings.json`:
 - **Import Pattern Flexibility**: Fallback import system supports both symlinked and installed contexts
 - **Configuration-First Approach**: All customizations preserved through configuration rather than code changes
 
+## Agent System Enhancements
+
+### Enhanced Context-Gathering Agent
+The context-gathering agent now provides comprehensive pattern recognition with detailed examples across multiple architecture types:
+- **Architecture Patterns**: Identifies super-repo, mono-repo, microservices, and standard repository structures
+- **Communication Patterns**: Recognizes REST, GraphQL, gRPC, WebSockets, message queues, and event-driven architectures
+- **Data Access Patterns**: Detects ORM usage (SQLAlchemy, Prisma, TypeORM), caching strategies, and file system organization
+- **Business Logic Recognition**: Captures validation patterns, authentication flows, data transformation pipelines, and workflow patterns
+- **Improved Research Methodology**: More thorough component discovery with explicit guidance to trace call paths and understand full architecture
+
+### Simplified Agent Transcript Access
+All specialized agents now use streamlined transcript access through dedicated directories:
+- **Logging Agent**: Reads from `sessions/transcripts/logging/` with improved chronological consolidation
+- **Context-Refinement Agent**: Accesses `sessions/transcripts/context-refinement/` for discovery tracking
+- **Consistent Pattern**: Eliminates complex path management across all agent operations
+
+### Kickstart Agent Customization
+New comprehensive guide at `cc_sessions/kickstart/agent-customization-guide.md` enables project-specific agent customization:
+- **Technology Stack Adaptation**: Customize agents for specific languages, frameworks, and databases
+- **Architectural Pattern Recognition**: Tailor pattern detection for microservices, serverless, monolithic, or frontend architectures
+- **Domain-Specific Terminology**: Replace generic terms with project-specific vocabulary
+- **Custom Skip Patterns**: Configure agents to skip generated files, vendor directories, or irrelevant paths
+- **Compliance Integration**: Add security, accessibility, or regulatory requirements to code review patterns
+
+### Agent Reliability Improvements
+- **Task Startup Notice Fixes**: Resolved intermittent failures in task startup notifications through improved hook handling
+- **Enhanced Error Handling**: Better transcript reading with fallback mechanisms
+- **Atomic File Operations**: Consistent file locking patterns across all agent operations
+
 ## Related Documentation
 
 - docs/INSTALL.md - Detailed installation guide
@@ -404,6 +438,7 @@ Configuration in `.claude/settings.json`:
 - README.md - Marketing-focused feature overview
 - sessions/protocols/ - Workflow protocol specifications (in installed projects)
 - sessions/tasks/migration-audit.md - Documentation of local vs package differences
+- cc_sessions/kickstart/agent-customization-guide.md - Complete agent customization guide
 
 ## Sessions API Usage
 

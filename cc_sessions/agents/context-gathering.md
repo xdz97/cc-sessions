@@ -25,11 +25,12 @@ Hunt down:
 - Every feature/service/module that will be touched
 - Every component that communicates with those components  
 - Configuration files and environment variables
-- Database models and access patterns
-- Caching patterns and data structures
+- Database models and data access patterns
+- Caching systems and data structures (Redis, Memcached, in-memory, etc.)
 - Authentication and authorization flows
 - Error handling patterns
 - Any existing similar implementations
+- NOTE: Skip test files unless they contain critical implementation details
 
 Read files completely. Trace call paths. Understand the full architecture.
 
@@ -120,27 +121,30 @@ The current caching pattern assumes [assumption] but our new feature requires [r
 ## Examples of What You're Looking For
 
 ### Architecture Patterns
-- MVC, microservices, monolith, serverless, event-driven
-- Communication patterns: REST, GraphQL, gRPC, message queues
-- State management: Redux, Context, MobX, Vuex, etc.
+- Repository structure: super-repo, mono-repo, single-purpose, microservices
+- Communication patterns: REST, GraphQL, gRPC, WebSockets, message queues, event buses
+- State management: Redux, Context API, MobX, Vuex, Zustand, server state
+- Design patterns: MVC, MVVM, repository pattern, dependency injection, factory pattern
 
-### Access Patterns  
-- Database query patterns (ORM usage, raw SQL, stored procedures)
-- Cache key structures and TTLs
-- File system organization
-- API routing conventions
+### Data Access Patterns  
+- Database patterns: ORM usage (SQLAlchemy, Prisma, TypeORM), raw SQL, stored procedures
+- Caching strategies: Redis patterns, cache keys, TTLs, invalidation strategies, distributed caching
+- File system organization: where files live, naming conventions, directory structure
+- API routing conventions: RESTful patterns, RPC style, GraphQL resolvers
 
 ### Code Organization
-- Module boundaries and interfaces
-- Dependency injection patterns
-- Error handling conventions
-- Logging and monitoring approaches
+- Module/service boundaries and interfaces
+- Dependency injection and IoC containers
+- Error handling strategies: try/catch patterns, error boundaries, custom error classes
+- Logging approaches: structured logging, log levels, correlation IDs
+- Configuration management: environment variables, config files, feature flags
 
-### Business Logic
-- Validation rules and where they're enforced
-- Permission checks and authorization logic
-- Data transformation and processing pipelines
-- Integration points with external services
+### Business Logic & Domain Rules
+- Validation patterns: where validation happens, schema validation, business rule validation
+- Authentication & authorization: JWT, sessions, OAuth, RBAC, ABAC, middleware patterns
+- Data transformation pipelines: ETL processes, data mappers, serialization patterns
+- Integration points: external APIs, webhooks, third-party services, payment processors
+- Workflow patterns: state machines, saga patterns, event sourcing
 
 ## Self-Verification Checklist
 

@@ -30,7 +30,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/protocol_commands.py:59-172` - Protocol-specific API commands with startup-load returning full task content
 - `cc_sessions/scripts/api/state_commands.py` - State inspection and limited write operations
 - `cc_sessions/scripts/api/config_commands.py` - Configuration management commands
-- `cc_sessions/commands/` - User slash commands (mode, state, config, triggers)
+- `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
@@ -84,11 +84,12 @@ The framework includes persistent task management with git branch enforcement, c
 ### Sessions API
 - **State Inspection** - View current task, mode, todos, flags, metadata, and active protocol
 - **Configuration Management** - Manage trigger phrases, git preferences, environment settings
+- **Feature Toggle Operations** - Enhanced with `toggle` command for simple boolean value flipping
 - **Limited Write Operations** - One-way mode switching (implementation → discussion)
 - **Protocol Commands** - startup-load command for task loading during startup protocol
 - **JSON Output Support** - Machine-readable format for programmatic use
 - **Security Boundaries** - No access to safety-critical settings or todo manipulation
-- **Dual Access** - Same functionality available via Python module and user slash commands
+- **Thin Wrapper Command Architecture** - All slash commands delegate to API layer following Claude Code official patterns
 
 ### Specialized Agents
 - **context-gathering**: Creates comprehensive task context manifests with enhanced pattern examples and architectural insights
@@ -154,11 +155,11 @@ protocols/
 - File system locks for atomic state/configuration operations
 - **CLAUDE_PROJECT_DIR environment variable** for symlinked development setup
 
-### Provides  
-- **Sessions API** - Programmatic access via `python -m sessions.api` or `python -m cc_sessions.scripts.api`
-- **User Slash Commands** - `/mode`, `/state`, `/config`, `/add-trigger`, `/remove-trigger`
+### Provides
+- **Sessions API** - Programmatic access via `python -m sessions.api` (unified module path)
+- **Thin Wrapper Slash Commands** - `/mode`, `/state`, `/config`, `/add-trigger`, `/remove-trigger` following official Claude Code patterns
 - **Protocol Commands** - `python -m sessions.api protocol startup-load <task-file>` returns full task file content for task loading
-- `/add-trigger` - Dynamic trigger phrase configuration with persistent storage
+- **Enhanced Feature Management** - `config features toggle <key>` for simple boolean operations
 - `daic` - Manual mode switching command
 - Hook-based tool blocking with user-configurable patterns
 - Templated protocol system with automatic content adaptation
@@ -442,12 +443,12 @@ New comprehensive guide at `cc_sessions/kickstart/agent-customization-guide.md` 
 
 ## Sessions API Usage
 
-### User Slash Commands
-- `/mode` - Toggle between discussion and implementation modes
-- `/state [component]` - Show current state or specific component (todos, task, flags)
-- `/config` - Show current configuration (read-only)
-- `/add-trigger <category> <phrase>` - Add trigger phrase to specified category
-- `/remove-trigger <category> <phrase>` - Remove trigger phrase from category
+### User Slash Commands (Thin Wrappers)
+- `/mode` - Toggle between discussion and implementation modes via API delegation
+- `/state [component]` - Show current state or specific component via API delegation
+- `/config` - Show current configuration via API delegation (read-only)
+- `/add-trigger <category> <phrase>` - Add trigger phrase via API delegation (categories: implement, discuss, create, start, complete, compact)
+- `/remove-trigger <category> <phrase>` - Remove trigger phrase via API delegation
 
 ### Programmatic API
 
@@ -470,6 +471,7 @@ New comprehensive guide at `cc_sessions/kickstart/agent-customization-guide.md` 
 - `python -m sessions.api config phrases list [category]` - View trigger phrases
 - `python -m sessions.api config phrases add <category> "<phrase>"` - Add trigger phrase
 - `python -m sessions.api config phrases remove <category> "<phrase>"` - Remove trigger phrase
+- `python -m sessions.api config features toggle <key>` - Toggle feature boolean values
 - `python -m sessions.api config git show` - View git preferences
 - `python -m sessions.api config git set <setting> <value>` - Update git preference
 - `python -m sessions.api config env show` - View environment settings

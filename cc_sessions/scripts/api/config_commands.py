@@ -363,10 +363,11 @@ def handle_env_command(args: List[str], json_output: bool = False) -> Any:
 def handle_features_command(args: List[str], json_output: bool = False) -> Any:
     """
     Handle feature toggle commands.
-    
+
     Usage:
         config features show
         config features set <key> <value>
+        config features toggle <key>
     """
     if not args or args[0] == 'show':
         # Show feature toggles
@@ -423,9 +424,40 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
         if json_output:
             return {"updated": key, "value": bool_value}
         return f"Updated features.{key} to {bool_value}"
-    
+
+    elif action == 'toggle':
+        if len(args) < 2:
+            raise ValueError("Usage: config features toggle <key>")
+
+        key = args[1].lower()
+
+        # Get current value
+        config = load_config()
+        if key in ['task_detection', 'auto_ultrathink']:
+            current_value = getattr(config.features, key)
+        elif key in ['warn_85', 'warn_90']:
+            current_value = getattr(config.features.context_warnings, key)
+        elif key == 'branch_enforcement':
+            raise ValueError("Cannot modify branch_enforcement via API")
+        else:
+            raise ValueError(f"Unknown feature: {key}")
+
+        # Toggle the value
+        new_value = not current_value
+
+        # Save the toggled value
+        with edit_config() as config:
+            if key in ['task_detection', 'auto_ultrathink']:
+                setattr(config.features, key, new_value)
+            elif key in ['warn_85', 'warn_90']:
+                setattr(config.features.context_warnings, key, new_value)
+
+        if json_output:
+            return {"toggled": key, "old_value": current_value, "new_value": new_value}
+        return f"Toggled {key}: {current_value} → {new_value}"
+
     else:
-        raise ValueError(f"Unknown features action: {action}. Valid actions: show, set")
+        raise ValueError(f"Unknown features action: {action}. Valid actions: show, set, toggle")
 #!<
 
 #!> Config validation

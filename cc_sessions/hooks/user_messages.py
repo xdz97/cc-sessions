@@ -354,29 +354,10 @@ if not is_api_command and task_start_detected:
     ]
 
     # Check if task will be auto-loaded
-    if task_reference:
-        try:
-            task_data = TaskState.load_task(file=task_reference)
-            # Auto-update status and started date
-            task_data.status = 'in-progress'
-            if not task_data.started: task_data.started = date.today().strftime('%Y-%m-%d')
-            with edit_state() as s: s.current_task = task_data; STATE = s
-
-            # Auto-output the task file content
-            task_file_path = PROJECT_ROOT / 'sessions' / 'tasks' / task_reference
-            with open(task_file_path, 'r') as f:
-                task_content = f.read()
-            context += f"[Task Startup Notice]\nTask loaded: {task_reference}\n\nTask file content:\n{task_content}\n\n"
-        except:
-            context += f"[Task Startup Notice]\nFailed to load task reference: {task_reference} - the file doesn't exist or contains invalid frontmatter.\n"
-            context += "Ask the user which task they want to start, verify the task file exists (ls sessions/tasks/), "
-            context += "then use: python -m sessions.api protocol startup-load <valid-task-file>\n\n"
-            task_reference = None  # Clear invalid reference
-    else:
-        context += "[Task Startup Notice]\nNo task reference detected. **If the user mentioned which task to start, *YOU MUST***:\n"
-        context += "1. Return to project root directory\n"
-        context += "2. Run: `python -m sessions.api protocol startup-load <task-file>`\n"
-        context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n"
+    context += "[Task Startup Notice]\n**If the user mentioned which task to start, *YOU MUST***:\n"
+    context += "1. Return to project root directory\n"
+    context += "2. Run: `python -m sessions.api protocol startup-load <task-file>`\n"
+    context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n"
 
     # Build template variables for protocol
     git_status_scope = 'in both super-repo and all submodules' if CONFIG.git_preferences.has_submodules else ''

@@ -140,11 +140,6 @@ def handle_startup_load(args: List[str], json_output: bool = False) -> Any:
             # Clear the startup_load permission after use
             s.api.startup_load = False
         
-        # Read the actual task file content
-        task_file_path = PROJECT_ROOT / 'sessions' / 'tasks' / str(relative_task_path)
-        with open(task_file_path, 'r') as f:
-            task_content = f.read()
-        
         if json_output:
             return {
                 "success": True,
@@ -154,10 +149,10 @@ def handle_startup_load(args: List[str], json_output: bool = False) -> Any:
                     "branch": task_data.branch,
                     "status": task_data.status
                 },
-                "content": task_content
+                "next_steps": "If the user has not already shown you the task file with @task-name syntax, read the task file before you continue. Otherwise, you may proceed with the task startup protocol."
             }
         
-        return task_content
+        return f"Your task data has been loaded into the session state:\nTask Name: {task_data.name}\nTask File: {task_data.file}\nBranch To Use: {task_data.branch}\nTask Status: {task_data.status}\nIf the user has not already shown you the task file with @task-name syntax, read the task file before you continue. Otherwise, you may proceed with the task startup protocol."
         
     except FileNotFoundError:
         error_msg = f"Task file not found: {task_file_input}"

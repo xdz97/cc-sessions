@@ -151,9 +151,9 @@ CRITICAL RULES:
 - Do NOT add new todos - only implement approved items
 - Do NOT remove todos - complete them or return to discussion
 - Check off each todo as you complete it
-- If you discover you need to change your approach, return to discussion mode (Bash, 'daic') and explain
+- If you discover you need to change your approach, return to discussion mode using the API command
 - Todo list defines your execution boundary
-- When all todos are complete, you'll auto-return to discussion (no daic command needed)
+- When all todos are complete, you'll auto-return to discussion
 """
 
 # Emergency stop (works in any mode)

@@ -104,7 +104,7 @@ if tool_name == "Bash" and STATE.mode is Mode.NO:
         sys.exit(0)
     
     if not is_bash_read_only(command):
-        print("[DAIC] Blocked write-like Bash command in Discussion mode. Switch to Implementation or explain what you intend to change.", file=sys.stderr); sys.exit(2)
+        print("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.", file=sys.stderr); sys.exit(2)  # Block with feedback
     else: sys.exit(0)
 #!<
 

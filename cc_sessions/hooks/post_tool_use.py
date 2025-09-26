@@ -72,11 +72,15 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
         with edit_state() as s: s.active_protocol = None; STATE = s
  
     if STATE.todos.stashed:
-        with edit_state() as s: num_restored = s.todos.restore_stashed(); restored = [t.content for t in s.todos.active]; STATE = s
-        # TODO: Replace printed command hint for clearing active todos with less verbose agent API (expose critical functions/methods to the agent directly with python/TS|JS script + args)
-        if num_restored:
-            print(f"Your previous {num_restored} todos have been restored to active and you may immediately resume completing them.\nFor reference, those todos are:\n\n{json.dumps(restored, indent=2)}\n\nIf you don't need these, just run `cd .claude/hooks && python -c \"from shared_state import edit_state; with edit_state() as s: s.todos.clear_active\"` to clear them.\n\n", file=sys.stderr)
+        with edit_state() as s:
+            num_restored = s.todos.restore_stashed()
+            restored = [t.content for t in s.todos.active]
+            # Enable the todos clear command for this context
+            s.api.todos_clear = True
+            STATE = s
             mod = True
+        if num_restored:
+            print(f"Your previous {num_restored} todos have been restored:\n\n{json.dumps(restored, indent=2)}\n\nIf these todos are no longer relevant, you should clear them using: python -m sessions.api todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n", file=sys.stderr)
     else:
         with edit_state() as s: s.todos.active = []; s.mode = Mode.NO; STATE = s
         print("You have returned to discussion mode. You may now discuss next steps with the user.\n\n", file=sys.stderr)
@@ -91,6 +95,24 @@ if STATE.mode is Mode.GO and not STATE.flags.subagent and not STATE.todos.active
             "If the user asked you to do something without todo proposal/approval, translate *only the remaining work* to todos and add them (all 'pending'). "
             "In any case, return to discussion mode after completing approved implementation.", file=sys.stderr)
     mod = True
+#!<
+
+#!> Disable windowed API permissions after any tool use (except the windowed command itself)
+if STATE.api.todos_clear and tool_name == "Bash":
+    # Check if this is the todos clear command
+    import json
+    tool_input = json.loads(os.environ.get('__TOOL_INPUT__', '{}'))
+    command = tool_input.get('command', '')
+    if 'python -m sessions.api todos clear' not in command:
+        # Not the todos clear command, disable the permission
+        with edit_state() as s:
+            s.api.todos_clear = False
+            STATE = s
+elif STATE.api.todos_clear:
+    # Any other tool was used, disable the permission
+    with edit_state() as s:
+        s.api.todos_clear = False
+        STATE = s
 #!<
 
 #-#

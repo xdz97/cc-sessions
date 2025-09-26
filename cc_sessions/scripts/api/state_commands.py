@@ -264,6 +264,61 @@ def handle_flags_command(args: List[str], json_output: bool = False) -> Any:
         raise ValueError(f"Unknown flags action: {action}. Valid actions: clear, clear-context")
 #!<
 
+#!> Todos handler
+def handle_todos_command(args: List[str], json_output: bool = False) -> Any:
+    """
+    Handle todos management commands.
+
+    Usage:
+        todos clear - Clear all active todos (requires api.todos_clear permission for API, always available via slash command)
+    """
+    if not args:
+        # Show current todos
+        state = load_state()
+        if json_output:
+            return {"todos": state.todos.to_dict()}
+        lines = ["Active Todos:"]
+        for todo in state.todos.active:
+            status = todo.get('status', 'pending')
+            content = todo.get('content', 'Unknown')
+            lines.append(f"  [{status}] {content}")
+        if not state.todos.active:
+            lines.append("  (none)")
+        return "\n".join(lines)
+
+    # Check if --from-slash flag is present
+    is_slash_command = '--from-slash' in args
+    if is_slash_command:
+        args = [arg for arg in args if arg != '--from-slash']
+
+    if not args:
+        raise ValueError("todos command requires an action. Valid actions: clear")
+
+    action = args[0].lower()
+
+    if action == 'clear':
+        # Check if we have permission (only for API calls, not slash commands)
+        state = load_state()
+        if not is_slash_command and not state.api.todos_clear:
+            if json_output:
+                return {"error": "Permission denied: todos clear command is not available in this context"}
+            return "Permission denied: The todos clear command is only available immediately after todos are restored"
+
+        # Clear the todos
+        with edit_state() as state:
+            state.todos.clear_active()
+            # Only disable permission if this was an API call
+            if not is_slash_command and state.api.todos_clear:
+                state.api.todos_clear = False
+
+        if json_output:
+            return {"message": "Active todos cleared"}
+        return "Active todos cleared"
+
+    else:
+        raise ValueError(f"Unknown todos action: {action}. Valid actions: clear")
+#!<
+
 #!> Status and version handlers
 def handle_status_command(args: List[str], json_output: bool = False) -> Any:
     """

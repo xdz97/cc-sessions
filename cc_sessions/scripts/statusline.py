@@ -2,6 +2,7 @@
 
 ## ===== STDLIB ===== ##
 import json, sys, subprocess
+from pathlib import Path
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -161,7 +162,7 @@ curr_mode = "Implementation" if STATE.mode == Mode.GO else "Discussion"
 ## ===== COUNT EDITED & UNCOMMITTED ===== ##
 # Use subprocess to count edited and uncommitted files (unstaged or staged)
 if cwd == str(PROJECT_ROOT): git_path = PROJECT_ROOT / ".git"
-else: git_path = find_git_repo(cwd)
+else: git_path = find_git_repo(Path(cwd))
 total_edited = 0
 if git_path and git_path.exists():
     try:

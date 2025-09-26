@@ -329,6 +329,7 @@ class TaskState:
     created: Optional[str] = None
     started: Optional[str] = None
     updated: Optional[str] = None
+    dependencies: Optional[List[str]] = None
     submodules: Optional[List[str]] = None
 
     @property
@@ -482,6 +483,7 @@ class SessionsTodos:
 class APIPerms:
     startup_load: bool = False
     completion: bool = False
+    todos_clear: bool = False
 #!<
 
 #!> State object
@@ -558,6 +560,7 @@ class SessionsState:
 ## ===== HELPERS ===== ##
 def find_git_repo(path: Path) -> Optional[Path]:
     """Walk up directory tree to find .git directory."""
+    if not isinstance(path, Path): path = Path(path)
     current = path if path.is_dir() else path.parent
     while True:
         if (current / '.git').exists(): return current

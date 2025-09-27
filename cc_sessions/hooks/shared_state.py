@@ -589,9 +589,10 @@ def list_open_tasks() -> str:
             # Read first few lines to get task info
             with fpath.open('r', encoding='utf-8') as f: lines = f.readlines()[:10]
             task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
-            status = 'unknown'
+            status = None
             for line in lines:
                 if line.startswith('status:'): status = line.split(':')[1].strip(); break
+            if not status: continue
             task_startup_help += f"  • {task_name} ({status})\n"
         task_startup_help += f"""
 To select a task:

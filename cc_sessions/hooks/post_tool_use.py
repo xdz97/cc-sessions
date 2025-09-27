@@ -65,7 +65,12 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
     print("[DAIC: Todos Complete] All todos completed.\n\n", file=sys.stderr)
 
     if STATE.active_protocol is SessionsProtocol.COMPLETE: 
-        with edit_state() as s: s.mode = Mode.NO; s.active_protocol = None; s.current_task.clear_task(); STATE = s
+        with edit_state() as s: 
+            s.mode = Mode.NO
+            s.active_protocol = None
+            s.current_task.clear_task()
+            s.todos.active = []
+            STATE = s
         print(list_open_tasks()); sys.exit(0)
 
     if STATE.active_protocol is not None:

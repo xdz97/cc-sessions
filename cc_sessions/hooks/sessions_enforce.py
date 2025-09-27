@@ -33,13 +33,80 @@ CONFIG = load_config()
 if tool_name == "Bash": command = tool_input.get("command", "").strip()
 if tool_name == "TodoWrite": incoming_todos = tool_input.get("todos", [])
 
-# TODO: Write-like patterns will be extended by user config in packaged/cc-session version
+# Enhanced command categorization to fix oversensitive blocking
 ## ===== PATTERNS ===== ##
-READONLY_FIRST = {  'cat','less','more','grep','egrep','fgrep','head','tail','sort','uniq',
-                    'cut','awk','sed','wc','printf','echo','pwd','ls','find','which','type',
-                    'env','printenv','whoami','date','df','du','stat','basename','dirname','diff' }
-WRITE_FIRST = {'rm','mv','cp','chmod','chown','mkdir','rmdir','ln','install','tee','truncate','touch','chattr','setfacl'}
-REDIR = re.compile(r'(?:^|\s)(?:>>|>|<<?|<<<)\s')
+READONLY_FIRST = {
+    # Basic file reading
+    'cat', 'less', 'more', 'head', 'tail', 'wc', 'nl', 'tac', 'rev',
+    # Text search and filtering
+    'grep', 'egrep', 'fgrep', 'rg', 'ripgrep', 'ag', 'ack',
+    # Text processing (all safe for reading)
+    'sort', 'uniq', 'cut', 'paste', 'join', 'comm', 'column',
+    'tr', 'expand', 'unexpand', 'fold', 'fmt', 'pr', 'shuf', 'tsort',
+    # Comparison
+    'diff', 'cmp', 'sdiff', 'vimdiff',
+    # Checksums
+    'md5sum', 'sha1sum', 'sha256sum', 'sha512sum', 'cksum', 'sum',
+    # Binary inspection
+    'od', 'hexdump', 'xxd', 'strings', 'file', 'readelf', 'objdump', 'nm',
+    # File system inspection
+    'ls', 'dir', 'vdir', 'pwd', 'which', 'type', 'whereis', 'locate', 'find',
+    'basename', 'dirname', 'readlink', 'realpath', 'stat',
+    # User/system info
+    'whoami', 'id', 'groups', 'users', 'who', 'w', 'last', 'lastlog',
+    'hostname', 'uname', 'arch', 'lsb_release', 'hostnamectl',
+    'date', 'cal', 'uptime', 'df', 'du', 'free', 'vmstat', 'iostat',
+    # Process monitoring
+    'ps', 'pgrep', 'pidof', 'top', 'htop', 'iotop', 'atop',
+    'lsof', 'jobs', 'pstree', 'fuser',
+    # Network monitoring
+    'netstat', 'ss', 'ip', 'ifconfig', 'route', 'arp',
+    'ping', 'traceroute', 'tracepath', 'mtr', 'nslookup', 'dig', 'host', 'whois',
+    # Environment
+    'printenv', 'env', 'set', 'export', 'alias', 'history', 'fc',
+    # Output
+    'echo', 'printf', 'yes', 'seq', 'jot',
+    # Testing
+    'test', '[', '[[', 'true', 'false',
+    # Calculation
+    'bc', 'dc', 'expr', 'factor', 'units',
+    # Modern tools
+    'jq', 'yq', 'xmlstarlet', 'xmllint', 'xsltproc',
+    'bat', 'fd', 'fzf', 'tree', 'ncdu', 'exa', 'lsd',
+    'tldr', 'cheat',
+    # Note: awk/sed are here but need special argument checking
+    'awk', 'sed', 'gawk', 'mawk', 'gsed',
+}
+
+WRITE_FIRST = {
+    # File operations
+    'rm', 'rmdir', 'unlink', 'shred',
+    'mv', 'rename', 'cp', 'install', 'dd',
+    'mkdir', 'mkfifo', 'mknod', 'mktemp', 'touch', 'truncate',
+    # Permissions
+    'chmod', 'chown', 'chgrp', 'umask',
+    'ln', 'link', 'symlink',
+    'setfacl', 'setfattr', 'chattr',
+    # System management
+    'useradd', 'userdel', 'usermod', 'groupadd', 'groupdel',
+    'passwd', 'chpasswd', 'systemctl', 'service',
+    # Package managers
+    'apt', 'apt-get', 'dpkg', 'snap', 'yum', 'dnf', 'rpm',
+    'pip', 'pip3', 'npm', 'yarn', 'gem', 'cargo',
+    # Build tools
+    'make', 'cmake', 'ninja', 'meson',
+    # Other dangerous
+    'sudo', 'doas', 'su', 'crontab', 'at', 'batch',
+    'kill', 'pkill', 'killall', 'tee',
+}
+
+# Enhanced redirection detection (includes stderr redirections)
+REDIR_PATTERNS = [
+    r'(?:^|\s)(?:>>?|<<?|<<<)\s',           # Basic redirections
+    r'(?:^|\s)\d*>&?\d*(?:\s|$)',            # File descriptor redirections (2>&1, etc)
+    r'(?:^|\s)&>',                           # Combined stdout/stderr redirect
+]
+REDIR = re.compile('|'.join(REDIR_PATTERNS))
 ##-##
 
 #-#
@@ -68,26 +135,92 @@ Enforces DAIC (Discussion, Alignment, Implementation, Check) workflow:
 # ===== FUNCTIONS ===== #
 
 ## ===== HELPERS ===== ##
+def check_command_arguments(parts):
+    """Check if command arguments indicate write operations"""
+    if not parts: return True
+
+    cmd = parts[0].lower()
+    args = parts[1:] if len(parts) > 1 else []
+
+    # Check sed for in-place editing
+    if cmd in ['sed', 'gsed']:
+        for arg in args:
+            if arg.startswith('-i') or arg == '--in-place':
+                return False  # sed -i is a write operation
+
+    # Check awk for file output operations
+    if cmd in ['awk', 'gawk', 'mawk']:
+        script = ' '.join(args)
+        # Check for output redirection within awk script
+        if re.search(r'>\s*["\'].*["\']', script):  # > "file" or > 'file'
+            return False
+        if re.search(r'>>\s*["\'].*["\']', script):  # >> "file" or >> 'file'
+            return False
+        if 'print >' in script or 'print >>' in script:
+            return False
+        if 'printf >' in script or 'printf >>' in script:
+            return False
+
+    # Check find for dangerous operations
+    if cmd == 'find':
+        if '-delete' in args:
+            return False
+        for i, arg in enumerate(args):
+            if arg in ['-exec', '-execdir']:
+                if i + 1 < len(args):
+                    exec_cmd = args[i + 1].lower()
+                    if exec_cmd in WRITE_FIRST or exec_cmd in ['rm', 'mv', 'cp', 'shred']:
+                        return False
+
+    # Check xargs for dangerous commands
+    if cmd == 'xargs':
+        for write_cmd in WRITE_FIRST:
+            if write_cmd in args:
+                return False
+        # Check for sed -i through xargs
+        if 'sed' in args:
+            sed_idx = args.index('sed')
+            if sed_idx + 1 < len(args) and args[sed_idx + 1].startswith('-i'):
+                return False
+
+    return True
+
 # Check if a bash command is read-only (no writes, no redirections)
 def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.extrasafe or True) -> bool:
     """Determine if a bash command is read-only.
+
+    Enhanced to check command arguments for operations like:
+    - sed -i (in-place editing)
+    - awk with file output
+    - find -delete or -exec rm
+    - xargs with write commands
+
     Args:
         command (str): The bash command to evaluate.
         extrasafe (bool): If True, unrecognized commands are treated as write-like."""
     s = (command or '').strip()
     if not s: return True
     if REDIR.search(s): return False
-    for segment in re.split(r'[|]{1,2}|&&|\|\|', s):
+
+    for segment in re.split(r'(?<!\|)\|(?!\|)|&&|\|\|', s):  # Split on |, && and ||
         segment = segment.strip()
         if not segment: continue
         try: parts = shlex.split(segment)
         except ValueError: return not CONFIG.blocked_actions.extrasafe
         if not parts: continue
+
         first = parts[0].lower()
         if first == 'cd': continue
         if first in WRITE_FIRST: return False
         if CONFIG.blocked_actions.matches_custom_pattern(first): return False
+
+        # Check command arguments for write operations
+        if not check_command_arguments(parts):
+            return False
+
+        # If extrasafe is on and command not in readonly list, block it
         if first not in READONLY_FIRST and CONFIG.blocked_actions.extrasafe: return False
+
     return True
 ##-##
 

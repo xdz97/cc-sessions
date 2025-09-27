@@ -17,7 +17,7 @@ The framework includes persistent task management with git branch enforcement, c
 
 ## Key Files
 - `cc_sessions/hooks/shared_state.py:1-50` - Core state and configuration management with unified SessionsConfig system
-- `cc_sessions/hooks/sessions_enforce.py` - DAIC enforcement with user-configurable tool blocking patterns
+- `cc_sessions/hooks/sessions_enforce.py:36-110` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection
 - `cc_sessions/hooks/session_start.py` - Session initialization with configuration integration and dual-import pattern
 - `cc_sessions/hooks/user_messages.py:72-84` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting with improved task startup notices
 - `cc_sessions/hooks/user_messages.py:165-216` - Templated task creation protocol system with automatic todo loading
@@ -56,6 +56,9 @@ The framework includes persistent task management with git branch enforcement, c
 
 ### DAIC Enforcement
 - Blocks Edit/Write/MultiEdit tools in discussion mode
+- Enhanced command categorization with 70+ read-only commands recognized
+- Intelligent argument analysis detects write operations (sed -i, awk output, find -delete, xargs with write commands)
+- Improved redirection detection including stderr redirections (2>&1, &>, etc.)
 - Requires explicit trigger phrases to enter implementation mode
 - Todo-based execution boundaries enforce exact scope matching
 - Approved TodoWrite lists define implementation work scope
@@ -238,6 +241,7 @@ Configuration in `.claude/settings.json`:
 - **Commit Style Templates**: Added templated commit message styles (conventional, simple, detailed) with branch-based selection
 - **Protocol Command Integration**: Enhanced `startup-load` API command returns full task file content instead of just metadata
 - **Conditional Todo System**: Todos automatically adapt based on user configuration (auto_merge, auto_push, etc.)
+- **Discussion Mode Write Blocking Enhancements**: Comprehensive command categorization and intelligent argument analysis eliminates oversensitive blocking of legitimate read-only operations
 
 ### Protocol Automation Infrastructure (v0.3.2+)
 - **SessionsProtocol Enum**: Tracks active protocols (`COMPACT`, `CREATE`, `START`, `COMPLETE`) for protocol state management
@@ -270,14 +274,38 @@ Configuration in `.claude/settings.json`:
 - **Unified Import Pattern**: Consistent `load_config()` and `load_state()` imports across all hook files
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
+## Recent Enhancements
+
+### Discussion Mode Write Blocking (v0.3.2+)
+Recent improvements to `sessions_enforce.py` address oversensitive blocking that prevented legitimate compound operations:
+
+**Enhanced Command Classification:**
+- `READONLY_FIRST`: Expanded from 20 to 70+ commands covering text processing, inspection, monitoring, and modern tools
+- `WRITE_FIRST`: Comprehensive categorization of dangerous operations including system management and package managers
+- **Intelligent Argument Analysis**: New `check_command_arguments()` function detects context-specific write operations
+
+**Advanced Detection Patterns:**
+- **sed -i Detection**: Identifies in-place editing operations that modify files
+- **awk Output Analysis**: Recognizes file output within awk scripts using regex patterns
+- **find Command Safety**: Detects `-delete` flag and dangerous `-exec` operations
+- **xargs Validation**: Prevents write commands passed through xargs pipelines
+- **Enhanced Redirection Detection**: Improved regex patterns catch stderr redirections (2>&1, &>) and complex file descriptor operations
+
+**Improved Pipeline Handling:**
+- **Proper Pipeline Splitting**: Enhanced regex prevents false positives on `||` logical operators
+- **Per-Segment Analysis**: Each pipeline segment evaluated independently for safety
+- **Context-Aware Validation**: Commands analyzed with their complete argument context
+
+This eliminates false blocking of legitimate read-only compound operations while maintaining protection against actual write operations.
+
 ## Key Patterns
 
 ### Hook Architecture
 - **Unified State Management**: SessionsState class manages all runtime state in single JSON file with atomic operations
-- **Configuration-Driven Enforcement**: SessionsConfig system provides type-safe user customization of all behavioral patterns  
+- **Configuration-Driven Enforcement**: SessionsConfig system provides type-safe user customization of all behavioral patterns
 - **Protocol State Management**: SessionsProtocol enum and active_protocol field enable protocol-driven automation
 - **Protocol Command Authorization**: APIPerms dataclass provides protocol-specific command permission validation
-- **Pre-tool-use Validation**: sessions_enforce.py uses configurable patterns for tool blocking and branch validation
+- **Enhanced Pre-tool-use Validation**: sessions_enforce.py uses comprehensive command categorization with intelligent argument analysis for accurate write operation detection
 - **Post-tool-use Automation**: Automatic todo completion detection and mode transitions based on user preferences
 - **Configurable Trigger Detection**: user_messages.py supports user-defined trigger phrases for all workflow transitions
 - **Protocol Auto-Loading**: `load_protocol_file()` helper eliminates manual "read this file" instructions

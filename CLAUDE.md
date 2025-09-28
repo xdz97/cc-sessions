@@ -16,7 +16,7 @@ The v0.3.1+ enhancement introduces a templated protocol system where protocols a
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py:1-50` - Core state and configuration management with unified SessionsConfig system
+- `cc_sessions/hooks/shared_state.py:1-50` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), and fixed EnabledFeatures.from_dict() dataclass serialization
 - `cc_sessions/hooks/sessions_enforce.py:36-110` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection
 - `cc_sessions/hooks/session_start.py` - Session initialization with configuration integration and dual-import pattern
 - `cc_sessions/hooks/user_messages.py:72-84` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting with improved task startup notices
@@ -298,6 +298,22 @@ Recent improvements to `sessions_enforce.py` address oversensitive blocking that
 
 This eliminates false blocking of legitimate read-only compound operations while maintaining protection against actual write operations.
 
+### System Reliability Improvements (2025-09-27)
+Recent stability enhancements in `shared_state.py` address intermittent failures affecting statusline display and trigger phrase recognition:
+
+**Lock Contention Resolution:**
+- **Timeout Optimization**: Reduced lock acquisition timeout from 5 seconds to 1 second to eliminate user-visible delays
+- **Force-Removal Mechanism**: Added aggressive lock cleanup after timeout instead of raising exceptions
+- **Stale Lock Detection**: Enhanced process death detection with automatic cleanup of abandoned locks
+- **Impact**: Eliminates intermittent failures when statusline and trigger phrase hooks compete for state file access
+
+**Dataclass Serialization Fix:**
+- **EnabledFeatures.from_dict()**: Fixed ContextWarnings instantiation to properly handle nested dictionary structures
+- **Type Safety**: Enhanced validation prevents silent failures in feature flag handling
+- **Configuration Reliability**: Ensures proper deserialization of complex configuration structures
+
+These improvements maintain data integrity and atomic file operations while significantly improving system responsiveness and reliability during concurrent hook operations.
+
 ## Key Patterns
 
 ### Hook Architecture
@@ -312,14 +328,15 @@ This eliminates false blocking of legitimate read-only compound operations while
 - **Centralized Protocol Todo System**: `format_todos_for_protocol()` provides consistent todo formatting across all protocols
 - **Template-Based Protocol System**: Protocols auto-adapt based on configuration without conditional instructions
 - **Automatic Task Status Updates**: Task lifecycle management through state system (status, started dates)
-- **Commit Style Templating**: Dynamic commit message templates based on user preferences and branch patterns  
+- **Commit Style Templating**: Dynamic commit message templates based on user preferences and branch patterns
 - **Conditional Todo Generation**: Protocol todos adapt automatically to user configuration (merge, push, submodules)
 - **Session Initialization**: session_start.py integrates configuration with task context loading
 - **Subagent Protection**: Automatic subagent context detection and flag management with cleanup
-- **Atomic File Operations**: File locking and atomic writes prevent state corruption across all operations
+- **Atomic File Operations**: File locking and atomic writes prevent state corruption across all operations with optimized 1-second timeout and aggressive lock cleanup
 - **Cross-platform Compatibility**: pathlib.Path throughout with Windows-specific handling
-- **API Command Integration**: Sessions API commands whitelisted in DAIC enforcement and bypass ultrathink detection  
+- **API Command Integration**: Sessions API commands whitelisted in DAIC enforcement and bypass ultrathink detection
 - **Dual-Context Import Pattern**: Supports both symlinked development and package installation through CLAUDE_PROJECT_DIR detection
+- **Reliable Lock Management**: Enhanced lock contention handling prevents intermittent failures in statusline and trigger phrase recognition
 
 ### Agent Delegation
 - Heavy file operations delegated to specialized agents with enhanced pattern recognition
@@ -408,10 +425,11 @@ This eliminates false blocking of legitimate read-only compound operations while
 - Todo-based execution boundaries prevent scope creep
 - Exact scope matching required for TodoWrite operations
 - Auto-return to discussion when implementation complete
-- **Atomic State Protection**: File locking prevents state corruption and race conditions
+- **Atomic State Protection**: File locking prevents state corruption and race conditions with optimized 1-second timeout and force-removal after timeout
 - **Configuration Validation**: Type-safe configuration prevents invalid behavioral patterns
 - **Backup and Recovery**: Automatic backup of corrupted configuration/state files
 - **API Security Boundaries**: Sessions API prevents access to safety-critical features
+- **Enhanced Lock Reliability**: Improved lock contention handling eliminates user-visible delays from statusline and trigger phrase operations
 - Chronological work log maintenance
 - Task scope enforcement through structured protocols
 

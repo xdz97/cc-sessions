@@ -295,6 +295,18 @@ class EnabledFeatures:
     task_detection: bool = True
     auto_ultrathink: bool = True
     context_warnings: ContextWarnings = field(default_factory=ContextWarnings)
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "EnabledFeatures":
+        cw_data = d.get("context_warnings", {})
+        if cw_data and isinstance(cw_data, dict): cw = ContextWarnings(**cw_data)
+        else: cw = ContextWarnings()
+        return cls(
+            branch_enforcement=d.get("branch_enforcement", True),
+            task_detection=d.get("task_detection", True),
+            auto_ultrathink=d.get("auto_ultrathink", True),
+            context_warnings=cw
+        )
 #!<
 
 #!> Config object
@@ -313,7 +325,7 @@ class SessionsConfig:
             git_preferences=GitPreferences(**d.get("git_preferences", {})),
             environment=SessionsEnv(**d.get("environment", {})),
             blocked_actions=BlockingPatterns(**d.get("blocked_actions", {})),
-            features=EnabledFeatures(**d.get("features", {})))
+            features=EnabledFeatures.from_dict(d.get("features", {})))
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -623,7 +635,7 @@ def _the_ol_in_out(path: Path, obj: Dict[str, Any]) -> None:
     os.replace(tmp_name, path)  # atomic across filesystems on same volume
 
 @contextmanager
-def _lock(lock_dir: Path, timeout: float = 5.0, poll: float = 0.05, stale_timeout: float = 30.0) -> Iterator[None]:
+def _lock(lock_dir: Path, timeout: float = 1.0, poll: float = 0.05, stale_timeout: float = 30.0) -> Iterator[None]:
     """
     Acquire a directory-based lock with stale lock detection.
     
@@ -675,12 +687,21 @@ def _lock(lock_dir: Path, timeout: float = 5.0, poll: float = 0.05, stale_timeou
             break
         except FileExistsError:
             if monotonic() - start > timeout:
-                # Try one more aggressive cleanup before failing
-                if lock_dir.exists():
-                    try:
-                        lock_age = monotonic() - json.loads((lock_dir / "lock_info.json").read_text()).get("timestamp", 0)
-                        raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s (held for {lock_age:.1f}s)")
-                    except: raise TimeoutError(f"Could not acquire lock {lock_dir} in {timeout}s")
+                # Force-remove stale lock after timeout and try once more
+                print(f"Force-removing lock after {timeout}s timeout", file=sys.stderr)
+                shutil.rmtree(lock_dir, ignore_errors=True)
+                # Try once more to acquire
+                try:
+                    lock_dir.mkdir(exist_ok=False)
+                    # Write lock info atomically
+                    lock_info = { "pid": os.getpid(),
+                        "timestamp": monotonic(),
+                        "host": os.uname().nodename if hasattr(os, 'uname') else "unknown" }
+                    lock_info_file.write_text(json.dumps(lock_info))
+                    break
+                except FileExistsError:
+                    # Someone else grabbed it in the meantime
+                    raise TimeoutError(f"Could not acquire lock {lock_dir} even after force removal")
             sleep(poll)
     
     try: yield

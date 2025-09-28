@@ -3,17 +3,27 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-from datetime import date
-import json
-import sys
-import os
+from pathlib import Path
+import json, sys, os
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, TaskState, load_config, SessionsProtocol
+  # Add sessions to path if CLAUDE_PROJECT_DIR is available (symlink setup)
+if 'CLAUDE_PROJECT_DIR' in os.environ:
+    sessions_path = os.path.join(os.environ['CLAUDE_PROJECT_DIR'], 'sessions')
+    hooks_path = os.path.join(sessions_path, 'hooks')
+    if hooks_path not in sys.path:
+        sys.path.insert(0, hooks_path)
+
+try:
+    # Try direct import (works with sessions in path or package install)
+    from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol
+except ImportError:
+    # Fallback to package import
+    from cc_sessions.hooks.shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol
 ##-##
 
 #-#

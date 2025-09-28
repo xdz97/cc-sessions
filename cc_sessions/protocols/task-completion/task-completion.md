@@ -70,7 +70,7 @@ mv sessions/tasks/[priority]-[task-name]/ sessions/tasks/done/
 
 ## 4. Git Operations (Commit & Merge)
 
-**NOTE**: DO NOT perform **ANY** git operations until you have cleared task state and archived the task file. This ensures your final commit and merge is complete with no unstaged/uncommitted changes.
+**NOTE**: Do not commit until the task file is marked complete and moved to done/. This ensures the completed task file is included in its final location.
 
 {staging_instructions}
 

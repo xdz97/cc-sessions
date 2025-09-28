@@ -147,8 +147,18 @@ Would you like me to create a new index category for this type of task?
 Your choice:
 ```
 
-  - Add task to relevant index files under appropriate priority section
-  - Skip if no relevant index exists
+  - **If creating a new index**:
+    1. Copy the index template: `cp cc-sessions/cc_sessions/templates/INDEX_TEMPLATE.md sessions/tasks/indexes/[index-name].md`
+    2. Fill out the frontmatter:
+       - `index`: Short identifier (e.g., `auth-oauth`, `mcp`, `user-model`)
+       - `name`: Human-readable name (e.g., "Authentication & OAuth")
+       - `description`: Brief description of what tasks belong in this index
+    3. Add the new task to the appropriate priority section
+  - **If using existing index**:
+    - Add task to relevant index files under appropriate priority section
+    - Use format: `` `[task-filename]` - [brief description]``
+    - For directory tasks, append `/` to the filename
+  - Skip if no relevant index exists and user declines to create one
 
 ### 5: Commit the new task file
 - Stage the task file and any updated index files

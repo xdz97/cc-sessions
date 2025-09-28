@@ -57,9 +57,19 @@ Your choice:
    Include: Task completion summary, final status
 ```
 
-## 5. Task Archival
+## 5. Update Index Files
 
-After agents complete:
+Before archiving the task:
+1. Check all index files in `sessions/tasks/indexes/`
+2. For each index that contains this task:
+   - Move the task entry from the appropriate priority section under "Active Tasks"
+   - Add it to the "Completed Tasks" section
+   - Keep the same format: `` `[task-filename]` - [brief description]``
+3. If no indexes contain the task, skip this step
+
+## 6. Task Archival
+
+After updating indexes:
 ```bash
 # Update task file status to 'completed'
 # Move to done/ directory

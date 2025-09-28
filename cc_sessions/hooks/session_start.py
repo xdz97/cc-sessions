@@ -5,13 +5,14 @@
 ## ===== STDLIB ===== ##
 from importlib.metadata import version, PackageNotFoundError
 import requests, json, sys, shutil
+from typing import Dict, List, Optional, Tuple
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, PROJECT_ROOT, load_config, list_open_tasks
+from shared_state import edit_state, PROJECT_ROOT, load_config
 ##-##
 
 #-#
@@ -30,6 +31,135 @@ context = f"You are beginning a new context window with the developer, {develope
 # Quick configuration checks
 needs_setup = False
 quick_checks = []
+#-#
+
+# ===== FUNCTIONS ===== #
+
+def parse_index_file(index_path) -> Optional[Tuple[Dict, List[str]]]:
+    """Parse an index file and extract metadata and task lines."""
+    if not index_path.exists():
+        return None
+
+    try:
+        content = index_path.read_text()
+        lines = content.split('\n')
+    except (IOError, UnicodeDecodeError):
+        return None
+
+    # Extract frontmatter using simple string parsing (like task files)
+    metadata = {}
+    if lines and lines[0] == '---':
+        for i, line in enumerate(lines[1:], 1):
+            if line == '---':
+                break
+            if ':' in line:
+                key, value = line.split(':', 1)
+                metadata[key.strip()] = value.strip()
+
+    # Extract task lines (those starting with - `)
+    task_lines = []
+    for line in lines:
+        if line.strip().startswith('- `'):
+            task_lines.append(line.strip())
+
+    return metadata, task_lines
+
+def list_open_tasks_grouped() -> str:
+    """List open tasks grouped by their indexes."""
+    tasks_dir = PROJECT_ROOT / 'sessions' / 'tasks'
+    indexes_dir = tasks_dir / 'indexes'
+
+    # First collect all tasks as before
+    task_files = []
+    if tasks_dir.exists():
+        task_files = sorted([f for f in tasks_dir.glob('*.md') if f.name != 'TEMPLATE.md'])
+    for task_dir in sorted([d for d in tasks_dir.iterdir() if d.is_dir() and d.name not in ['done', 'indexes']]):
+        readme_file = task_dir / 'README.md'
+        if readme_file.exists():
+            task_files.append(task_dir)
+        subtask_files = sorted([f for f in task_dir.glob('*.md') if f.name not in ['TEMPLATE.md', 'README.md']])
+        task_files.extend(subtask_files)
+
+    # Build task status map
+    task_status = {}
+    for task_file in task_files:
+        fpath = task_file / 'README.md' if task_file.is_dir() else task_file
+        if not fpath.exists():
+            continue
+        try:
+            with fpath.open('r', encoding='utf-8') as f:
+                lines = f.readlines()[:10]
+        except (IOError, UnicodeDecodeError):
+            continue
+        task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
+        status = None
+        for line in lines:
+            if line.startswith('status:'):
+                status = line.split(':')[1].strip()
+                break
+        if status:
+            task_status[task_name] = status
+
+    # Parse all index files
+    indexed_tasks = {}
+    index_info = {}
+    if indexes_dir.exists():
+        for index_file in sorted(indexes_dir.glob('*.md')):
+            result = parse_index_file(index_file)
+            if result:
+                metadata, task_lines = result
+                if metadata and 'index' in metadata:
+                    index_id = metadata['index']
+                    index_info[index_id] = {
+                        'name': metadata.get('name', index_id),
+                        'description': metadata.get('description', ''),
+                        'tasks': []
+                    }
+                    # Extract task names from the lines
+                    for line in task_lines:
+                        # Extract task name from format: - `task-name.md` - description
+                        if '`' in line:
+                            try:
+                                start = line.index('`') + 1
+                                end = line.index('`', start)
+                                task = line[start:end]
+                                if task in task_status:
+                                    indexed_tasks[task] = index_id
+                                    index_info[index_id]['tasks'].append(task)
+                            except ValueError:
+                                # Malformed line, skip it
+                                continue
+
+    # Build output
+    output = "No active task set. Available tasks:\n\n"
+
+    # Display tasks grouped by index
+    for index_id, info in sorted(index_info.items()):
+        if info['tasks']:  # Only show indexes with tasks
+            output += f"## {info['name']}\n"
+            if info['description']:
+                output += f"{info['description']}\n"
+            for task in info['tasks']:
+                if task in task_status:
+                    output += f"  • {task} ({task_status[task]})\n"
+            output += "\n"
+
+    # Show unindexed tasks
+    unindexed = [task for task in task_status if task not in indexed_tasks]
+    if unindexed:
+        output += "## Uncategorized\n"
+        for task in sorted(unindexed):
+            output += f"  • {task} ({task_status[task]})\n"
+        output += "\n"
+
+    # Add startup instructions
+    output += f"""To select a task:
+- Type in one of your startup commands: {CONFIG.trigger_phrases.task_startup}
+- Include the task file you would like to start using `@`
+- Hit Enter to activate task startup
+"""
+    return output
+
 #-#
 
 """
@@ -105,7 +235,7 @@ Loading task file: {STATE.current_task.file}
         if task_updated: context += "[Note: Task status updated from 'pending' to 'in-progress']\n\nFollow the task-startup protocol to create branches and set up the work environment.\n\n"
         else: context += "Review the Work Log at the end of the task file above and continue the task.\n\n"
 else:
-    context += list_open_tasks()
+    context += list_open_tasks_grouped()
 #!<
 
 #!> 4. Check cc-sessions version

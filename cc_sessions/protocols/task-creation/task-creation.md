@@ -54,7 +54,26 @@ Combine: `[priority]-[type]-[descriptive-name]`
   - `m-migrate-to-postgres/` (schema + data + cutover)
   - `l-test-all-services/` (per-service test files)
 
+#### Propose the task naming to user
+
+Before creating the file, present a structured proposal:
+
+```markdown
+[PROPOSAL: Task Name]
+Priority: [h/m/l/?]
+Type: [implement/fix/refactor/research/etc]
+Name: [priority]-[type]-[descriptive-name]
+Full path: sessions/tasks/[priority]-[type]-[descriptive-name].md
+
+Structure: [FILE/DIRECTORY]
+Rationale: [why file vs directory]
+
+Approve this task naming?
+```
+
 #### Finally, create the task file
+Once approved, create the file:
+
 For file:
 ```bash
 cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name].md
@@ -71,20 +90,63 @@ Then fill out task frontmatter
   - status: Start as 'pending'
   - created: Today's date{submodules_field}
 
-### 2: Write problem statement and success criteria
-First, clarify your understanding of the task with the user as needed. Then, write a clear description of what we're solving/building in Problem/Goal section.
+### 2: Ask user about task success and propose success criteria
 
-Propose specific, measurable success criteria to the user that unambiguously define "done" and adjust as needed based on user feedback. Once approved, record the success criteria with checkboxes in the text file.
+First, ask the user about their vision:
+
+```markdown
+[QUESTION: Task Success]
+What will be true when this task is complete/successful?
+```
+
+Wait for the user's response, then propose specific criteria based on their input:
+
+```markdown
+[PROPOSAL: Success Criteria]
+Based on your requirements, I propose the following success criteria:
+
+□ [Specific measurable criterion based on user input]
+□ [Additional criterion I've identified]
+□ [Another criterion for completeness]
+
+Would you like to adjust or add to these criteria?
+```
+
+Once approved, write a clear description of what we're solving/building in Problem/Goal section and record the success criteria with checkboxes in the text file.
 
 ### 3: Run context-gathering agent or mark complete
-  - Ask user: "Would you like to run the context-gathering agent now?"
+
+Present the decision to the user:
+
+```markdown
+[DECISION: Context Gathering]
+Would you like me to run the context-gathering agent now to create a comprehensive context manifest?
+
+- YES: I'll run the agent to analyze the codebase and create context
+- NO: We'll skip this for now (must be done during task startup)
+
+Your choice:
+```
+
   - If yes: Use context-gathering agent on sessions/tasks/[priority]-[task-name].md
   - If no: Mark this step complete and continue
   - Context manifest MUST be complete before work begins (if not now, during task startup)
 
 ### 4: Update service index files if applicable
   - Check if task relates to any task indexes (sessions/tasks/indexes)
-  - If not, ask user if they would like to create a new index for any affected features, code paths, or services
+  - If not, present a structured decision:
+
+```markdown
+[DECISION: Task Index]
+I didn't find any task indexes that fit this task.
+Would you like me to create a new index category for this type of task?
+
+- YES: Create new index file
+- NO: No index needed
+
+Your choice:
+```
+
   - Add task to relevant index files under appropriate priority section
   - Skip if no relevant index exists
 

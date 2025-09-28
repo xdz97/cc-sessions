@@ -12,6 +12,29 @@ Before starting any task work, ensure a clean working state and sync with remote
 - Check git status {git_status_scope}
 - Address EVERY file shown in `git status`, not just expected files
 - Common missed files: CLAUDE.md, sessions/state files, test outputs
+
+If uncommitted changes exist, present them:
+
+```markdown
+[STATUS: Uncommitted Changes]
+Found uncommitted changes in the repository:
+
+Modified files:
+- file1.py: [brief description of changes if known]
+- file2.md: [brief description]
+
+Untracked files:
+- newfile.txt
+- temp/
+
+How would you like to handle these changes?
+- COMMIT: Commit all changes with message (git add -A && git commit -m "...")
+- STASH: Stash changes to apply later (git stash push -m "...")
+- SELECTIVE: Review each file individually (git add -p)
+
+Your choice:
+```
+
 {git_handling}
 
 ### Remote Changes
@@ -39,7 +62,22 @@ Check task frontmatter for branch name{submodule_context}, then create/checkout 
 
 ## 3. Verify context manifest for the task
 
-Check the task file for a Context Manifest section:
+Check the task file for a Context Manifest section and report status:
+
+If missing:
+```markdown
+[STATUS: Context Manifest]
+✗ No context manifest found in task file
+
+Running context-gathering agent to analyze the task and create comprehensive context...
+```
+
+If present:
+```markdown
+[STATUS: Context Manifest]
+✓ Context manifest found and loaded
+```
+
 - If present, proceed to the next step to load it
 - If missing, you **must** use the context-gathering agent to analyze this task and create a context manifest
 
@@ -62,15 +100,24 @@ Verify branch state:
 
 After gathering context:
 1. Analyze the task requirements thoroughly
-2. Propose implementation plan with specific todo list:
-   ```
-   I propose to implement the following:
-   □ [Specific action 1]: [Expanded explanation of the todo item]
-   □ [Specific action 2]: [Expanded explanation of the todo item]
-   □ [Specific action 3]: [Expanded explanation of the todo item]
-   
-   Shall I proceed with this implementation?
-   ```
+2. Propose implementation plan with structured format:
+
+```markdown
+[PLAN: Implementation Approach]
+Based on the task requirements, I propose the following implementation:
+
+□ [Specific action 1]
+  → [Expanded explanation of what this involves]
+
+□ [Specific action 2]
+  → [Expanded explanation of what this involves]
+
+□ [Specific action 3]
+  → [Expanded explanation of what this involves]
+
+Shall I proceed with this implementation?
+```
+
 3. Iterate based on user feedback until approved
 4. Upon approval, convert proposed todos to TodoWrite exactly as written
 

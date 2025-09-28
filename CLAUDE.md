@@ -103,8 +103,10 @@ The framework includes persistent task management with git branch enforcement, c
 
 ## Protocol Architecture (v0.3.1+)
 
-### Templated Protocol System
+### Templated Protocol System with Structured Output
 The protocol system uses configuration-driven template substitution to eliminate conditional instructions. Instead of protocols containing "if you have submodules, do X, otherwise do Y" logic, protocol content adapts automatically based on user configuration.
+
+Enhanced with structured output formats, protocols now provide transparent communication at key decision points using standardized bracketed headers like `[PROPOSAL]`, `[STATUS]`, `[PLAN]`, `[FINDINGS]`, `[DECISION]`, `[QUESTION]`, `[RUNNING]`, and `[COMPLETE]` for improved user experience and predictable AI interactions.
 
 #### Template Variables
 - `{submodules_field}` - Conditional frontmatter field for submodules list
@@ -275,6 +277,25 @@ Configuration in `.claude/settings.json`:
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
 ## Recent Enhancements
+
+### Protocol Structured Output (v0.3.3+)
+Enhanced all protocols with transparent structured output formats at key decision points:
+
+**Structured Output Formats:**
+- `[PROPOSAL]` - Task naming, success criteria, implementation plans
+- `[STATUS]` - Pre-completion checks, context manifest status, git state
+- `[PLAN]` - Implementation approaches with expandable explanations
+- `[FINDINGS]` - Code review results with categorized issues
+- `[DECISION]` - User choice points for context gathering, task indexing, file handling
+- `[QUESTION]` - User input requests for task success definition
+- `[RUNNING]`/`[COMPLETE]` - Agent execution tracking during context compaction
+
+**Visual Indicators:**
+- ✓ for completed items and successful states
+- ✗ for failures or missing requirements
+- □ for proposals, findings, and action items
+
+This enhancement provides predictable AI communication patterns and improves transparency at protocol decision points, replacing informal communication with standardized formats that clearly indicate when user input or confirmation is required.
 
 ### Discussion Mode Write Blocking (v0.3.2+)
 Recent improvements to `sessions_enforce.py` address oversensitive blocking that prevented legitimate compound operations:

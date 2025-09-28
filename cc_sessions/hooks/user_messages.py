@@ -180,8 +180,8 @@ if not is_api_command and task_creation_detected:
             content='Create task file from template with appropriate priority, type, and structure',
             activeForm='Creating task file from template'),
         CCTodo(
-            content='Write clear problem statement and success criteria',
-            activeForm='Writing clear problem statement and success criteria'),
+            content='Ask user about task success and propose success criteria',
+            activeForm='Asking user about task success and proposing success criteria'),
         CCTodo(
             content='Run context-gathering agent to create context manifest',
             activeForm='Running context-gathering agent to create context manifest'),
@@ -307,7 +307,7 @@ if not is_api_command and task_completion_detected:
         template_vars['commit_style_guidance'] = load_protocol_file('task-completion/commit-style-conventional.md')
 
     # Format commit instructions with merge/push
-    template_vars['commit_instructions'] = commit_instructions_content.format(merge_instruction=merge_instruction, push_instruction=push_instruction, commit_style_guidance=template_vars['commit_style_guidance'])
+    template_vars['commit_instructions'] = commit_instructions_content.format(merge_instruction=merge_instruction, push_instruction=push_instruction, commit_style_guidance=template_vars['commit_style_guidance'], default_branch=CONFIG.git_preferences.default_branch)
 
     # Format protocol with all template variables
     if protocol_content: protocol_content = protocol_content.format(**template_vars)
@@ -337,7 +337,9 @@ if not is_api_command and task_start_detected:
 
     # Load conditional chunks
     if CONFIG.git_preferences.has_submodules:
-        submodule_management = load_protocol_file('task-startup/submodule-management.md')
+        submodule_management_raw = load_protocol_file('task-startup/submodule-management.md')
+        # Format the submodule management content with default_branch
+        submodule_management = submodule_management_raw.format(default_branch=CONFIG.git_preferences.default_branch) if submodule_management_raw else ""
         resume_notes = load_protocol_file('task-startup/resume-notes-superrepo.md')
     else:
         submodule_management = ""

@@ -389,7 +389,7 @@ if not is_api_command and task_start_detected:
         'git_status_scope': git_status_scope,
         'git_handling': git_handling,
         'todos': format_todos_for_protocol(todos),
-        'implementation_mode_triggers': '\n'.join(f"- {phrase}" for phrase in CONFIG.trigger_phrases.implementation_mode)
+        'implementation_mode_triggers': f"[{', '.join(phrase for phrase in CONFIG.trigger_phrases.implementation_mode)}]" if CONFIG.trigger_phrases.implementation_mode else "[]"
     }
 
     # Format protocol with template variables

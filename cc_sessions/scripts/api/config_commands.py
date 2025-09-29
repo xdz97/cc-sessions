@@ -58,10 +58,12 @@ def handle_config_command(args: List[str], json_output: bool = False) -> Any:
         return handle_env_command(section_args, json_output)
     elif section == 'features':
         return handle_features_command(section_args, json_output)
+    elif section == 'readonly':
+        return handle_readonly_command(section_args, json_output)
     elif section == 'validate':
         return validate_config(json_output)
     else:
-        raise ValueError(f"Unknown config section: {section}. Valid sections: phrases, git, env, features, validate")
+        raise ValueError(f"Unknown config section: {section}. Valid sections: phrases, git, env, features, readonly, validate")
 
 def format_config_human(config) -> str:
     """Format full config for human reading."""
@@ -458,6 +460,70 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
     else:
         raise ValueError(f"Unknown features action: {action}. Valid actions: show, set, toggle")
+#!<
+
+#!> Readonly commands handlers
+def handle_readonly_command(args: List[str], json_output: bool = False) -> Any:
+    """
+    Handle custom readonly command management.
+
+    Usage:
+        config readonly list              - List all custom readonly commands
+        config readonly add <command>     - Add a command to readonly list
+        config readonly remove <command>  - Remove a command from readonly list
+    """
+    if not args or args[0] == 'list':
+        # List all readonly commands
+        config = load_config()
+        commands = config.blocked_actions.list_readonly_commands()
+
+        if json_output:
+            return {"readonly_commands": commands}
+
+        if commands:
+            lines = ["Custom Readonly Commands:"]
+            for cmd in commands:
+                lines.append(f"  - {cmd}")
+            return "\n".join(lines)
+        else:
+            return "No custom readonly commands configured"
+
+    action = args[0].lower()
+
+    if action == 'add':
+        if len(args) < 2:
+            raise ValueError("Usage: config readonly add <command>")
+
+        command = args[1]
+
+        with edit_config() as config:
+            added = config.blocked_actions.add_readonly_command(command)
+
+        if json_output:
+            return {"added": added, "command": command}
+        if added:
+            return f"Added '{command}' to readonly commands"
+        else:
+            return f"'{command}' already exists in readonly commands"
+
+    elif action == 'remove':
+        if len(args) < 2:
+            raise ValueError("Usage: config readonly remove <command>")
+
+        command = args[1]
+
+        with edit_config() as config:
+            removed = config.blocked_actions.remove_readonly_command(command)
+
+        if json_output:
+            return {"removed": removed, "command": command}
+        if removed:
+            return f"Removed '{command}' from readonly commands"
+        else:
+            return f"'{command}' not found in readonly commands"
+
+    else:
+        raise ValueError(f"Unknown readonly action: {action}. Valid actions: list, add, remove")
 #!<
 
 #!> Config validation

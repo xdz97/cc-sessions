@@ -242,6 +242,7 @@ class SessionsEnv:
 class BlockingPatterns:
     implementation_only_tools: List[CCTools] = field(default_factory=lambda: [CCTools.EDIT, CCTools.WRITE, CCTools.MULTIEDIT, CCTools.NOTEBOOKEDIT])
     custom_blocked_patterns: List[str] = field(default_factory=list) # Bash/CLI patterns user wants blocked in discussion mode
+    custom_readonly_commands: List[str] = field(default_factory=list) # Additional commands allowed in discussion mode
     extrasafe: bool = False
 
     def _coax_cc_tool(self, tool: str) -> CCTools:
@@ -283,6 +284,23 @@ class BlockingPatterns:
     def remove_custom_pattern(self, pattern: str) -> None:
         """Remove a custom pattern from the blocked list. Returns True if removed, False if not found."""
         if pattern in self.custom_blocked_patterns: self.custom_blocked_patterns.remove(pattern)
+
+    def add_readonly_command(self, command: str) -> bool:
+        """Add a command to the allowed readonly list. Returns True if added, False if already present."""
+        if command in self.custom_readonly_commands: return False
+        self.custom_readonly_commands.append(command)
+        return True
+
+    def remove_readonly_command(self, command: str) -> bool:
+        """Remove a command from the readonly list. Returns True if removed, False if not found."""
+        if command in self.custom_readonly_commands:
+            self.custom_readonly_commands.remove(command)
+            return True
+        return False
+
+    def list_readonly_commands(self) -> List[str]:
+        """Return the list of custom readonly commands."""
+        return self.custom_readonly_commands
 
 @dataclass
 class ContextWarnings:

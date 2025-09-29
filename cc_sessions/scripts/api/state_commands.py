@@ -132,6 +132,7 @@ def format_state_human(state) -> str:
     lines.append(f"  Context 90% warning: {state.flags.context_90}")
     lines.append(f"  Subagent mode: {state.flags.subagent}")
     lines.append(f"  Noob mode: {state.flags.noob}")
+    lines.append(f"  Bypass mode: {state.flags.bypass_mode}")
     
     return "\n".join(lines)
 
@@ -181,6 +182,7 @@ def format_flags_human(flags) -> str:
     lines.append(f"  context_90: {flags.context_90}")
     lines.append(f"  subagent: {flags.subagent}")
     lines.append(f"  noob: {flags.noob}")
+    lines.append(f"  bypass_mode: {flags.bypass_mode}")
     return "\n".join(lines)
 #!<
 
@@ -188,19 +190,23 @@ def format_flags_human(flags) -> str:
 def handle_mode_command(args: List[str], json_output: bool = False) -> Any:
     """
     Handle mode switching commands.
-    
+
     Usage:
         mode discussion  - Switch to discussion mode (one-way only)
+        mode bypass      - Toggle bypass mode (disables behavioral constraints)
     """
     if not args:
-        # Just show current mode
+        # Just show current mode and bypass status
         state = load_state()
         if json_output:
-            return {"mode": state.mode.value}
-        return f"Current mode: {state.mode.value}"
-    
+            return {"mode": state.mode.value, "bypass_mode": state.flags.bypass_mode}
+        result = f"Current mode: {state.mode.value}"
+        if state.flags.bypass_mode:
+            result += "\nBypass mode: ACTIVE (behavioral constraints disabled)"
+        return result
+
     target_mode = args[0].lower()
-    
+
     if target_mode == 'discussion':
         # One-way switch to discussion allowed
         with edit_state() as state:
@@ -213,13 +219,33 @@ def handle_mode_command(args: List[str], json_output: bool = False) -> Any:
                 if json_output:
                     return {"mode": "discussion", "message": "Already in discussion mode"}
                 return "Already in discussion mode"
-    
+
+    elif target_mode == 'bypass':
+        # Check if this is a slash command (user-initiated) or API call (Claude-initiated)
+        is_slash_command = '--from-slash' in args
+
+        with edit_state() as state:
+            if state.flags.bypass_mode:
+                # Always allow deactivating bypass mode (returning to safety)
+                state.flags.bypass_mode = False
+                if json_output:
+                    return {"bypass_mode": False, "message": "Bypass mode INACTIVE"}
+                return "Bypass mode INACTIVE - behavioral constraints enabled"
+            else:
+                # Only allow activating bypass if it's from a slash command (user-initiated)
+                if not is_slash_command:
+                    raise ValueError("Cannot activate bypass mode via API. Only the user can enable bypass mode.")
+                state.flags.bypass_mode = True
+                if json_output:
+                    return {"bypass_mode": True, "message": "Bypass mode ACTIVE"}
+                return "Bypass mode ACTIVE - behavioral constraints disabled"
+
     elif target_mode == 'implementation':
         # Not allowed via API
         raise ValueError("Cannot switch to implementation mode via API. Use trigger phrases instead.")
-    
+
     else:
-        raise ValueError(f"Unknown mode: {target_mode}. Valid modes: discussion")
+        raise ValueError(f"Unknown mode: {target_mode}. Valid modes: discussion, bypass")
 #!<
 
 #!> Flags command handler

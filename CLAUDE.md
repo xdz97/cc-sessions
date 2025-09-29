@@ -193,7 +193,8 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 
 **Blocked Actions (`blocked_actions`):**
 - `implementation_only_tools` - Tools blocked in discussion mode (default: Edit, Write, MultiEdit, NotebookEdit)
-- `custom_blocked_patterns` - User-defined CLI patterns blocked in discussion mode
+- `bash_read_patterns` - Patterns that are considered "read only" in Bash tool inputs and are allowed in discussion mode
+- `bash_write_patterns` - Patterns that are considered "write-like" in Bash tool inputs and are blocked in discussion mode
 - `extrasafe` - Enhanced blocking mode
 
 **Git Preferences (`git_preferences`):**

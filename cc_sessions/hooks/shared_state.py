@@ -87,9 +87,9 @@ class GitAddPattern(str, Enum):
     ALL = "all"
 
 class GitCommitStyle(str, Enum):
-    CONVENTIONAL = "conventional"
-    SIMPLE = "simple"
-    DETAILED = "detailed"
+    REG = "conventional"
+    SIMP = "simple"
+    OP = "detailed"
 
 class UserOS(str, Enum):
     LINUX = "linux" # All Linux distros and Unix-likes
@@ -221,7 +221,7 @@ class TriggerPhrases:
 class GitPreferences:
     add_pattern: GitAddPattern = GitAddPattern.ASK
     default_branch: str = "main"
-    commit_style: GitCommitStyle = GitCommitStyle.CONVENTIONAL
+    commit_style: GitCommitStyle = GitCommitStyle.REG
     auto_merge: bool = False
     auto_push: bool = False
     has_submodules: bool = False
@@ -241,8 +241,8 @@ class SessionsEnv:
 @dataclass
 class BlockingPatterns:
     implementation_only_tools: List[CCTools] = field(default_factory=lambda: [CCTools.EDIT, CCTools.WRITE, CCTools.MULTIEDIT, CCTools.NOTEBOOKEDIT])
-    custom_blocked_patterns: List[str] = field(default_factory=list) # Bash/CLI patterns user wants blocked in discussion mode
-    custom_readonly_commands: List[str] = field(default_factory=list) # Additional commands allowed in discussion mode
+    bash_read_patterns: List[str] = field(default_factory=lambda: [])
+    bash_write_patterns: List[str] = field(default_factory=lambda: [])
     extrasafe: bool = False
 
     def _coax_cc_tool(self, tool: str) -> CCTools:
@@ -253,12 +253,6 @@ class BlockingPatterns:
         """Return True if the tool is blocked in discussion mode."""
         if isinstance(tool, str): tool = self._coax_cc_tool(tool)
         return tool in self.implementation_only_tools
-
-    def matches_custom_pattern(self, cli_string: str) -> bool:
-        """Return True if the cli_string matches any custom blocked pattern."""
-        for pattern in self.custom_blocked_patterns:
-            if pattern in cli_string: return True
-        return False
 
     def add_blocked_tool(self, tool: CCTools) -> bool:
         """Add a tool to the blocked list. Returns True if added, False if already present."""
@@ -277,30 +271,24 @@ class BlockingPatterns:
 
     def add_custom_pattern(self, pattern: str) -> bool:
         """Add a custom pattern to the blocked list. Returns True if added, False if already present."""
-        if pattern in self.custom_blocked_patterns: return True
-        self.custom_blocked_patterns.append(pattern)
+        if pattern not in self.bash_write_patterns: self.bash_write_patterns.append(pattern)
         return True
 
-    def remove_custom_pattern(self, pattern: str) -> None:
+    def remove_custom_pattern(self, pattern: str) -> bool:
         """Remove a custom pattern from the blocked list. Returns True if removed, False if not found."""
-        if pattern in self.custom_blocked_patterns: self.custom_blocked_patterns.remove(pattern)
+        if pattern in self.bash_write_patterns: self.bash_write_patterns.remove(pattern)
+        return True
 
     def add_readonly_command(self, command: str) -> bool:
         """Add a command to the allowed readonly list. Returns True if added, False if already present."""
-        if command in self.custom_readonly_commands: return False
-        self.custom_readonly_commands.append(command)
+        if command in self.bash_read_patterns: return True
+        self.bash_read_patterns.append(command)
         return True
 
     def remove_readonly_command(self, command: str) -> bool:
         """Remove a command from the readonly list. Returns True if removed, False if not found."""
-        if command in self.custom_readonly_commands:
-            self.custom_readonly_commands.remove(command)
-            return True
-        return False
-
-    def list_readonly_commands(self) -> List[str]:
-        """Return the list of custom readonly commands."""
-        return self.custom_readonly_commands
+        if command in self.bash_read_patterns: self.bash_read_patterns.remove(command)
+        return True
 
 @dataclass
 class ContextWarnings:
@@ -424,11 +412,13 @@ class SessionsFlags:
     context_90: bool = False
     subagent: bool = False
     noob: bool = True
+    bypass_mode: bool = False
 
     def clear_flags(self) -> None:
         self.context_85 = False
         self.context_90 = False
         self.subagent = False
+        self.bypass_mode = False
 
 @dataclass
 class SessionsTodos:
@@ -563,6 +553,7 @@ class SessionsState:
                 context_85=d.get("flags", {}).get("context_85") or d.get("flags", {}).get("context_warnings", {}).get("85%", False),
                 context_90=d.get("flags", {}).get("context_90") or d.get("flags", {}).get("context_warnings", {}).get("90%", False),
                 subagent=d.get("flags", {}).get("subagent", False),
+                bypass_mode=d.get("flags", {}).get("bypass_mode", False),
             ),
             metadata=d.get("metadata", {}),
         )

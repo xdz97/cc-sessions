@@ -78,6 +78,8 @@ READONLY_FIRST = {
     'awk', 'sed', 'gawk', 'mawk', 'gsed',
 }
 
+READONLY_FIRST.update(CONFIG.blocked_actions.bash_read_patterns)
+
 WRITE_FIRST = {
     # File operations
     'rm', 'rmdir', 'unlink', 'shred',
@@ -99,6 +101,8 @@ WRITE_FIRST = {
     'sudo', 'doas', 'su', 'crontab', 'at', 'batch',
     'kill', 'pkill', 'killall', 'tee',
 }
+
+WRITE_FIRST.update(CONFIG.blocked_actions.bash_write_patterns)
 
 # Enhanced redirection detection (includes stderr redirections)
 REDIR_PATTERNS = [
@@ -212,7 +216,6 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
         first = parts[0].lower()
         if first == 'cd': continue
         if first in WRITE_FIRST: return False
-        if CONFIG.blocked_actions.matches_custom_pattern(first): return False
 
         # Check command arguments for write operations
         if not check_command_arguments(parts):
@@ -234,12 +237,12 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
 
 #!> Bash command handling
 # For Bash commands, check if it's a read-only operation
-if tool_name == "Bash" and STATE.mode is Mode.NO:
+if tool_name == "Bash" and STATE.mode is Mode.NO and not STATE.flags.bypass_mode:
     # Special case: Allow sessions.api commands in discussion mode
     if command and ('python -m sessions.api' in command or 'python -m cc_sessions.scripts.api' in command):
         # API commands are allowed in discussion mode for state inspection and safe config operations
         sys.exit(0)
-    
+
     if not is_bash_read_only(command):
         print("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n"
               "Note: Both Claude and the user can configure allowed commands:\n"
@@ -263,7 +266,7 @@ if file_path and all([
 # --- All commands beyond here contain write patterns (read patterns exit early) ---
 
 #!> Discussion mode guard (block write tools)
-if STATE.mode is Mode.NO:
+if STATE.mode is Mode.NO and not STATE.flags.bypass_mode:
     if CONFIG.blocked_actions.is_tool_blocked(tool_name):
         print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
         sys.exit(2)  # Block with feedback
@@ -271,7 +274,7 @@ if STATE.mode is Mode.NO:
 #!<
 
 #!> TodoWrite tool handling
-if tool_name == "TodoWrite":
+if tool_name == "TodoWrite" and not STATE.flags.bypass_mode:
     # Check for name mismatch first (regardless of completion state)
     if STATE.todos.active:
         active_names = STATE.todos.list_content('active')
@@ -298,7 +301,8 @@ if not file_path: sys.exit(0) # No file path, allow to proceed
 # Block direct modification of state file via Write/Edit/MultiEdit
 if all([    tool_name in ["Write", "Edit", "MultiEdit", "NotebookEdit"],
             file_path.name == 'sessions-state.json',
-            file_path.parent.name == 'sessions' ]):
+            file_path.parent.name == 'sessions',
+            not STATE.flags.bypass_mode]):
     print("[Security] Direct modification of sessions-state.json is not allowed. "
         "This file should only be modified through the TodoWrite tool and approved commands.", file=sys.stderr)
     sys.exit(2)

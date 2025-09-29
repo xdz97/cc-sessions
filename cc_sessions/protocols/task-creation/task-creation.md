@@ -85,7 +85,7 @@ cp sessions/tasks/TEMPLATE.md sessions/tasks/[priority]-[task-name]/README.md
 ```
 
 Then fill out task frontmatter
-  - task: Must match filename (including priority prefix)
+  - name: Must match filename (including priority prefix)
   - branch: Based on task type (or 'none' for research)
   - status: Start as 'pending'
   - created: Today's date{submodules_field}

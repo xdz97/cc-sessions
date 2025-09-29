@@ -116,6 +116,9 @@ Based on the task requirements, I propose the following implementation:
   → [Expanded explanation of what this involves]
 
 Shall I proceed with this implementation?
+
+NOTE: To approve these todos, you may use any of your implementation mode trigger phrases: 
+{implementation_mode_triggers}
 ```
 
 3. Iterate based on user feedback until approved

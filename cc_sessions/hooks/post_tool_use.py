@@ -93,11 +93,11 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
 #!<
 
 #!> Implementation mode + no Todos enforcement
-if STATE.mode is Mode.GO and not STATE.flags.subagent and not STATE.todos.active:
-    # In implementation mode but no todos - show reminder
+if STATE.mode is Mode.GO and not STATE.flags.subagent and not STATE.todos.active and STATE.current_task.name:
+    # In implementation mode but no todos - show reminder only during task-based work
     print("[Reminder] You're in implementation mode without approved todos. "
             "If you proposed todos that were approved, add them. "
-            "If the user asked you to do something without todo proposal/approval, translate *only the remaining work* to todos and add them (all 'pending'). "
+            "If the user asked you to do something without todo proposal/approval that is **reasonably complex or multi-step**, translate *only the remaining work* to todos and add them (all 'pending'). "
             "In any case, return to discussion mode after completing approved implementation.", file=sys.stderr)
     mod = True
 #!<

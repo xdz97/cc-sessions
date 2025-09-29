@@ -388,7 +388,8 @@ if not is_api_command and task_start_detected:
         'resume_notes': resume_notes,
         'git_status_scope': git_status_scope,
         'git_handling': git_handling,
-        'todos': format_todos_for_protocol(todos)
+        'todos': format_todos_for_protocol(todos),
+        'implementation_mode_triggers': '\n'.join(f"- {phrase}" for phrase in CONFIG.trigger_phrases.implementation_mode)
     }
 
     # Format protocol with template variables

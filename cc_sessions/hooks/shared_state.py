@@ -379,9 +379,12 @@ class TaskState:
             key, value = line.split(':', 1)
             key = key.strip()
             value = value.strip()
-            if key == "submodules":
+            if key == "submodules" or key == "modules":
                 value = value.strip('[]')
-                data[key] = [s.strip() for s in value.split(',')]
+                data["submodules"] = [s.strip() for s in value.split(',')]
+            elif key == "task":
+                # Handle legacy "task:" field by mapping to "name"
+                data["name"] = value or None
             else: data[key] = value or None
         if not file and path: 
             try: rel = path.relative_to(tasks_root); data["file"] = str(rel)

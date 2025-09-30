@@ -10,7 +10,8 @@ import shutil, json, sys
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, SessionsProtocol, list_open_tasks
+from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, SessionsProtocol, list_open_tasks, TaskState, StateError
+from pathlib import Path
 ##-##
 
 #-#
@@ -100,6 +101,44 @@ if STATE.mode is Mode.GO and not STATE.flags.subagent and not STATE.todos.active
             "If the user asked you to do something without todo proposal/approval that is **reasonably complex or multi-step**, translate *only the remaining work* to todos and add them (all 'pending'). "
             "In any case, return to discussion mode after completing approved implementation.", file=sys.stderr)
     mod = True
+#!<
+
+#!> Task file auto-update detection
+if tool_name in ["Edit", "Write", "MultiEdit"] and STATE.current_task.name and STATE.current_task.file:
+    # Extract file path from tool input
+    file_path_str = tool_input.get("file_path")
+    if file_path_str:
+        file_path = Path(file_path_str)
+        task_path = PROJECT_ROOT / 'sessions' / 'tasks' / STATE.current_task.file
+
+        # Check if the edited file is the current task file
+        if file_path.resolve() == task_path.resolve():
+            try:
+                # Task file was edited - re-parse frontmatter to detect changes
+                updated_task = TaskState.load_task(path=task_path)
+
+                # Update session state with any changes from the re-parsed frontmatter
+                if updated_task:
+                    with edit_state() as s:
+                        # Update relevant fields from the re-parsed task
+                        if updated_task.status != STATE.current_task.status:
+                            s.current_task.status = updated_task.status
+                        if updated_task.updated != STATE.current_task.updated:
+                            s.current_task.updated = updated_task.updated
+                        if updated_task.branch != STATE.current_task.branch:
+                            s.current_task.branch = updated_task.branch
+                        if updated_task.submodules != STATE.current_task.submodules:
+                            s.current_task.submodules = updated_task.submodules
+                        # Update other relevant fields as needed
+                        if updated_task.started != STATE.current_task.started:
+                            s.current_task.started = updated_task.started
+                        if updated_task.dependencies != STATE.current_task.dependencies:
+                            s.current_task.dependencies = updated_task.dependencies
+                        STATE = s
+            except (FileNotFoundError, StateError):
+                # File might be temporarily invalid during editing
+                # or frontmatter might be malformed - silently skip
+                pass
 #!<
 
 #!> Disable windowed API permissions after any tool use (except the windowed command itself)

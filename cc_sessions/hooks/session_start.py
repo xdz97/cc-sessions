@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, PROJECT_ROOT, load_config
+from shared_state import edit_state, PROJECT_ROOT, load_config, SessionsProtocol
 ##-##
 
 #-#
@@ -230,10 +230,49 @@ Loading task file: {STATE.current_task.file}
 {"=" * 60}
 {task_content}
 {"=" * 60}
+
 """
 
-        if task_updated: context += "[Note: Task status updated from 'pending' to 'in-progress']\n\nFollow the task-startup protocol to create branches and set up the work environment.\n\n"
-        else: context += "Review the Work Log at the end of the task file above and continue the task.\n\n"
+    context += f"""Since you are resuming an in-progress task, follow these instructions:
+
+    1. Analyze the task requirements and work completed thoroughly
+    2. Analyze any next steps itemized in the task file and, if necessary, ask any questions from the user for clarification.
+    3. Propose implementation plan with structured format:
+
+```markdown
+[PLAN: Implementation Approach]
+Based on the task requirements, I propose the following implementation:
+
+□ [Specific action 1]
+  → [Expanded explanation of what this involves]
+
+□ [Specific action 2]
+  → [Expanded explanation of what this involves]
+
+□ [Specific action 3]
+  → [Expanded explanation of what this involves]
+
+To approve these todos, you may use any of your implementation mode trigger phrases: 
+{CONFIG.trigger_phrases.implementation_mode}
+```
+
+3. Iterate based on user feedback until approved
+4. Upon approval, convert proposed todos to TodoWrite exactly as written
+
+**IMPORTANT**: Until your todos are approved, you are seeking the user's approval of an explicitly proposed and properly explained list of execution todos. Besides answering user questions during discussion, your messages should end with an expanded explanation of each todo, the clean list of todos, and **no further messages**.
+
+**For the duration of the task**:
+- Discuss before implementing
+- Constantly seek user input and approval
+
+Once approved, remember:
+- *Immediately* load your proposed todo items *exactly* as you proposed them using ToDoWrite
+- Work logs are maintained by the logging agent (not manually)
+
+After completion of the last task in any todo list:
+- *Do not* try to run any write-based tools (you will be automatically put into discussion mode)
+- Repeat todo proposal and approval workflow for any additional write/edit-based work"""
+
 else:
     context += list_open_tasks_grouped()
 #!<

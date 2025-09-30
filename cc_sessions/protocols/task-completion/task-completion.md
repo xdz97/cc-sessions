@@ -25,7 +25,7 @@ If any checks fail, stop and address the remaining work first.
 Delegate to specialized agents in this order:
 ```
 1. code-review agent - Review all implemented code for security/quality
-   Include: Changed files, task context, implementation approach
+   Include: Changed files, task context, implementation approach, complete explanation of threat model (avoids ridiculous suggestions like "Critical: command injection vulnerability" when the environment is the shell and the command writer is the user who already has access to their own shell and can run dangerous commands if they truly wanted to)
    **IMPORTANT**: After code-review completes, report findings using this format:
 
 ```markdown

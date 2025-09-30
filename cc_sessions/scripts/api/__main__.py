@@ -42,11 +42,12 @@ def main():
     parser.add_argument('command', help='Main command (state, config, mode, flags, status, version)')
     parser.add_argument('args', nargs='*', help='Command arguments')
     parser.add_argument('--json', action='store_true', help='Output in JSON format')
-    
+    parser.add_argument('--from-slash', action='store_true', help='Indicates call from slash command')
+
     args = parser.parse_args()
-    
+
     try:
-        result = route_command(args.command, args.args, json_output=args.json)
+        result = route_command(args.command, args.args, json_output=args.json, from_slash=args.from_slash)
         if result is not None:
             if args.json and not isinstance(result, str):
                 print(json.dumps(result, indent=2))

@@ -168,6 +168,15 @@ CRITICAL RULES:
 
 # Emergency stop (works in any mode)
 if STATE.mode is Mode.GO and discussion_phrase_detected:  # Case sensitive
+    # DEBUG: Log what triggered this
+    import datetime
+    debug_log_path = PROJECT_ROOT / "sessions" / "mode-revert-debug.log"
+    with open(debug_log_path, "a") as log:
+        log.write(f"\n[{datetime.datetime.now().isoformat()}] EMERGENCY STOP TRIGGERED\n")
+        log.write(f"  Prompt: {prompt[:200]}...\n")
+        log.write(f"  discussion_phrase_detected: {discussion_phrase_detected}\n")
+        log.write(f"  Trigger phrases: {CONFIG.trigger_phrases.discussion_mode}\n")
+
     with edit_state() as s: s.mode = Mode.NO; s.todos.clear_active(); STATE = s
     context += "[DAIC: EMERGENCY STOP] All tools locked. You are now in discussion mode. Re-align with your pair programmer.\n"
 #!<

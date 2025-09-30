@@ -9,7 +9,7 @@ from pathlib import Path
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
-import yaml
+# No third-party dependencies needed
 ##-##
 
 ## ===== LOCAL ===== ##
@@ -306,7 +306,26 @@ To restore the previous task later:
             return {"error": "Invalid format", "message": error_msg}
         return error_msg
 
-    frontmatter = yaml.safe_load(parts[1])
+    # Parse frontmatter using simple string parsing
+    frontmatter_lines = parts[1].split('\n')
+    frontmatter = {}
+    for line in frontmatter_lines:
+        if ':' in line:
+            key, value = line.split(':', 1)
+            key = key.strip()
+            value = value.strip()
+
+            # Handle special cases
+            if key in ['submodules', 'dependencies']:
+                # Parse arrays formatted as: [item1, item2]
+                if value.startswith('[') and value.endswith(']'):
+                    value = [s.strip() for s in value[1:-1].split(',') if s.strip()]
+                elif value == 'null' or value == '':
+                    value = None
+            elif value == 'null' or value == '':
+                value = None
+
+            frontmatter[key] = value
 
     # Load and compose protocol based on config
     protocol_content = load_protocol_file('task-startup/task-startup.md')

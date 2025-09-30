@@ -44,7 +44,15 @@
   "files": [
     "install.js",
     "install.sh",
-    "cc_sessions/",
+    "cc_sessions/hooks/*.js",
+    "cc_sessions/scripts/api/*.js",
+    "cc_sessions/scripts/statusline.js",
+    "cc_sessions/commands/sessions.js.md",
+    "cc_sessions/protocols/",
+    "cc_sessions/agents/",
+    "cc_sessions/knowledge/",
+    "cc_sessions/templates/",
+    "cc_sessions/kickstart/",
     "docs/",
     "README.md",
     "LICENSE"

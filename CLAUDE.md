@@ -1,13 +1,13 @@
 # cc-sessions CLAUDE.md
 
 ## Purpose
-Complete Claude Code Sessions framework that enforces Discussion-Alignment-Implementation-Check (DAIC) methodology for AI pair programming workflows with comprehensive user configurability.
+Complete Claude Code Sessions framework with dual-language implementation (Python/JavaScript) that enforces Discussion-Alignment-Implementation-Check (DAIC) methodology for AI pair programming workflows with comprehensive user configurability.
 
 ## Narrative Summary
 
 The cc-sessions package transforms Claude Code from a basic AI coding assistant into a sophisticated workflow management system. It enforces structured collaboration patterns where Claude must discuss approaches before implementing code, maintains persistent task context across sessions, and provides specialized agents for complex operations.
 
-The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enforcement through Python hooks that cannot be bypassed. When Claude attempts to edit code without explicit user approval ("go ahead", "make it so", etc.), the hooks block the tools and require discussion first. The system uses todo-based execution boundaries where approved TodoWrite lists define the exact scope of implementation work. This prevents both over-implementation and "execution anxiety" from per-tool reminders.
+The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enforcement through language-agnostic hooks that cannot be bypassed. Available in both Python and JavaScript implementations with complete feature parity, When Claude attempts to edit code without explicit user approval ("go ahead", "make it so", etc.), the hooks block the tools and require discussion first. The system uses todo-based execution boundaries where approved TodoWrite lists define the exact scope of implementation work. This prevents both over-implementation and "execution anxiety" from per-tool reminders.
 
 Recent architectural enhancement (v0.3.0) introduced comprehensive user configuration through the SessionsConfig system. Users can now customize trigger phrases, blocked tools, developer preferences, git workflows, and environment settings. This 320+ line configuration architecture provides type-safe, atomic configuration management with the same reliability as the core state system.
 
@@ -16,20 +16,19 @@ The v0.3.1+ enhancement introduces a templated protocol system where protocols a
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py:1-50` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), and fixed EnabledFeatures.from_dict() dataclass serialization
-- `cc_sessions/hooks/sessions_enforce.py:36-110` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection
-- `cc_sessions/hooks/session_start.py` - Session initialization with configuration integration and dual-import pattern
-- `cc_sessions/hooks/user_messages.py:72-84` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting with improved task startup notices
-- `cc_sessions/hooks/user_messages.py:165-216` - Templated task creation protocol system with automatic todo loading
-- `cc_sessions/hooks/user_messages.py:316-414` - Task startup protocol with conditional API startup-load command
-- `cc_sessions/hooks/user_messages.py:218-314` - Task completion protocol with commit style templates and conditional todos
-- `cc_sessions/hooks/post_tool_use.py` - Todo completion detection and automated mode transitions
-- `cc_sessions/hooks/subagent_hooks.py` - Subagent context management and flag handling
-- `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output
-- `cc_sessions/scripts/api/router.py` - Command routing with protocol command support and --from-slash flag handling
-- `cc_sessions/scripts/api/protocol_commands.py:59-172` - Protocol-specific API commands with startup-load returning full task content
-- `cc_sessions/scripts/api/state_commands.py` - State inspection and limited write operations
-- `cc_sessions/scripts/api/config_commands.py` - Configuration management commands with --from-slash support for contextual output formatting
+- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), and fixed EnabledFeatures.from_dict() dataclass serialization (both Python and JavaScript implementations)
+- `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection (both Python and JavaScript implementations)
+- `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration and dual-import pattern (both Python and JavaScript implementations)
+- `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting with improved task startup notices (both Python and JavaScript implementations)
+- `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
+- `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output (Python)
+- `cc_sessions/scripts/api/index.js` - Sessions API entry point (JavaScript)
+- `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support and --from-slash flag handling (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/protocol_commands.py|.js` - Protocol-specific API commands with startup-load returning full task content (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/state_commands.py|.js` - State inspection and limited write operations (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
@@ -47,10 +46,17 @@ The framework includes persistent task management with git branch enforcement, c
 - `pyproject.toml` - Package configuration with console script entry points
 
 ## Installation Methods
+**Python Variant:**
 - `pipx install cc-sessions` - Isolated Python install (recommended)
-- `npm install -g cc-sessions` - Global npm install
 - `pip install cc-sessions` - Direct pip install
+
+**JavaScript Variant:**
+- `npm install -g cc-sessions` - Global npm install
+- `npx cc-sessions` - One-time execution
+
+**Development:**
 - Direct bash: `./install.sh` from repository
+- **Symlinked Development Setup**: Use cc-sessions package locally without installation via symlinks
 
 ## Core Features
 
@@ -155,10 +161,11 @@ protocols/
 ### Consumes
 - Claude Code hooks system for behavioral enforcement
 - Git for branch management and enforcement
-- Python 3.8+ with tiktoken for token counting
+- **Python 3.8+** OR **Node.js 16+** (language-specific variants)
 - Shell environment for command execution (Bash/PowerShell/Command Prompt)
 - File system locks for atomic state/configuration operations
 - **CLAUDE_PROJECT_DIR environment variable** for symlinked development setup
+- **No external dependencies** - removed tiktoken and yaml dependencies from both languages
 
 ### Provides
 - **Sessions API** - Programmatic access via `python -m sessions.api` (unified module path)
@@ -298,6 +305,33 @@ Enhanced all protocols with transparent structured output formats at key decisio
 
 This enhancement provides predictable AI communication patterns and improves transparency at protocol decision points, replacing informal communication with standardized formats that clearly indicate when user input or confirmation is required.
 
+### JavaScript Implementation Complete (v0.3.4)
+
+The cc-sessions package now provides complete feature parity between Python and JavaScript implementations, enabling users to choose their preferred runtime environment without functionality compromises.
+
+**Complete JavaScript Port Achieved:**
+- ✅ **6 Core Hook Files**: All hook files (`session_start.js`, `user_messages.js`, `post_tool_use.js`, `sessions_enforce.js`, `subagent_hooks.js`, `shared_state.js`) provide identical functionality to Python counterparts
+- ✅ **6 API Module Files**: All API modules (`config_commands.js`, `index.js`, `protocol_commands.js`, `router.js`, `state_commands.js`, `task_commands.js`) completely rewritten to match Python functionality
+- ✅ **Dependency Elimination**: Removed tiktoken and yaml dependencies from both language implementations
+- ✅ **Architecture Simplification**: Both languages now use simple string parsing and character-based operations instead of external tokenization
+
+**Technical Achievements:**
+- **Stdin JSON Handling**: JavaScript hooks now properly read JSON input from stdin instead of command-line arguments, matching Claude Code's hook execution model
+- **Atomic State Management**: Implemented Node.js equivalent patterns for Python's `edit_state()` context manager with proper file locking
+- **Hook Output Compliance**: All JavaScript hooks output correct `hookSpecificOutput` JSON structure expected by Claude Code
+- **Behavioral Equivalence**: Error handling, exit codes, and execution patterns match Python behavior exactly
+- **File System Operations**: Proper async/await patterns for file operations with concurrent access protection
+
+**Quality Assurance Process:**
+Used systematic 5-step iterloop methodology for each file:
+1. Read Python implementation completely
+2. Read JavaScript implementation completely
+3. Itemize functional differences
+4. Apply fixes to achieve feature parity
+5. Document changes made
+
+**Status**: Both Python and JavaScript variants now provide identical DAIC enforcement, state management, task workflows, and API capabilities. Users can choose their preferred language without functional limitations.
+
 ### Discussion Mode Write Blocking (v0.3.2+)
 Recent improvements to `sessions_enforce.py` address oversensitive blocking that prevented legitimate compound operations:
 
@@ -409,11 +443,21 @@ These improvements maintain data integrity and atomic file operations while sign
 ## Package Structure
 
 ### Installation Variants
-- Python package with pip/pipx/uv support
-- NPM package wrapper for JavaScript environments
-- Direct bash script for build-from-source installations
+- **Python package** with pip/pipx/uv support (Python-only dependencies)
+- **NPM package** for JavaScript environments (JavaScript-only dependencies)
+- **Direct bash script** for build-from-source installations
 - **Symlinked Development Setup**: Use cc-sessions package locally without installation via symlinks
-- Cross-platform compatibility (macOS, Linux, Windows 10/11)
+- **Cross-platform compatibility** (macOS, Linux, Windows 10/11)
+- **Complete feature parity** between Python and JavaScript implementations
+
+### Language Implementation Status
+- **Python Implementation**: Complete and fully functional (reference implementation)
+- **JavaScript Implementation**: Complete with full feature parity (as of v0.3.4)
+  - All 6 core hook files providing identical functionality
+  - All 6 API module files with complete feature set
+  - No external dependencies (tiktoken/yaml removed)
+  - Proper stdin JSON handling and atomic state management
+  - File locking patterns and async operations implemented
 
 ### Development Setup
 - **Symlink Structure**: `sessions/hooks/` → `cc-sessions/cc_sessions/hooks/` for real-time testing

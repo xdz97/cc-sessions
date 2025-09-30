@@ -5,6 +5,7 @@
 ## ===== STDLIB ===== ##
 from typing import Any, List, Optional, Dict
 import json
+import os
 from importlib.metadata import version, PackageNotFoundError
 ##-##
 
@@ -12,7 +13,7 @@ from importlib.metadata import version, PackageNotFoundError
 ##-##
 
 ## ===== LOCAL ===== ##
-from hooks.shared_state import load_state, edit_state, Mode
+from hooks.shared_state import load_state, edit_state, load_config, Mode, PROJECT_ROOT, STATE_FILE
 ##-##
 
 #-#
@@ -29,76 +30,124 @@ from hooks.shared_state import load_state, edit_state, Mode
 # ===== FUNCTIONS ===== #
 
 #!> State inspection handlers
-def handle_state_command(args: List[str], json_output: bool = False) -> Any:
+def handle_state_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
     """
-    Handle state inspection commands.
-    
+    Handle state inspection and management commands.
+
     Usage:
-        state [component] [--json]
-        state task.name [--json]
-        state todos.active [--json]
+        state                       - Show full state
+        state help                  - Show help information
+        state show [section]        - Show state (all, task, todos, flags, mode)
+        state mode <mode>           - Switch mode (discussion/no, bypass/off)
+        state task <action>         - Manage current task
+        state todos <action>        - Manage todos
+        state flags <action>        - Manage flags
     """
-    state = load_state()
-    
-    if not args:
-        # Return full state
-        if json_output:
-            return state.to_dict()
-        else:
-            return format_state_human(state)
-    
-    component = args[0]
-    
-    # Handle nested access (e.g., task.name, flags.noob)
-    if '.' in component:
-        parts = component.split('.')
-        result = state.to_dict()
-        try:
-            for part in parts:
-                if isinstance(result, dict):
-                    result = result.get(part)
-                elif hasattr(result, part):
-                    result = getattr(result, part)
-                else:
-                    raise ValueError(f"Invalid state path: {component}")
-            
+    # Handle help command
+    if not args or (args and args[0].lower() in ['help', '']):
+        if from_slash and (not args or args[0].lower() == 'help'):
+            return format_state_help()
+        elif not args:
+            # Show full state when no args
+            state = load_state()
             if json_output:
-                return {component: result}
-            else:
-                return f"{component}: {result}"
-        except (KeyError, AttributeError):
-            raise ValueError(f"Invalid state path: {component}")
-    
-    # Handle top-level components
-    if component == 'mode':
-        if json_output:
-            return {"mode": state.mode.value}
-        return f"Mode: {state.mode.value}"
-    
-    elif component == 'task':
-        if json_output:
-            return {"task": state.current_task.task_state if state.current_task else None}
-        if state.current_task:
-            return format_task_human(state.current_task)
-        return "No active task"
-    
-    elif component == 'todos':
-        if json_output:
-            return {"todos": state.todos.to_dict()}
-        return format_todos_human(state.todos)
-    
-    elif component == 'flags':
-        if json_output:
-            return {"flags": state.flags.to_dict()}
-        return format_flags_human(state.flags)
-    
-    elif component == 'metadata':
-        if json_output:
-            return {"metadata": state.metadata}
-        return f"Metadata: {json.dumps(state.metadata, indent=2)}"
-    
+                return state.to_dict()
+            return format_state_human(state)
+
+    section = args[0].lower()
+    section_args = args[1:] if len(args) > 1 else []
+
+    # Remove --from-slash from section_args if present
+    if '--from-slash' in section_args:
+        section_args = [arg for arg in section_args if arg != '--from-slash']
+
+    # Route to appropriate handler
+    if section == 'show':
+        return handle_show_command(section_args, json_output)
+    elif section == 'mode':
+        return handle_mode_command(section_args, json_output, from_slash)
+    elif section == 'task':
+        return handle_task_command(section_args, json_output, from_slash)
+    elif section == 'todos':
+        return handle_todos_command(section_args, json_output)
+    elif section == 'flags':
+        return handle_flags_command(section_args, json_output)
     else:
-        raise ValueError(f"Unknown state component: {component}")
+        # For backward compatibility, support direct component access
+        state = load_state()
+        component = section
+
+        # Handle nested access (e.g., task.name, flags.noob)
+        if '.' in component:
+            parts = component.split('.')
+            result = state.to_dict()
+            try:
+                for part in parts:
+                    if isinstance(result, dict):
+                        result = result.get(part)
+                    elif hasattr(result, part):
+                        result = getattr(result, part)
+                    else:
+                        raise ValueError(f"Invalid state path: {component}")
+
+                if json_output:
+                    return {component: result}
+                else:
+                    return f"{component}: {result}"
+            except (KeyError, AttributeError):
+                raise ValueError(f"Invalid state path: {component}")
+
+        # Handle top-level components for backward compatibility
+        if component == 'mode':
+            if json_output:
+                return {"mode": state.mode.value}
+            return f"Mode: {state.mode.value}"
+        elif component == 'task':
+            if json_output:
+                return {"task": state.current_task.task_state if state.current_task else None}
+            if state.current_task:
+                return format_task_human(state.current_task)
+            return "No active task"
+        elif component == 'todos':
+            if json_output:
+                return {"todos": state.todos.to_dict()}
+            return format_todos_human(state.todos)
+        elif component == 'flags':
+            if json_output:
+                return {"flags": state.flags.to_dict()}
+            return format_flags_human(state.flags)
+        elif component == 'metadata':
+            if json_output:
+                return {"metadata": state.metadata}
+            return f"Metadata: {json.dumps(state.metadata, indent=2)}"
+        else:
+            if from_slash:
+                return f"Unknown command: {section}\n\n{format_state_help()}"
+            raise ValueError(f"Unknown state component: {component}")
+
+def format_state_help() -> str:
+    """Format help output for slash command."""
+    lines = [
+        "Sessions State Commands:",
+        "",
+        "  /sessions state                 - Display current state",
+        "  /sessions state show [section]  - Show specific section (task, todos, flags, mode)",
+        "  /sessions state mode <mode>     - Switch mode (discussion/no, bypass/off)",
+        "  /sessions state task <action>   - Manage task (clear, show, restore <file>)",
+        "  /sessions state todos <action>  - Manage todos (clear)",
+        "  /sessions state flags <action>  - Manage flags (clear, clear-context)",
+        "",
+        "Mode Aliases:",
+        "  no   → discussion mode",
+        "  off  → bypass mode toggle",
+        "  go   → implementation mode (use trigger phrases, not slash commands)",
+        "",
+        "Examples:",
+        "  /sessions state show task       - Show current task",
+        "  /sessions state mode no         - Switch to discussion mode",
+        "  /sessions state task restore m-refactor-commands.md",
+    ]
+    return "\n".join(lines)
 
 def format_state_human(state) -> str:
     """Format full state for human reading."""
@@ -187,13 +236,14 @@ def format_flags_human(flags) -> str:
 #!<
 
 #!> Mode command handler
-def handle_mode_command(args: List[str], json_output: bool = False) -> Any:
+def handle_mode_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
     """
     Handle mode switching commands.
 
     Usage:
-        mode discussion  - Switch to discussion mode (one-way only)
-        mode bypass      - Toggle bypass mode (disables behavioral constraints)
+        mode discussion / mode no   - Switch to discussion mode (one-way only)
+        mode bypass / mode off      - Toggle bypass mode (disables behavioral constraints)
+        mode go                     - Switch to implementation mode (not allowed via API)
     """
     if not args:
         # Just show current mode and bypass status
@@ -207,45 +257,74 @@ def handle_mode_command(args: List[str], json_output: bool = False) -> Any:
 
     target_mode = args[0].lower()
 
+    # Friendly name mapping
+    mode_aliases = {
+        'no': 'discussion',
+        'go': 'implementation',
+        'off': 'bypass'
+    }
+
+    target_mode = mode_aliases.get(target_mode, target_mode)
+
     if target_mode == 'discussion':
         # One-way switch to discussion allowed
         with edit_state() as state:
             if state.mode == Mode.GO:
                 state.mode = Mode.NO
-                if json_output:
-                    return {"mode": "discussion", "message": "Switched to discussion mode"}
-                return "Switched to discussion mode"
+                result = "Switched to discussion mode"
             else:
-                if json_output:
-                    return {"mode": "discussion", "message": "Already in discussion mode"}
-                return "Already in discussion mode"
+                result = "Already in discussion mode"
+
+        if json_output:
+            return {"mode": "discussion", "message": result}
+        return result
 
     elif target_mode == 'bypass':
         # Check if this is a slash command (user-initiated) or API call (Claude-initiated)
-        is_slash_command = '--from-slash' in args
+        is_slash_command = from_slash or '--from-slash' in args
 
+        result = None
+        bypass_active = None
         with edit_state() as state:
             if state.flags.bypass_mode:
                 # Always allow deactivating bypass mode (returning to safety)
                 state.flags.bypass_mode = False
-                if json_output:
-                    return {"bypass_mode": False, "message": "Bypass mode INACTIVE"}
-                return "Bypass mode INACTIVE - behavioral constraints enabled"
+                bypass_active = False
+                result = "Bypass mode INACTIVE - behavioral constraints enabled"
             else:
                 # Only allow activating bypass if it's from a slash command (user-initiated)
                 if not is_slash_command:
                     raise ValueError("Cannot activate bypass mode via API. Only the user can enable bypass mode.")
                 state.flags.bypass_mode = True
-                if json_output:
-                    return {"bypass_mode": True, "message": "Bypass mode ACTIVE"}
-                return "Bypass mode ACTIVE - behavioral constraints disabled"
+                bypass_active = True
+                result = "Bypass mode ACTIVE - behavioral constraints disabled"
+
+        if json_output:
+            return {"bypass_mode": bypass_active, "message": result}
+        return result
 
     elif target_mode == 'implementation':
-        # Not allowed via API
-        raise ValueError("Cannot switch to implementation mode via API. Use trigger phrases instead.")
+        # Allow via slash command (user-initiated), block via direct API call (Claude-initiated)
+        if not from_slash:
+            raise ValueError("Cannot switch to implementation mode via API. Use trigger phrases or slash command instead.")
+
+        # User-initiated via slash command - allow the switch
+        with edit_state() as state:
+            if state.mode == Mode.GO:
+                result = "Already in implementation mode"
+            else:
+                state.mode = Mode.GO
+                result = "Mode switched: discussion → implementation\n\nYou are now in Implementation Mode and may use tools to execute agreed upon actions.\n\nRemember to return to Discussion Mode when done:\n  /sessions state mode no\n  OR use your discussion mode trigger phrases"
+
+        if json_output:
+            return {"mode": "implementation", "message": result}
+        return result
 
     else:
-        raise ValueError(f"Unknown mode: {target_mode}. Valid modes: discussion, bypass")
+        valid_modes = "discussion (no), implementation (go), bypass (off)"
+        if from_slash:
+            return f"Unknown mode: {args[0]}\n\nValid modes: {valid_modes}\n\nUsage:\n  mode discussion / mode no        - Switch to discussion mode\n  mode implementation / mode go    - Switch to implementation mode\n  mode bypass / mode off           - Toggle bypass mode"
+        raise ValueError(f"Unknown mode: {args[0]}. Valid modes: {valid_modes}")
 #!<
 
 #!> Flags command handler
@@ -343,6 +422,117 @@ def handle_todos_command(args: List[str], json_output: bool = False) -> Any:
 
     else:
         raise ValueError(f"Unknown todos action: {action}. Valid actions: clear")
+#!<
+
+#!> Task management handler
+def handle_task_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
+    """
+    Handle task management commands.
+
+    Usage:
+        task clear          - Clear current task
+        task show           - Show current task details
+        task restore <file> - Restore task from file frontmatter
+    """
+    if not args:
+        # Show current task by default
+        state = load_state()
+        if state.current_task:
+            if json_output:
+                return {"task": state.current_task.task_state}
+            return format_task_human(state.current_task)
+        else:
+            if json_output:
+                return {"task": None}
+            return "No active task"
+
+    action = args[0].lower()
+
+    if action == 'clear':
+        with edit_state() as s:
+            s.current_task.clear_task()
+
+        if json_output:
+            return {"message": "Task cleared"}
+        return "Task cleared"
+
+    elif action == 'show':
+        state = load_state()
+        if state.current_task:
+            if json_output:
+                return {"task": state.current_task.task_state}
+            return format_task_human(state.current_task)
+        else:
+            if json_output:
+                return {"task": None}
+            return "No active task"
+
+    elif action == 'restore':
+        if len(args) < 2:
+            raise ValueError("task restore requires a task file path")
+
+        task_file = args[1]
+
+        # Use TaskState.load_task() to properly load task from file
+        from hooks.shared_state import TaskState
+
+        try:
+            task_state = TaskState.load_task(file=task_file)
+        except Exception as e:
+            if from_slash:
+                return f"Failed to restore task: {str(e)}"
+            raise ValueError(f"Failed to restore task: {str(e)}")
+
+        # Update state with loaded task
+        with edit_state() as s:
+            s.current_task = task_state
+
+        # Guidance message for Claude
+        guidance = f"\n\nTask restored. If you don't have sessions/tasks/{task_file} in your context, read it to understand the task requirements."
+
+        if json_output:
+            return {"message": f"Task '{task_state.name}' restored from {task_file}", "guidance": guidance}
+
+        return f"Task '{task_state.name}' restored from {task_file}{guidance}"
+
+    else:
+        valid_actions = "clear, show, restore"
+        if from_slash:
+            return f"Unknown task action: {action}\n\nValid actions: {valid_actions}\n\nUsage:\n  task clear          - Clear current task\n  task show           - Show current task details\n  task restore <file> - Restore task from file frontmatter"
+        raise ValueError(f"Unknown task action: {action}. Valid actions: {valid_actions}")
+#!<
+
+#!> Show subsection handler
+def handle_show_command(args: List[str], json_output: bool = False) -> Any:
+    """
+    Handle show subsection commands for convenient access.
+
+    Usage:
+        show task   - Show current task
+        show todos  - Show active todos
+        show flags  - Show session flags
+        show mode   - Show current mode
+    """
+    if not args:
+        # Default to full state
+        return handle_state_command([], json_output)
+
+    subsection = args[0].lower()
+
+    # Route to appropriate handler
+    if subsection == 'task':
+        return handle_task_command(['show'], json_output)
+    elif subsection == 'todos':
+        return handle_todos_command([], json_output)
+    elif subsection == 'flags':
+        return handle_flags_command([], json_output)
+    elif subsection == 'mode':
+        state = load_state()
+        if json_output:
+            return {"mode": state.mode.value}
+        return f"Mode: {state.mode.value}"
+    else:
+        raise ValueError(f"Unknown show subsection: {subsection}. Valid: task, todos, flags, mode")
 #!<
 
 #!> Status and version handlers

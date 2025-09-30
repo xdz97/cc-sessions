@@ -25,11 +25,11 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/user_messages.py:218-314` - Task completion protocol with commit style templates and conditional todos
 - `cc_sessions/hooks/post_tool_use.py` - Todo completion detection and automated mode transitions
 - `cc_sessions/hooks/subagent_hooks.py` - Subagent context management and flag handling
-- `cc_sessions/scripts/api/__main__.py` - Sessions API entry point for programmatic access
-- `cc_sessions/scripts/api/router.py` - Command routing with protocol command support
+- `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output
+- `cc_sessions/scripts/api/router.py` - Command routing with protocol command support and --from-slash flag handling
 - `cc_sessions/scripts/api/protocol_commands.py:59-172` - Protocol-specific API commands with startup-load returning full task content
 - `cc_sessions/scripts/api/state_commands.py` - State inspection and limited write operations
-- `cc_sessions/scripts/api/config_commands.py` - Configuration management commands
+- `cc_sessions/scripts/api/config_commands.py` - Configuration management commands with --from-slash support for contextual output formatting
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
@@ -92,7 +92,7 @@ The framework includes persistent task management with git branch enforcement, c
 - **Protocol Commands** - startup-load command for task loading during startup protocol
 - **JSON Output Support** - Machine-readable format for programmatic use
 - **Security Boundaries** - No access to safety-critical settings or todo manipulation
-- **Thin Wrapper Command Architecture** - All slash commands delegate to API layer following Claude Code official patterns
+- **Slash Command Integration** - Consolidated sesh-* commands with API delegation pattern and --from-slash contextual output formatting
 
 ### Specialized Agents
 - **context-gathering**: Creates comprehensive task context manifests with enhanced pattern examples and architectural insights
@@ -162,7 +162,7 @@ protocols/
 
 ### Provides
 - **Sessions API** - Programmatic access via `python -m sessions.api` (unified module path)
-- **Thin Wrapper Slash Commands** - `/mode`, `/state`, `/config`, `/add-trigger`, `/remove-trigger` following official Claude Code patterns
+- **Consolidated Slash Commands** - `/sesh-config`, `/sesh-state`, `/sesh-tasks` with API delegation pattern and --from-slash contextual output
 - **Protocol Commands** - `python -m sessions.api protocol startup-load <task-file>` returns full task file content for task loading
 - **Enhanced Feature Management** - `config features toggle <key>` for simple boolean operations
 - `daic` - Manual mode switching command
@@ -511,12 +511,19 @@ New comprehensive guide at `cc_sessions/kickstart/agent-customization-guide.md` 
 
 ## Sessions API Usage
 
-### User Slash Commands (Thin Wrappers)
-- `/mode` - Toggle between discussion and implementation modes via API delegation
-- `/state [component]` - Show current state or specific component via API delegation
-- `/config` - Show current configuration via API delegation (read-only)
-- `/add-trigger <category> <phrase>` - Add trigger phrase via API delegation (categories: implement, discuss, create, start, complete, compact)
-- `/remove-trigger <category> <phrase>` - Remove trigger phrase via API delegation
+### Consolidated Slash Commands
+- `/sesh-config` - Comprehensive configuration management with API delegation pattern
+- `/sesh-state` - State inspection and mode switching with enhanced output formatting
+- `/sesh-tasks` - Task management operations (create, start, list, quick capture)
+
+#### API Delegation Pattern
+All slash commands use: `!python -m sessions.api <command> $ARGUMENTS --from-slash`
+
+**Enhanced Features:**
+- **Contextual Output**: `--from-slash` flag enables user-friendly responses optimized for slash command usage
+- **Adaptive Error Messages**: Commands show valid options and contextual help when operations fail
+- **Two-Level Help System**: Brief help at top level (`/sesh-config help`), verbose help for specific operations (`/sesh-config trigger help`)
+- **Name Mapping**: Friendly aliases (go→implementation_mode, auto→true, etc.) for user convenience
 
 ### Programmatic API
 
@@ -535,15 +542,20 @@ New comprehensive guide at `cc_sessions/kickstart/agent-customization-guide.md` 
 - Permission-based access controlled by active_protocol and api.startup_load states
 
 **Configuration Operations:**
-- `python -m sessions.api config [--json]` - Full configuration inspection
-- `python -m sessions.api config phrases list [category]` - View trigger phrases
-- `python -m sessions.api config phrases add <category> "<phrase>"` - Add trigger phrase
-- `python -m sessions.api config phrases remove <category> "<phrase>"` - Remove trigger phrase
-- `python -m sessions.api config features toggle <key>` - Toggle feature boolean values
-- `python -m sessions.api config git show` - View git preferences
-- `python -m sessions.api config git set <setting> <value>` - Update git preference
-- `python -m sessions.api config env show` - View environment settings
-- `python -m sessions.api config env set <setting> <value>` - Update environment setting
+- `python -m sessions.api config [--json] [--from-slash]` - Full configuration inspection with optional contextual formatting
+- `python -m sessions.api config phrases list [category] [--from-slash]` - View trigger phrases
+- `python -m sessions.api config phrases add <category> "<phrase>" [--from-slash]` - Add trigger phrase
+- `python -m sessions.api config phrases remove <category> "<phrase>" [--from-slash]` - Remove trigger phrase
+- `python -m sessions.api config features toggle <key> [--from-slash]` - Toggle feature boolean values
+- `python -m sessions.api config git show [--from-slash]` - View git preferences
+- `python -m sessions.api config git set <setting> <value> [--from-slash]` - Update git preference
+- `python -m sessions.api config env show [--from-slash]` - View environment settings
+- `python -m sessions.api config env set <setting> <value> [--from-slash]` - Update environment setting
+
+**Slash Command Integration:**
+- All API commands support `--from-slash` flag for enhanced error messages and user-friendly output formatting
+- Contextual help shows relevant options when commands fail
+- Adaptive responses optimized for slash command user experience
 
 **Security Notes:**
 - No access to blocked_actions configuration (prevents DAIC bypass)

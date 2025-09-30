@@ -1,7 +1,7 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-import json, sys, subprocess
+import json, sys, subprocess, os
 from pathlib import Path
 ##-##
 
@@ -9,18 +9,14 @@ from pathlib import Path
 ##-##
 
 ## ===== LOCAL ===== ##
-import os
-
-# Add sessions to path if CLAUDE_PROJECT_DIR is available (symlink setup)
 if 'CLAUDE_PROJECT_DIR' in os.environ:
-    sys.path.insert(0, os.path.join(os.environ['CLAUDE_PROJECT_DIR'], 'sessions'))
-
-try:
-    # Try direct import (works with sessions in path or package install)
-    from hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_repo, load_state
-except ImportError:
-    # Fallback to package import
-    from cc_sessions.hooks.shared_state import edit_state, Model, Mode, PROJECT_ROOT, find_git_repo, load_state
+    PROJECT_ROOT = Path(os.environ['CLAUDE_PROJECT_DIR']).resolve()
+    sys.path.insert(0, str(PROJECT_ROOT))
+    # Use local symlinked sessions package when in development mode
+    from sessions.hooks.shared_state import edit_state, Model, Mode, find_git_repo, load_state
+else:
+    # Use installed cc-sessions package in production
+    from cc_sessions.hooks.shared_state import edit_state, Model, Mode, find_git_repo, load_state
 ##-##
 
 #-#
@@ -52,7 +48,8 @@ reset = "\033[0m"
 #!> Determine model and context limit
 curr_model = None
 context_limit = 160000
-if "sonnet" in model_name.lower(): curr_model = Model.SONNET; context_limit = 800000
+if "[1m]" in model_name.lower(): context_limit = 800000
+if "sonnet" in model_name.lower(): curr_model = Model.SONNET
 elif "opus" in model_name.lower(): curr_model = Model.OPUS
 else: curr_model = Model.UNKNOWN
 #!<
@@ -74,7 +71,13 @@ if not STATE or STATE.model != curr_model:
 ║ ██████║  ██║  ██║  ██║  ██║  ╚████╔╝██████║███████╗██████╗██║╚███║██████╗ ║
 ║ ╚═════╝  ╚═╝  ╚═╝  ╚═╝  ╚═╝   ╚═══╝ ╚═════╝╚══════╝╚═════╝╚═╝ ╚══╝╚═════╝ ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
-A progress bar showing context length used vs model limit.
+Sessions default status line script
+Shows:
+- Context usage progress bar (with Ayu Dark colors)
+- Current task name
+- Current mode (Discussion or Implementation)
+- Count of edited & uncommitted files in the current git repo
+- Count of open tasks in sessions/tasks (files + dirs)
 """
 
 # ===== EXECUTION ===== #
@@ -84,11 +87,10 @@ A progress bar showing context length used vs model limit.
 #!> Pull context length from transcript
 context_length = None
 transcript_path = data.get('transcript_path', None)
+
 if transcript_path:
     try:
-        with open(transcript_path, 'r') as f:
-            lines = f.readlines()
-
+        with open(transcript_path, 'r') as f: lines = f.readlines()
         most_recent_usage = None
         most_recent_timestamp = None
 
@@ -109,10 +111,11 @@ if transcript_path:
         # Calculate context length (input + cache tokens only, NOT output)
         if most_recent_usage:
             context_length = (most_recent_usage.get('input_tokens', 0) + most_recent_usage.get('cache_read_input_tokens', 0) + most_recent_usage.get('cache_creation_input_tokens', 0))
-    except: pass
+    except Exception as e:
+        pass
 #!<
 
-#!> Use context_length and model_name to calculate context percentage
+#!> Use context_length and context_limit to calculate context percentage
 if context_length and context_length < 17000: context_length = 17000
 if context_length and context_limit:
     pct = (context_length * 100) / context_limit

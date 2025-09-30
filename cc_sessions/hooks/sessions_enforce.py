@@ -33,7 +33,6 @@ CONFIG = load_config()
 if tool_name == "Bash": command = tool_input.get("command", "").strip()
 if tool_name == "TodoWrite": incoming_todos = tool_input.get("todos", [])
 
-# Enhanced command categorization to fix oversensitive blocking
 ## ===== PATTERNS ===== ##
 READONLY_FIRST = {
     # Basic file reading
@@ -204,7 +203,9 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
         extrasafe (bool): If True, unrecognized commands are treated as write-like."""
     s = (command or '').strip()
     if not s: return True
-    if REDIR.search(s): return False
+
+    if REDIR.search(s):
+        return False
 
     for segment in re.split(r'(?<!\|)\|(?!\|)|&&|\|\|', s):  # Split on |, && and ||
         segment = segment.strip()
@@ -215,15 +216,34 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
 
         first = parts[0].lower()
         if first == 'cd': continue
+
+        # Special case: Commands with read-only subcommands
+        if first in ['pip', 'pip3']:
+            subcommand = parts[1].lower() if len(parts) > 1 else ''
+            if subcommand in ['show', 'list', 'search', 'check', 'freeze', 'help']:
+                continue  # Allow read-only pip operations
+            return False  # Block write operations
+
+        if first in ['npm', 'yarn']:
+            subcommand = parts[1].lower() if len(parts) > 1 else ''
+            if subcommand in ['list', 'ls', 'view', 'show', 'search', 'help']:
+                continue  # Allow read-only npm/yarn operations
+            return False  # Block write operations
+
+        if first in ['python', 'python3']:
+            # Allow python -c for simple expressions and python -m for module execution
+            if len(parts) > 1 and parts[1] in ['-c', '-m']:
+                continue  # These are typically read-only operations in our context
+            # Block other python invocations as potentially write-like
+            return False
+
         if first in WRITE_FIRST: return False
 
         # Check command arguments for write operations
-        if not check_command_arguments(parts):
-            return False
+        if not check_command_arguments(parts): return False
 
         # Check if command is in user's custom readonly list
-        if first in CONFIG.blocked_actions.custom_readonly_commands:
-            continue  # Allow custom readonly commands
+        if first in CONFIG.blocked_actions.bash_read_patterns: continue  # Allow custom readonly commands
 
         # If extrasafe is on and command not in readonly list, block it
         if first not in READONLY_FIRST and CONFIG.blocked_actions.extrasafe: return False

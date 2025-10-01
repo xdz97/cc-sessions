@@ -6,10 +6,10 @@
 import shutil
 import json
 import sys
-## -##
+##-##
 
 ## ===== 3RD-PARTY ===== ##
-## -##
+##-##
 
 ## ===== LOCAL ===== ##
 from shared_state import (
@@ -23,9 +23,9 @@ from shared_state import (
     StateError,
 )
 from pathlib import Path
-## -##
+##-##
 
-# -#
+#-#
 
 # ===== GLOBALS ===== #
 input_data = json.load(sys.stdin)
@@ -35,7 +35,7 @@ cwd = input_data.get("cwd", "")
 mod = False
 
 STATE = load_state()
-# -#
+#-#
 
 """
 ╔════════════════════════════════════════════════════════════════════════════════════════╗
@@ -202,7 +202,7 @@ elif STATE.api.todos_clear:
         STATE = s
 #!<
 
-# -#
+#-#
 
 if mod:
     sys.exit(2)  # Exit code 2 feeds stderr back to Claude

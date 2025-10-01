@@ -665,11 +665,13 @@ class SessionsState {
 // ===== FUNCTIONS ===== #
 
 // ===== HELPERS ===== #
+/**
+ * Walk up directory tree to find .git directory.
+ * @param {string} dirPath - Directory to start search from (NOT a file path)
+ * @returns {string|null} Path to git repo root, or null if not found
+ */
 function findGitRepo(dirPath) {
     let current = path.resolve(dirPath);
-    if (!fs.statSync(current).isDirectory()) {
-        current = path.dirname(current);
-    }
 
     while (true) {
         if (fs.existsSync(path.join(current, '.git'))) {

@@ -332,7 +332,7 @@ if all([    tool_name in ["Write", "Edit", "MultiEdit", "NotebookEdit"],
 if not (expected_branch := STATE.current_task.branch): sys.exit(0) # No branch/task info, allow to proceed
 
 else:
-    repo_path = find_git_repo(file_path)
+    repo_path = find_git_repo(file_path.parent)
 
     if repo_path:
         try:

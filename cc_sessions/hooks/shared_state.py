@@ -582,10 +582,14 @@ class SessionsState:
 # ===== FUNCTIONS ===== #
 
 ## ===== HELPERS ===== ##
-def find_git_repo(path: Path) -> Optional[Path]:
-    """Walk up directory tree to find .git directory."""
-    if not isinstance(path, Path): path = Path(path)
-    current = path if path.is_dir() else path.parent
+def find_git_repo(dir_path: Path) -> Optional[Path]:
+    """Walk up directory tree to find .git directory.
+
+    Args:
+        dir_path: Directory to start search from (NOT a file path)
+    """
+    if not isinstance(dir_path, Path): dir_path = Path(dir_path)
+    current = dir_path
     while True:
         if (current / '.git').exists(): return current
         if current == PROJECT_ROOT or current.parent == current: break

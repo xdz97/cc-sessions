@@ -18,8 +18,8 @@ The v0.3.5+ enhancement adds first-class support for directory-based tasks with 
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, and directory task helper functions `is_directory_task()` and `get_task_file_path()` (both Python and JavaScript implementations)
-- `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection (both Python and JavaScript implementations)
+- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, and simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input (both Python and JavaScript implementations)
+- `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration and dual-import pattern (both Python and JavaScript implementations)
 - `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, and improved task startup notices (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
@@ -389,6 +389,9 @@ Used systematic 5-step iterloop methodology for each file:
 
 **Status**: Both Python and JavaScript variants now provide identical DAIC enforcement, state management, task workflows, and API capabilities. Users can choose their preferred language without functional limitations.
 
+**Architectural Cleanup During Port:**
+- **Git Repository Detection Simplification**: Refactored `find_git_repo()`/`findGitRepo()` to assume directory input, eliminating file path existence checks and directory detection logic. Callers now pass `file_path.parent` (Python) or `path.dirname(filePath)` (JavaScript) when working with file paths, creating cleaner separation of concerns and more predictable behavior.
+
 ### Discussion Mode Write Blocking (v0.3.2+)
 Recent improvements to `sessions_enforce.py` address oversensitive blocking that prevented legitimate compound operations:
 
@@ -450,6 +453,7 @@ These improvements maintain data integrity and atomic file operations while sign
 - **API Command Integration**: Sessions API commands whitelisted in DAIC enforcement and bypass ultrathink detection
 - **Dual-Context Import Pattern**: Supports both symlinked development and package installation through CLAUDE_PROJECT_DIR detection
 - **Reliable Lock Management**: Enhanced lock contention handling prevents intermittent failures in statusline and trigger phrase recognition
+- **Simplified Git Repository Detection**: `find_git_repo()`/`findGitRepo()` functions assume directory input; callers responsible for passing `file_path.parent` or `path.dirname(filePath)` when working with file paths
 
 ### Agent Delegation
 - Heavy file operations delegated to specialized agents with enhanced pattern recognition

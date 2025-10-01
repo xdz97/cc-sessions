@@ -422,7 +422,7 @@ if (!expectedBranch) {
     process.exit(0); // No branch/task info, allow to proceed
 }
 
-const repoPath = findGitRepo(filePath);
+const repoPath = findGitRepo(path.dirname(filePath));
 
 if (repoPath) {
     try {

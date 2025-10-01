@@ -12,7 +12,16 @@ import sys
 ## -##
 
 ## ===== LOCAL ===== ##
-from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, SessionsProtocol, list_open_tasks, TaskState, StateError
+from shared_state import (
+    load_state,
+    edit_state,
+    Mode,
+    PROJECT_ROOT,
+    SessionsProtocol,
+    list_open_tasks,
+    TaskState,
+    StateError,
+)
 from pathlib import Path
 ## -##
 
@@ -61,7 +70,7 @@ if tool_name == "Task" and STATE.flags.subagent:
         STATE = s
     # Clean up agent transcript directory
     subagent_type = tool_input.get("subagent_type", "shared")
-    agent_dir = PROJECT_ROOT / 'sessions' / 'transcripts' / subagent_type
+    agent_dir = PROJECT_ROOT / "sessions" / "transcripts" / subagent_type
     if agent_dir.exists():
         shutil.rmtree(agent_dir)
     sys.exit(0)
@@ -96,34 +105,53 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
             STATE = s
             mod = True
         if num_restored:
-            print(f"Your previous {num_restored} todos have been restored:\n\n{json.dumps(
-                restored, indent=2)}\n\nIf these todos are no longer relevant, you should clear them using: python -m sessions.api todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n", file=sys.stderr)
+            print(
+                f"Your previous {num_restored} todos have been restored:\n\n{
+                    json.dumps(restored, indent=2)
+                }\n\nIf these todos are no longer relevant, you should clear them using: python -m sessions.api todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n",
+                file=sys.stderr,
+            )
     else:
         with edit_state() as s:
             s.todos.active = []
             s.mode = Mode.NO
             STATE = s
-        print("You have returned to discussion mode. You may now discuss next steps with the user.\n\n", file=sys.stderr)
+        print(
+            "You have returned to discussion mode. You may now discuss next steps with the user.\n\n",
+            file=sys.stderr,
+        )
         mod = True
 #!<
 
 #!> Implementation mode + no Todos enforcement
-if STATE.mode is Mode.GO and not STATE.flags.subagent and not STATE.todos.active and STATE.current_task.name:
+if (
+    STATE.mode is Mode.GO
+    and not STATE.flags.subagent
+    and not STATE.todos.active
+    and STATE.current_task.name
+):
     # In implementation mode but no todos - show reminder only during task-based work
-    print("[Reminder] You're in implementation mode without approved todos. "
-          "If you proposed todos that were approved, add them. "
-          "If the user asked you to do something without todo proposal/approval that is **reasonably complex or multi-step**, translate *only the remaining work* to todos and add them (all 'pending'). "
-          "In any case, return to discussion mode after completing approved implementation.", file=sys.stderr)
+    print(
+        "[Reminder] You're in implementation mode without approved todos. "
+        "If you proposed todos that were approved, add them. "
+        "If the user asked you to do something without todo proposal/approval that is **reasonably complex or multi-step**, translate *only the remaining work* to todos and add them (all 'pending'). "
+        "In any case, return to discussion mode after completing approved implementation.",
+        file=sys.stderr,
+    )
     mod = True
 #!<
 
 #!> Task file auto-update detection
-if tool_name in ["Edit", "Write", "MultiEdit"] and STATE.current_task.name and STATE.current_task.file:
+if (
+    tool_name in ["Edit", "Write", "MultiEdit"]
+    and STATE.current_task.name
+    and STATE.current_task.file
+):
     # Extract file path from tool input
     file_path_str = tool_input.get("file_path")
     if file_path_str:
         file_path = Path(file_path_str)
-        task_path = PROJECT_ROOT / 'sessions' / 'tasks' / STATE.current_task.file
+        task_path = PROJECT_ROOT / "sessions" / "tasks" / STATE.current_task.file
 
         # Check if the edited file is the current task file
         if file_path.resolve() == task_path.resolve():
@@ -159,9 +187,10 @@ if tool_name in ["Edit", "Write", "MultiEdit"] and STATE.current_task.name and S
 if STATE.api.todos_clear and tool_name == "Bash":
     # Check if this is the todos clear command
     import json
-    tool_input = json.loads(os.environ.get('__TOOL_INPUT__', '{}'))
-    command = tool_input.get('command', '')
-    if 'python -m sessions.api todos clear' not in command:
+
+    tool_input = json.loads(os.environ.get("__TOOL_INPUT__", "{}"))
+    command = tool_input.get("command", "")
+    if "python -m sessions.api todos clear" not in command:
         # Not the todos clear command, disable the permission
         with edit_state() as s:
             s.api.todos_clear = False

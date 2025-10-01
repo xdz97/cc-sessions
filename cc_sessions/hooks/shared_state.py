@@ -592,6 +592,28 @@ def find_git_repo(path: Path) -> Optional[Path]:
         current = current.parent
     return None
 
+def is_directory_task(task_path: Union[str, Path]) -> bool:
+    """Check if a task is part of a directory task (contains a /).
+    If path has a slash, it's definitely a directory task or subtask."""
+    # Normalize to string first for consistent '/' detection
+    path_str = str(task_path) if isinstance(task_path, Path) else task_path
+    # If the string contains a slash, it's a directory task or subtask
+    if '/' in path_str:
+        return True
+    # Otherwise check if it's a directory with README.md
+    task_path = task_path if isinstance(task_path, Path) else Path(task_path)
+    if task_path.is_dir() and (task_path / 'README.md').exists():
+        return True
+    return False
+
+def get_task_file_path(task_path: Union[str, Path]) -> Path:
+    """Get the actual .md file path for a task (handles both directory and file tasks)."""
+    if isinstance(task_path, str):
+        task_path = Path(task_path)
+    if is_directory_task(task_path):
+        return task_path / 'README.md'
+    return task_path
+
 def list_open_tasks() -> str:
     # No active task - list available tasks
     tasks_dir = PROJECT_ROOT / 'sessions' / 'tasks'
@@ -608,11 +630,11 @@ def list_open_tasks() -> str:
     if task_files:
         task_startup_help += "No active task set. Available tasks:\n"
         for task_file in task_files:
-            fpath = task_file / 'README.md' if task_file.is_dir() else task_file
+            fpath = get_task_file_path(task_file)
             if not fpath.exists(): continue
             # Read first few lines to get task info
             with fpath.open('r', encoding='utf-8') as f: lines = f.readlines()[:10]
-            task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
+            task_name = f"{task_file.name}/" if is_directory_task(task_file) else task_file.name
             status = None
             for line in lines:
                 if line.startswith('status:'): status = line.split(':')[1].strip(); break

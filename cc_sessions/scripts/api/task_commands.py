@@ -19,7 +19,9 @@ from hooks.shared_state import (
     load_config,
     TaskState,
     SessionsProtocol,
-    PROJECT_ROOT
+    PROJECT_ROOT,
+    get_task_file_path,
+    is_directory_task
 )
 ##-##
 
@@ -97,7 +99,7 @@ def get_task_status_map() -> Dict[str, str]:
         task_files.extend(subtask_files)
 
     for task_file in task_files:
-        fpath = task_file / 'README.md' if task_file.is_dir() else task_file
+        fpath = get_task_file_path(task_file)
         if not fpath.exists():
             continue
         try:
@@ -106,7 +108,7 @@ def get_task_status_map() -> Dict[str, str]:
         except (IOError, UnicodeDecodeError):
             continue
 
-        task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
+        task_name = f"{task_file.name}/" if is_directory_task(task_file) else task_file.name
         status = None
         for line in lines:
             if line.startswith('status:'):

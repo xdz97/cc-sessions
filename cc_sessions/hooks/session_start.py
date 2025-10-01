@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, PROJECT_ROOT, load_config, SessionsProtocol
+from shared_state import edit_state, PROJECT_ROOT, load_config, SessionsProtocol, get_task_file_path, is_directory_task
 ##-##
 
 #-#
@@ -83,7 +83,7 @@ def list_open_tasks_grouped() -> str:
     # Build task status map
     task_status = {}
     for task_file in task_files:
-        fpath = task_file / 'README.md' if task_file.is_dir() else task_file
+        fpath = get_task_file_path(task_file)
         if not fpath.exists():
             continue
         try:
@@ -91,7 +91,7 @@ def list_open_tasks_grouped() -> str:
                 lines = f.readlines()[:10]
         except (IOError, UnicodeDecodeError):
             continue
-        task_name = f"{task_file.name}/" if task_file.is_dir() else task_file.name
+        task_name = f"{task_file.name}/" if is_directory_task(task_file) else task_file.name
         status = None
         for line in lines:
             if line.startswith('status:'):

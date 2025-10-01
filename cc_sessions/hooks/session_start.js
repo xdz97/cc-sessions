@@ -12,7 +12,7 @@ const https = require('https');
 ///-///
 
 /// ===== LOCAL ===== ///
-const { editState, PROJECT_ROOT, loadConfig, SessionsProtocol } = require('./shared_state.js');
+const { editState, PROJECT_ROOT, loadConfig, SessionsProtocol, getTaskFilePath, isDirectoryTask } = require('./shared_state.js');
 ///-///
 
 //-//
@@ -141,10 +141,8 @@ function listOpenTasksGrouped() {
     // Build task status map
     const taskStatus = {};
     for (const taskFile of taskFiles) {
-        const isDir = !taskFile.endsWith('.md');
-        const fpath = isDir
-            ? path.join(tasksDir, taskFile, 'README.md')
-            : path.join(tasksDir, taskFile);
+        const fullPath = path.join(tasksDir, taskFile);
+        const fpath = getTaskFilePath(fullPath);
 
         if (!fs.existsSync(fpath)) {
             continue;
@@ -154,7 +152,7 @@ function listOpenTasksGrouped() {
             const content = fs.readFileSync(fpath, 'utf8');
             const lines = content.split('\n').slice(0, 10);
 
-            const taskName = isDir ? `${taskFile}/` : taskFile;
+            const taskName = isDirectoryTask(fullPath) ? `${taskFile}/` : taskFile;
             let status = null;
 
             for (const line of lines) {
@@ -292,7 +290,7 @@ async function main() {
 
     //!> 3. Load current task or list available tasks
     // Check for active task
-    const taskFile = STATE.current_task?.file_path;
+    const taskFile = STATE.current_task?.filePath;
     if (taskFile && fs.existsSync(taskFile)) {
         // Check if task status is pending and update to in-progress
         let taskContent = fs.readFileSync(taskFile, 'utf8');

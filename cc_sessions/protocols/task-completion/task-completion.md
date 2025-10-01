@@ -20,6 +20,8 @@ Ready to proceed with task completion.
 
 If any checks fail, stop and address the remaining work first.
 
+{directory_completion_check}
+
 ## 2-4. Run Completion Agents
 
 Delegate to specialized agents in this order:

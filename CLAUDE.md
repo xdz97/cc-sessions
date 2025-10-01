@@ -13,13 +13,15 @@ Recent architectural enhancement (v0.3.0) introduced comprehensive user configur
 
 The v0.3.1+ enhancement introduces a templated protocol system where protocols auto-load content with configuration-based template variables, eliminating conditional instructions. Protocols adapt automatically based on user configuration (e.g., submodules support) without requiring manual decision-making. The `load_protocol_file()` helper function provides seamless protocol loading with template substitution.
 
+The v0.3.5+ enhancement adds first-class support for directory-based tasks with subtask workflows. Directory tasks provide structured multi-phase work where subtasks remain on a single feature branch until the entire effort completes. The system automatically detects directory tasks and adjusts protocol behavior - preventing auto-merge until all subtasks finish, loading planning-focused guidance during startup, and providing helper functions for consistent detection across the codebase.
+
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), and fixed EnabledFeatures.from_dict() dataclass serialization (both Python and JavaScript implementations)
+- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, and directory task helper functions `is_directory_task()` and `get_task_file_path()` (both Python and JavaScript implementations)
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration and dual-import pattern (both Python and JavaScript implementations)
-- `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper and centralized todo formatting with improved task startup notices (both Python and JavaScript implementations)
+- `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, and improved task startup notices (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
 - `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output (Python)
@@ -39,9 +41,10 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/agents/context-gathering.md` - Enhanced context-gathering with better pattern examples and comprehensive research methodology
 - `cc_sessions/agents/logging.md` - Improved logging agent with simplified transcript access and better cleanup patterns
 - `cc_sessions/agents/context-refinement.md` - Context refinement with streamlined transcript reading
-- `cc_sessions/protocols/task-creation/task-creation.md` - Main templated task creation protocol
+- `cc_sessions/protocols/task-creation/task-creation.md:37-74` - Main templated task creation protocol with directory task structure decision and user confirmation
 - `cc_sessions/protocols/task-startup/task-startup.md` - Main templated task startup protocol with conditional sections
-- `cc_sessions/protocols/task-completion/task-completion.md` - Main templated task completion protocol
+- `cc_sessions/protocols/task-startup/directory-task-startup.md` - Planning guidance for directory tasks emphasizing comprehensive subtask specification, comprehensive planning, and iterative same-branch workflow
+- `cc_sessions/protocols/task-completion/task-completion.md` - Main templated task completion protocol with directory task detection and auto-merge prevention
 - `cc_sessions/protocols/task-completion/commit-style-*.md` - Commit style templates (conventional, simple, detailed)
 - `pyproject.toml` - Package configuration with console script entry points
 
@@ -76,9 +79,19 @@ The framework includes persistent task management with git branch enforcement, c
 
 ### Task Management
 - Priority-prefixed tasks: h- (high), m- (medium), l- (low), ?- (investigate)
+- File-based tasks for focused single objectives
+- Directory-based tasks with subtask support for complex multi-phase work
 - Automatic git branch creation and enforcement
 - Persistent context across session restarts
 - Work log consolidation and cleanup
+
+### Directory Task Support
+- **Helper Functions**: `is_directory_task()` detects directory tasks by checking for '/' in task path, `get_task_file_path()` resolves to README.md for directories or direct .md for files
+- **Task Creation Integration**: Protocol explicitly asks users to confirm directory structure with clear explanation of workflow implications
+- **Planning-Focused Startup**: Conditionally loads directory-task-startup.md guidance emphasizing comprehensive subtask specification before implementation
+- **Merge Prevention**: Task completion protocol automatically detects directory tasks and prevents auto-merge until all subtasks complete, overriding user's auto_merge preference
+- **Iterative Workflow**: All subtasks work on the same feature branch without merging until the entire multi-phase effort is done
+- **Consistent Detection**: Helper functions used throughout hooks and API commands for reliable directory task identification
 
 ### Branch Enforcement
 - Task-to-branch mapping: implement- → feature/, fix- → fix/, etc.
@@ -137,14 +150,15 @@ Enhanced with structured output formats, protocols now provide transparent commu
 ```
 protocols/
 ├── task-creation/
-│   └── task-creation.md                    # Main templated protocol
+│   └── task-creation.md                    # Main templated protocol with directory task confirmation
 ├── task-startup/
-│   ├── task-startup.md                     # Main templated protocol  
+│   ├── task-startup.md                     # Main templated protocol
 │   ├── submodule-management.md             # Conditional chunk for submodules
+│   ├── directory-task-startup.md           # Conditional chunk for directory tasks
 │   ├── resume-notes-standard.md            # Conditional chunk for standard repos
 │   └── resume-notes-superrepo.md           # Conditional chunk for super-repos
 ├── task-completion/
-│   ├── task-completion.md                  # Main templated protocol
+│   ├── task-completion.md                  # Main templated protocol with directory task merge prevention
 │   ├── commit-style-conventional.md        # Conventional commit style template
 │   ├── commit-style-simple.md              # Simple commit style template
 │   ├── commit-style-detailed.md            # Detailed commit style template
@@ -286,6 +300,49 @@ Configuration in `.claude/settings.json`:
 
 ## Recent Enhancements
 
+### Directory Task Support (v0.3.5+)
+
+Enhanced the task management system with first-class support for directory-based tasks with subtask workflows:
+
+**Core Implementation:**
+- **Helper Functions**: Added `is_directory_task(task_path)` and `get_task_file_path(task_path)` to shared_state.py:595-615 and shared_state.js for consistent directory task detection across all code
+- **Detection Logic**: Simplified to check for '/' in task path (e.g., "h-implement-auth/01-setup.md") rather than filesystem verification for reliable subtask detection
+- **Path Resolution**: `get_task_file_path()` automatically resolves directory tasks to README.md, file tasks to direct .md path
+- **Type Safety**: Python implementation accepts Union[str, Path], normalizes to string for consistent '/' detection
+- **Consistent Usage**: Updated 9 files across hooks and API commands to use new helper functions instead of manual detection
+
+**Protocol Integration:**
+- **Task Creation** (task-creation.md:57-74): Protocol explicitly asks users to confirm directory structure with clear explanation of implications:
+  - Creating subtasks will be the first step after task creation
+  - All work done iteratively on the same task branch
+  - Plan and spec out subtasks comprehensively before implementation
+  - Individual subtask commits won't merge to main until all subtasks complete
+- **Task Startup**: Conditionally loads directory-task-startup.md guidance when `is_directory_task()` returns true, emphasizing:
+  - Read entire task specification in README.md thoroughly
+  - Analyze all success criteria to understand full scope
+  - Plan comprehensive subtask breakdown with clear deliverables
+  - Create well-defined subtask files with specific goals
+- **Task Completion**: Automatically detects directory tasks using `is_directory_task(STATE.current_task.file)` and prevents auto-merge until all subtasks complete, overriding user's auto_merge preference
+
+**Workflow Features:**
+- Directory tasks work iteratively on the same feature branch without merging
+- Subtask commits stay on the task branch until entire multi-phase effort completes
+- Planning-first approach with comprehensive subtask breakdown requirements
+- Manual merge control ensures quality review of complete work
+- Each subtask has independent success criteria building toward overall task goals
+
+**Implementation Approach:**
+- Minimal, practical implementation over extensive automation (guidance-based rather than automated subtask management)
+- Clean integration with existing protocol templating system using conditional section loading
+- No breaking changes to existing task workflows (file-based tasks unaffected)
+- Bug fixes included: Fixed incorrect `STATE.current_task.file_path` references, Path type handling, and template variable substitution
+
+**Files Modified:**
+- shared_state.py/js: Added helper functions
+- user_messages.py/js: Integrated directory task detection in startup and completion protocols
+- task-creation.md: Added directory structure decision point
+- directory-task-startup.md: New planning guidance snippet
+
 ### Protocol Structured Output (v0.3.3+)
 Enhanced all protocols with transparent structured output formats at key decision points:
 
@@ -420,10 +477,18 @@ These improvements maintain data integrity and atomic file operations while sign
 
 ### Task Structure
 - Markdown files with frontmatter integration into TaskState class
-- Directory-based tasks for complex multi-phase work
+- Directory-based tasks for complex multi-phase work with subtask support
 - File-based tasks for focused single objectives
 - Automatic branch mapping from task naming conventions
 - Git submodule awareness through task frontmatter
+
+**Directory Task Support:**
+- **Helper Functions**: `is_directory_task(task_path)` in shared_state.py:595-607 and shared_state.js detects directory tasks by checking for '/' in path, with fallback to README.md existence check
+- **Path Resolution**: `get_task_file_path(task_path)` in shared_state.py:609-615 and shared_state.js resolves to README.md for directory tasks or direct .md path for file tasks
+- **Creation Protocol**: task-creation.md:57-74 asks users to confirm directory structure with explanation of subtask workflow, planning requirements, and same-branch iteration
+- **Startup Protocol**: Conditionally loads directory-task-startup.md when `is_directory_task()` returns true, emphasizing comprehensive subtask specification before implementation
+- **Completion Protocol**: Detects directory tasks and prevents auto-merge until all subtasks complete, overriding user's auto_merge preference to keep work on feature branch
+- **Consistent Detection**: Both Python and JavaScript implementations use identical helper functions across all hooks and API commands for reliable identification
 
 ### Subagent Protection
 - Detection mechanism prevents DAIC reminders in subagent contexts

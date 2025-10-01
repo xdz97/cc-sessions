@@ -54,6 +54,25 @@ Combine: `[priority]-[type]-[descriptive-name]`
   - `m-migrate-to-postgres/` (schema + data + cutover)
   - `l-test-all-services/` (per-service test files)
 
+#### For directory tasks, confirm with user
+
+If you determine the task needs directory structure, explicitly confirm:
+
+```markdown
+[DECISION: Directory Task Structure]
+This task appears complex enough to require directory structure with subtasks.
+
+Using a directory means:
+- Creating subtasks will be the first step after task creation
+- All work will be done iteratively on the same task branch
+- You'll plan and spec out subtasks comprehensively before implementation
+- Individual subtask commits won't merge to main until all subtasks complete
+
+Would you like to use directory structure for this task? (yes/no)
+```
+
+Only proceed with directory structure if user confirms. If they say no, use a file instead.
+
 #### Propose the task naming to user
 
 Before creating the file, present a structured proposal:

@@ -94,6 +94,8 @@ Verify branch state:
 - Confirm you're on the correct branch that matches the task's expected branch
 - If the branch doesn't match the task branch, STOP and fix it first
 
+{directory_guidance}
+
 ## 5. Initial Discussion & Planning (After Todos Complete)
 
 **Note**: This step happens AFTER all startup todos are complete and you've automatically returned to discussion mode.

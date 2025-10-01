@@ -20,10 +20,10 @@ if 'CLAUDE_PROJECT_DIR' in os.environ:
 
 try:
     # Try direct import (works with sessions in path or package install)
-    from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol
+    from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task
 except ImportError:
     # Fallback to package import
-    from cc_sessions.hooks.shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol
+    from cc_sessions.hooks.shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task
 ##-##
 
 #-#
@@ -255,9 +255,12 @@ if not is_api_command and task_completion_detected:
             activeForm='Archiving task file')
     ]
 
-    # Build commit todo based on auto_merge preference
+    # Build commit todo based on auto_merge preference and directory task status
     commit_content = 'Commit changes'
-    if CONFIG.git_preferences.auto_merge:
+    # Check if this is a directory task - if so, don't merge until all subtasks complete
+    if STATE.current_task.file and is_directory_task(STATE.current_task.file):
+        commit_content += ' (directory task - no merge until all subtasks complete)'
+    elif CONFIG.git_preferences.auto_merge:
         commit_content += f' and merge to {CONFIG.git_preferences.default_branch}'
     else:
         commit_content += f' and ask if user wants to merge to {CONFIG.git_preferences.default_branch}'
@@ -296,10 +299,21 @@ if not is_api_command and task_completion_detected:
     # Commit instructions based on has_submodules
     if CONFIG.git_preferences.has_submodules: commit_instructions_content = load_protocol_file('task-completion/commit-superrepo.md')
     else: commit_instructions_content = load_protocol_file('task-completion/commit-standard.md')
- 
-    # Build merge and push instructions based on auto preferences
-    if CONFIG.git_preferences.auto_merge: merge_instruction = f'Merge into {CONFIG.git_preferences.default_branch}'
-    else: merge_instruction = f'Ask user if they want to merge into {CONFIG.git_preferences.default_branch}'
+
+    # Directory task completion check
+    if STATE.current_task.file and is_directory_task(STATE.current_task.file):
+        directory_completion_check = load_protocol_file('task-completion/directory-task-completion.md')
+        directory_completion_check = directory_completion_check.format(default_branch=CONFIG.git_preferences.default_branch)
+    else:
+        directory_completion_check = ''
+
+    # Build merge and push instructions based on auto preferences (but override for directory tasks)
+    if STATE.current_task.file and is_directory_task(STATE.current_task.file):
+        merge_instruction = 'Do not merge yet - directory task requires all subtasks to complete first'
+    elif CONFIG.git_preferences.auto_merge:
+        merge_instruction = f'Merge into {CONFIG.git_preferences.default_branch}'
+    else:
+        merge_instruction = f'Ask user if they want to merge into {CONFIG.git_preferences.default_branch}'
 
     if CONFIG.git_preferences.auto_push: push_instruction = 'Push the merged branch to remote'
     else: push_instruction = 'Ask user if they want to push to remote'
@@ -317,6 +331,9 @@ if not is_api_command and task_completion_detected:
 
     # Format commit instructions with merge/push
     template_vars['commit_instructions'] = commit_instructions_content.format(merge_instruction=merge_instruction, push_instruction=push_instruction, commit_style_guidance=template_vars['commit_style_guidance'], default_branch=CONFIG.git_preferences.default_branch)
+
+    # Add directory task completion check
+    template_vars['directory_completion_check'] = directory_completion_check
 
     # Format protocol with all template variables
     if protocol_content: protocol_content = protocol_content.format(**template_vars)
@@ -353,6 +370,12 @@ if not is_api_command and task_start_detected:
     else:
         submodule_management = ""
         resume_notes = load_protocol_file('task-startup/resume-notes-standard.md')
+
+    # Check if this is a directory task and load appropriate guidance
+    if STATE.current_task.file and is_directory_task(STATE.current_task.file):
+        directory_guidance = load_protocol_file('task-startup/directory-task-startup.md')
+    else:
+        directory_guidance = ""
 
     # Set todos based on config
     todo_branch_content = 'Create/checkout task branch and matching submodule branches' if CONFIG.git_preferences.has_submodules else 'Create/checkout task branch'
@@ -395,6 +418,7 @@ if not is_api_command and task_start_detected:
         'submodule_context': ' (and submodules list)' if CONFIG.git_preferences.has_submodules else '',
         'submodule_management_section': submodule_management,
         'resume_notes': resume_notes,
+        'directory_guidance': directory_guidance,
         'git_status_scope': git_status_scope,
         'git_handling': git_handling,
         'todos': format_todos_for_protocol(todos),

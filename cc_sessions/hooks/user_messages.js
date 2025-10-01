@@ -18,7 +18,8 @@ const {
     PROJECT_ROOT,
     CCTodo,
     loadConfig,
-    SessionsProtocol
+    SessionsProtocol,
+    isDirectoryTask
 } = require('./shared_state.js');
 ///-///
 
@@ -328,9 +329,12 @@ if (!isApiCommand && taskCompletionDetected) {
         })
     ];
 
-    // Build commit todo based on auto_merge preference
+    // Build commit todo based on auto_merge preference and directory task status
     let commitContent = 'Commit changes';
-    if (CONFIG.git_preferences.auto_merge) {
+    // Check if this is a directory task - if so, don't merge until all subtasks complete
+    if (STATE.current_task.file && isDirectoryTask(STATE.current_task.file)) {
+        commitContent += ' (directory task - no merge until all subtasks complete)';
+    } else if (CONFIG.git_preferences.auto_merge) {
         commitContent += ` and merge to ${CONFIG.git_preferences.default_branch}`;
     } else {
         commitContent += ` and ask if user wants to merge to ${CONFIG.git_preferences.default_branch}`;
@@ -378,10 +382,21 @@ if (!isApiCommand && taskCompletionDetected) {
         ? loadProtocolFile('task-completion/commit-superrepo.md')
         : loadProtocolFile('task-completion/commit-standard.md');
 
-    // Build merge and push instructions based on auto preferences
-    const mergeInstruction = CONFIG.git_preferences.auto_merge
-        ? `Merge into ${CONFIG.git_preferences.default_branch}`
-        : `Ask user if they want to merge into ${CONFIG.git_preferences.default_branch}`;
+    // Directory task completion check
+    let directoryCompletionCheck = '';
+    if (STATE.current_task.file && isDirectoryTask(STATE.current_task.file)) {
+        directoryCompletionCheck = loadProtocolFile('task-completion/directory-task-completion.md');
+    }
+
+    // Build merge and push instructions based on auto preferences (but override for directory tasks)
+    let mergeInstruction;
+    if (STATE.current_task.file && isDirectoryTask(STATE.current_task.file)) {
+        mergeInstruction = 'Do not merge yet - directory task requires all subtasks to complete first';
+    } else if (CONFIG.git_preferences.auto_merge) {
+        mergeInstruction = `Merge into ${CONFIG.git_preferences.default_branch}`;
+    } else {
+        mergeInstruction = `Ask user if they want to merge into ${CONFIG.git_preferences.default_branch}`;
+    }
 
     const pushInstruction = CONFIG.git_preferences.auto_push
         ? 'Push the merged branch to remote'
@@ -407,6 +422,9 @@ if (!isApiCommand && taskCompletionDetected) {
         .replace('{push_instruction}', pushInstruction)
         .replace('{commit_style_guidance}', commitStyleGuidance)
         .replace('{default_branch}', CONFIG.git_preferences.default_branch);
+
+    // Add directory task completion check
+    templateVars.directory_completion_check = directoryCompletionCheck;
 
     // Format protocol with all template variables
     if (protocolContent) {
@@ -459,6 +477,12 @@ if (!isApiCommand && taskStartDetected) {
         resumeNotes = loadProtocolFile('task-startup/resume-notes-standard.md');
     }
 
+    // Check if this is a directory task and load appropriate guidance
+    let directoryGuidance = '';
+    if (STATE.current_task.file && isDirectoryTask(STATE.current_task.file)) {
+        directoryGuidance = loadProtocolFile('task-startup/directory-task-startup.md');
+    }
+
     // Set todos based on config
     const todoBranchContent = CONFIG.git_preferences.has_submodules
         ? 'Create/checkout task branch and matching submodule branches'
@@ -509,6 +533,7 @@ if (!isApiCommand && taskStartDetected) {
         submodule_context: CONFIG.git_preferences.has_submodules ? ' (and submodules list)' : '',
         submodule_management_section: submoduleManagement,
         resume_notes: resumeNotes,
+        directory_guidance: directoryGuidance,
         git_status_scope: gitStatusScope,
         git_handling: gitHandling,
         todos: formatTodosForProtocol(todos),

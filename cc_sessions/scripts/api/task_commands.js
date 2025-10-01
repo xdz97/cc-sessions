@@ -18,7 +18,9 @@ const {
     loadConfig,
     TaskState,
     SessionsProtocol,
-    PROJECT_ROOT
+    PROJECT_ROOT,
+    getTaskFilePath,
+    isDirectoryTask
 } = require('../../hooks/shared_state.js');
 //--//
 
@@ -181,8 +183,7 @@ function getTaskStatusMap() {
 
     // Extract status from each task file
     for (const taskFile of taskFiles) {
-        const isDir = fs.statSync(taskFile).isDirectory();
-        const filePath = isDir ? path.join(taskFile, 'README.md') : taskFile;
+        const filePath = getTaskFilePath(taskFile);
 
         if (!fs.existsSync(filePath)) {
             continue;
@@ -192,7 +193,7 @@ function getTaskStatusMap() {
             const content = fs.readFileSync(filePath, 'utf8');
             const lines = content.split('\n').slice(0, 10);
 
-            const taskName = isDir
+            const taskName = isDirectoryTask(taskFile)
                 ? path.basename(taskFile) + '/'
                 : path.basename(taskFile);
 

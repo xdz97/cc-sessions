@@ -910,6 +910,40 @@ function saveConfig(config) {
     atomicWrite(CONFIG_FILE, config.toDict());
 }
 
+function isDirectoryTask(taskPath) {
+    /**
+     * Check if a task is part of a directory task (contains a /).
+     * If path has a slash, it's definitely a directory task or subtask.
+     */
+    // If the path contains a slash, it's a directory task or subtask within one
+    if (taskPath.includes('/')) {
+        return true;
+    }
+    // Otherwise check if it's a directory with README.md
+    try {
+        const stat = fs.statSync(taskPath);
+        if (stat.isDirectory()) {
+            const readmePath = path.join(taskPath, 'README.md');
+            return fs.existsSync(readmePath);
+        }
+    } catch (e) {
+        // Path doesn't exist or permission error - not a directory task
+        // (This is expected for relative task names like "h-task/01-subtask.md")
+        return false;
+    }
+    return false;
+}
+
+function getTaskFilePath(taskPath) {
+    /**
+     * Get the actual .md file path for a task (handles both directory and file tasks).
+     */
+    if (isDirectoryTask(taskPath)) {
+        return path.join(taskPath, 'README.md');
+    }
+    return taskPath;
+}
+
 function listOpenTasks() {
     // No active task - list available tasks
     const tasksDir = path.join(PROJECT_ROOT, 'sessions', 'tasks');
@@ -957,9 +991,7 @@ function listOpenTasks() {
     if (taskFiles.length > 0) {
         taskStartupHelp += "No active task set. Available tasks:\n";
         for (const taskFile of taskFiles.sort()) {
-            const filePath = fs.statSync(taskFile).isDirectory()
-                ? path.join(taskFile, 'README.md')
-                : taskFile;
+            const filePath = getTaskFilePath(taskFile);
 
             if (!fs.existsSync(filePath)) continue;
 
@@ -967,7 +999,7 @@ function listOpenTasks() {
             const content = fs.readFileSync(filePath, 'utf8');
             const lines = content.split('\n').slice(0, 10);
 
-            const taskName = fs.statSync(taskFile).isDirectory()
+            const taskName = isDirectoryTask(taskFile)
                 ? `${path.basename(taskFile)}/`
                 : path.basename(taskFile);
 
@@ -1046,5 +1078,7 @@ module.exports = {
     loadConfig,
     saveConfig,
     editConfig,
-    listOpenTasks
+    listOpenTasks,
+    isDirectoryTask,
+    getTaskFilePath
 };

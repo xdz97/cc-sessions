@@ -54,23 +54,32 @@ if (CONFIG.features.auto_ultrathink && !isApiCommand) {
 }
 
 //!> Trigger phrase detection
+function phraseMatches(phrase, text) {
+    // Check if phrase matches text. Case-sensitive if phrase is all caps, case-insensitive otherwise.
+    if (phrase === phrase.toUpperCase()) {
+        return text.includes(phrase);
+    } else {
+        return text.toLowerCase().includes(phrase.toLowerCase());
+    }
+}
+
 const implementationPhraseDetected = CONFIG.trigger_phrases.implementation_mode.some(
-    phrase => prompt.toLowerCase().includes(phrase.toLowerCase())
+    phrase => phraseMatches(phrase, prompt)
 );
 const discussionPhraseDetected = CONFIG.trigger_phrases.discussion_mode.some(
-    phrase => prompt.toLowerCase().includes(phrase.toLowerCase())
+    phrase => phraseMatches(phrase, prompt)
 );
 const taskCreationDetected = CONFIG.trigger_phrases.task_creation.some(
-    phrase => prompt.toLowerCase().includes(phrase.toLowerCase())
+    phrase => phraseMatches(phrase, prompt)
 );
 const taskCompletionDetected = CONFIG.trigger_phrases.task_completion.some(
-    phrase => prompt.toLowerCase().includes(phrase.toLowerCase())
+    phrase => phraseMatches(phrase, prompt)
 );
 const taskStartDetected = CONFIG.trigger_phrases.task_startup.some(
-    phrase => prompt.toLowerCase().includes(phrase.toLowerCase())
+    phrase => phraseMatches(phrase, prompt)
 );
 const compactionDetected = CONFIG.trigger_phrases.context_compaction.some(
-    phrase => prompt.toLowerCase().includes(phrase.toLowerCase())
+    phrase => phraseMatches(phrase, prompt)
 );
 //!<
 

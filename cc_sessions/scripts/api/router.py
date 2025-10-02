@@ -14,6 +14,7 @@ from api.state_commands import handle_state_command, handle_mode_command, handle
 from api.config_commands import handle_config_command
 from api.protocol_commands import handle_protocol_command
 from api.task_commands import handle_task_command
+from api.kickstart_commands import handle_kickstart_command
 ##-##
 
 #-#
@@ -30,6 +31,7 @@ COMMAND_HANDLERS = {
     'config': handle_config_command,
     'todos': handle_todos_command,
     'tasks': handle_task_command,
+    'kickstart': handle_kickstart_command,
 }
 
 #-#

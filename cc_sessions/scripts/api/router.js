@@ -17,6 +17,7 @@ const {
 const { handleConfigCommand } = require('./config_commands.js');
 const { handleProtocolCommand } = require('./protocol_commands.js');
 const { handleTaskCommand } = require('./task_commands.js');
+const { handleKickstartCommand } = require('./kickstart_commands.js');
 //--//
 
 //-#
@@ -33,6 +34,7 @@ const COMMAND_HANDLERS = {
     'config': handleConfigCommand,
     'todos': handleTodosCommand,
     'tasks': handleTaskCommand,
+    'kickstart': handleKickstartCommand,
 };
 
 //-#

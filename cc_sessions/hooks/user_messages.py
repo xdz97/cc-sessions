@@ -46,12 +46,19 @@ if CONFIG.features.auto_ultrathink and not is_api_command: context = "[[ ultrath
 else: context = ""
 
 #!> Trigger phrase detection
-implementation_phrase_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.implementation_mode)
-discussion_phrase_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.discussion_mode)
-task_creation_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.task_creation)
-task_completion_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.task_completion)
-task_start_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.task_startup)
-compaction_detected = any(phrase.lower() in prompt.lower() for phrase in CONFIG.trigger_phrases.context_compaction)
+def phrase_matches(phrase, text):
+    """Check if phrase matches text. Case-sensitive if phrase is all caps, case-insensitive otherwise."""
+    if phrase.isupper():
+        return phrase in text
+    else:
+        return phrase.lower() in text.lower()
+
+implementation_phrase_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.implementation_mode)
+discussion_phrase_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.discussion_mode)
+task_creation_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.task_creation)
+task_completion_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.task_completion)
+task_start_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.task_startup)
+compaction_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.context_compaction)
 #!<
 
 #!> Flags

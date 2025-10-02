@@ -21,14 +21,15 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, and simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input (both Python and JavaScript implementations)
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration, dual-import pattern, and kickstart protocol detection via `STATE.flags.noob` (both Python and JavaScript implementations)
+- `cc_sessions/hooks/kickstart_session_start.py|.js` - Kickstart-only SessionStart hook that checks noob flag, handles reminder dates, loads entry/resume protocols, and short-circuits to let normal hooks run when noob=false (both Python and JavaScript implementations)
 - `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, and improved task startup notices (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
 - `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output (Python)
 - `cc_sessions/scripts/api/index.js` - Sessions API entry point (JavaScript)
-- `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support and --from-slash flag handling (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support, kickstart handler integration, and --from-slash flag handling (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/protocol_commands.py|.js` - Protocol-specific API commands with startup-load returning full task content (both Python and JavaScript implementations)
-- `cc_sessions/scripts/api/kickstart_commands.py` - Kickstart-specific API commands for onboarding flow state management (next, mode, remind, complete)
+- `cc_sessions/scripts/api/kickstart_commands.py|.js` - Kickstart-specific API commands for onboarding flow state management (next, mode, remind, complete) with hybrid self-cleanup system (both Python and JavaScript implementations)
 - `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling and natural language date parsing
 - `cc_sessions/protocols/kickstart/02-mode-selection.md` - Mode selection protocol presenting full/api/seshxpert options
 - `cc_sessions/protocols/kickstart/full/` - 12 protocol chunks for Full mode (30-45 min walkthrough)
@@ -138,6 +139,7 @@ The framework includes persistent task management with git branch enforcement, c
 - Configuration import support for experienced users setting up new repos
 - Teaches DAIC workflow, trigger phrases, task management, agent customization
 - Protocols located in `cc_sessions/protocols/kickstart/`
+- Self-cleaning system: Deletes own files and returns manual cleanup instructions on completion
 
 ### Specialized Agents
 - **context-gathering**: Creates comprehensive task context manifests with enhanced pattern examples and architectural insights
@@ -363,17 +365,21 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 - **Seshxpert Mode** (5 min): Single protocol chunk with import/auto-generate support for experienced users setting up new repos
 
 **Core Architecture:**
-- **API-Driven Flow**: Protocols call `python -m sessions.kickstart` commands for state management and progression
+- **API-Driven Flow**: Protocols call `python -m sessions.api kickstart` commands for state management and progression
 - **Numbered Protocol Chunks**: Discrete markdown files (01-14) per learning module, loaded sequentially via `next` command
 - **Mode-Specific Directories**: `kickstart/full/` (12 chunks), `kickstart/api/` (8 chunks), `kickstart/seshxpert/` (1 chunk) with variant implementations
 - **Interactive Learning**: Demonstrates concepts through practice with real commands and immediate feedback
 - **Dummy Task Integration**: Uses `h-kickstart-setup.md` template as practice task throughout onboarding
+- **Language Variants**: Uses `install_lang` metadata to determine Python or JavaScript variant for hook and command paths
 
 **Session Start Integration:**
+- Dedicated `kickstart_session_start.py|.js` hooks registered in settings.json for first-run detection
 - Automatically triggered when `STATE.flags.noob` is `True` during session initialization
+- Short-circuits immediately when noob=false to let normal session_start hooks run
 - Loads `kickstart/01-entry.md` with yes/later/never options and natural language date parsing
 - Resume support for multi-session onboarding with progress preserved in `STATE.metadata.kickstart_progress`
 - Reminder system checks `kickstart_reminder_date` and re-presents entry prompt when time expires
+- Config injection: Protocol chunks with `{config}` template variable receive formatted current configuration
 
 **Full Mode Protocol Sequence:**
 1. Core workflow and DAIC enforcement (03) - Interactive demonstration with trigger phrase practice
@@ -403,15 +409,24 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 
 **State Management:**
 - Progress tracking in `STATE.metadata.kickstart_progress` with mode, started timestamp, last_active timestamp, current_module, completed_modules array
-- Agent-specific progress tracking for customization workflow
+- Agent-specific progress tracking for customization workflow in kickstart_progress.agent_progress
 - Reminder date storage in `STATE.metadata.kickstart_reminder_date` for "later" responses with dd:hh format parsing
+- Language variant tracking in `STATE.metadata.install_lang` (py or js) for cleanup path selection
 - Graduation cleanup: Clears `noob` flag and kickstart metadata while preserving all configuration changes and agent overrides
 
 **API Commands:**
-- `python -m sessions.kickstart next` - Load next protocol chunk based on mode and current progress
-- `python -m sessions.kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode and set initial progress state
-- `python -m sessions.kickstart remind <dd:hh>` - Set reminder for later onboarding (format: days:hours, e.g., "1:00" for tomorrow)
-- `python -m sessions.kickstart complete` - Exit kickstart, clear noob flag, remove progress metadata, preserve configuration
+- `python -m sessions.api kickstart next` - Load next protocol chunk based on mode and current progress with config template injection
+- `python -m sessions.api kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode and set initial progress state
+- `python -m sessions.api kickstart remind <dd:hh>` - Set reminder for later onboarding (format: days:hours, e.g., "1:00" for tomorrow)
+- `python -m sessions.api kickstart complete` - Exit kickstart with hybrid cleanup: automated file deletion + manual router/config cleanup instructions
+
+**Self-Cleanup System:**
+- Hybrid approach: Automated deletion of kickstart protocols, hooks, and setup task files
+- Manual cleanup instructions for router imports, COMMAND_HANDLERS entries, settings.json hooks, and API command files
+- Language-specific cleanup paths based on install_lang metadata (Python vs JavaScript variants)
+- Preserves `.claude/agents/` directory and all user customizations during cleanup
+- Switches to implementation mode automatically before file deletion to bypass DAIC enforcement
+- Returns formatted todo list for manual cleanup steps that can't be automated
 
 **Protocol Files:**
 - Base entry and mode selection: `cc_sessions/protocols/kickstart/01-entry.md`, `02-mode-selection.md`
@@ -421,7 +436,10 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 - Dummy task template: `cc_sessions/templates/h-kickstart-setup.md` for onboarding practice
 
 **Supporting Infrastructure:**
-- Kickstart API module: `cc_sessions/scripts/api/kickstart_commands.py` with next, mode, remind, complete commands
+- Kickstart API module: `cc_sessions/scripts/api/kickstart_commands.py|.js` with next, mode, remind, complete commands
+- Kickstart SessionStart hooks: `cc_sessions/hooks/kickstart_session_start.py|.js` with noob flag detection and reminder handling
+- Module sequences: FULL_MODE_SEQUENCE (12 modules), API_MODE_SEQUENCE (8 modules), SESHXPERT_SEQUENCE (2 modules)
+- Config formatting: `format_config_for_display()` helper generates readable markdown of current configuration
 - Sessions API enhancements for bash pattern management: config read/write commands
 - Agent customization guide: `cc_sessions/kickstart/agent-customization-guide.md` for tech stack-specific customization
 - KICKSTART_APPROACH.md: Documents API-driven protocol pattern and implementation philosophy
@@ -783,10 +801,10 @@ All slash commands use: `!python -m sessions.api <command> $ARGUMENTS --from-sla
 - Permission-based access controlled by active_protocol and api.startup_load states
 
 **Kickstart Operations:**
-- `python -m sessions.kickstart next` - Load next module chunk in onboarding sequence
-- `python -m sessions.kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode
-- `python -m sessions.kickstart remind <dd:hh>` - Schedule reminder for later onboarding (format: days:hours)
-- `python -m sessions.kickstart complete` - Exit kickstart, clear noob flag and progress metadata
+- `python -m sessions.api kickstart next` - Load next module chunk in onboarding sequence
+- `python -m sessions.api kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode
+- `python -m sessions.api kickstart remind <dd:hh>` - Schedule reminder for later onboarding (format: days:hours)
+- `python -m sessions.api kickstart complete` - Exit kickstart, clear noob flag and progress metadata
 
 **Configuration Operations:**
 - `python -m sessions.api config [--json] [--from-slash]` - Full configuration inspection with optional contextual formatting

@@ -20,7 +20,7 @@ The framework includes persistent task management with git branch enforcement, c
 ## Key Files
 - `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, and simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input (both Python and JavaScript implementations)
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation (both Python and JavaScript implementations)
-- `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration and dual-import pattern (both Python and JavaScript implementations)
+- `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration, dual-import pattern, and kickstart protocol detection via `STATE.flags.noob` (both Python and JavaScript implementations)
 - `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, and improved task startup notices (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
 - `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling (both Python and JavaScript implementations)
@@ -28,12 +28,28 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/index.js` - Sessions API entry point (JavaScript)
 - `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support and --from-slash flag handling (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/protocol_commands.py|.js` - Protocol-specific API commands with startup-load returning full task content (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/kickstart_commands.py` - Kickstart-specific API commands for onboarding flow state management (next, mode, remind, complete)
+- `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling and natural language date parsing
+- `cc_sessions/protocols/kickstart/02-mode-selection.md` - Mode selection protocol presenting full/api/seshxpert options
+- `cc_sessions/protocols/kickstart/full/` - 12 protocol chunks for Full mode (30-45 min walkthrough)
+- `cc_sessions/protocols/kickstart/api/` - 8 protocol chunks for API mode (10-15 min condensed version)
+- `cc_sessions/protocols/kickstart/seshxpert/` - 1 protocol chunk for Seshxpert mode (5 min import/auto-generate)
+- `cc_sessions/templates/h-kickstart-setup.md` - Dummy task template used for onboarding practice
 - `cc_sessions/scripts/api/state_commands.py|.js` - State inspection and limited write operations (both Python and JavaScript implementations)
-- `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
+- `cc_sessions/protocols/kickstart/` - Kickstart onboarding protocol directory with mode-specific chunks
+- `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling
+- `cc_sessions/protocols/kickstart/02-mode-selection.md` - Mode selection (full/api/seshxpert)
+- `cc_sessions/protocols/kickstart/full/03-core-workflow.md` - Interactive DAIC workflow demo
+- `cc_sessions/protocols/kickstart/full/04-trigger-phrases.md` - Trigger phrase customization
+- `cc_sessions/protocols/kickstart/full/05-orphaned-todos.md` - State system and todo management
+- `cc_sessions/protocols/kickstart/full/06-tasks-and-branches.md` - Task and branch management workflows
+- `cc_sessions/protocols/kickstart/full/07-task-startup-and-config.md` - Task startup protocol with dummy task
+- `cc_sessions/protocols/kickstart/full/08-create-first-task.md` - Graduation and first real task
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
@@ -105,13 +121,23 @@ The framework includes persistent task management with git branch enforcement, c
 
 ### Sessions API
 - **State Inspection** - View current task, mode, todos, flags, metadata, and active protocol
-- **Configuration Management** - Manage trigger phrases, git preferences, environment settings
+- **Configuration Management** - Manage trigger phrases, git preferences, environment settings, bash patterns, and tool blocking
+- **Pattern Management** - Configure bash_read_patterns, bash_write_patterns, and implementation_only_tools via dedicated commands
 - **Feature Toggle Operations** - Enhanced with `toggle` command for simple boolean value flipping
 - **Limited Write Operations** - One-way mode switching (implementation → discussion)
 - **Protocol Commands** - startup-load command for task loading during startup protocol
 - **JSON Output Support** - Machine-readable format for programmatic use
 - **Security Boundaries** - No access to safety-critical settings or todo manipulation
 - **Slash Command Integration** - Consolidated sesh-* commands with API delegation pattern and --from-slash contextual output formatting
+
+### Kickstart Onboarding Protocol
+- **kickstart**: Interactive first-run onboarding system for new installations
+- Three mode variants: Full (30-45 min), API (10-15 min), Seshxpert (5 min)
+- Triggered automatically when `STATE.flags.noob` is `True`
+- API-driven workflow with numbered protocol chunks per mode
+- Configuration import support for experienced users setting up new repos
+- Teaches DAIC workflow, trigger phrases, task management, agent customization
+- Protocols located in `cc_sessions/protocols/kickstart/`
 
 ### Specialized Agents
 - **context-gathering**: Creates comprehensive task context manifests with enhanced pattern examples and architectural insights
@@ -167,7 +193,34 @@ protocols/
 │   ├── staging-all.md                      # "Add all" staging instructions
 │   ├── staging-ask.md                      # "Ask user" staging instructions
 │   └── git-add-warning.md                  # Warning for "add all" pattern
-└── context-compaction.md                   # Simple protocol (no templating)
+├── context-compaction.md                   # Simple protocol (no templating)
+└── kickstart/                              # First-run onboarding protocols (v0.3.6+)
+    ├── 01-entry.md                         # Welcome prompt with yes/later/never
+    ├── 02-mode-selection.md                # Three mode variants
+    ├── full/                               # Full mode protocol chunks (30-45 min)
+    │   ├── 03-core-workflow.md             # DAIC explanation with interactive demo
+    │   ├── 04-trigger-phrases.md           # Trigger phrase configuration
+    │   ├── 05-orphaned-todos.md            # State system and todo cleanup
+    │   ├── 06-tasks-and-branches.md        # Task/branch workflows
+    │   ├── 07-task-startup-and-config.md   # Task startup with dummy task practice
+    │   ├── 08-create-first-task.md         # Create first real task
+    │   ├── 09-always-available-protocols.md # Completion, compaction, helper protocols
+    │   ├── 10-agent-customization.md       # Agent overview and customization intro
+    │   ├── 11-code-review-customization.md # Code-review agent tech stack setup
+    │   ├── 12-tool-configuration.md        # Custom readonly commands
+    │   ├── 13-advanced-features.md         # Directory tasks, bypass mode, indexes
+    │   └── 14-graduation.md                # Cleanup, summary, next steps
+    ├── api/                                # API mode protocol chunks (10-15 min)
+    │   ├── 03-core-workflow.md             # Condensed DAIC demo
+    │   ├── 04-task-protocols.md            # Task workflows condensed
+    │   ├── 05-context-management.md        # State system essentials
+    │   ├── 06-configuration.md             # Quick config setup
+    │   ├── 07-agent-customization.md       # Minimal agent setup
+    │   ├── 08-advanced-concepts.md         # Brief advanced features
+    │   ├── 09-create-first-task.md         # First real task
+    │   └── 10-graduation.md                # Quick summary and next steps
+    └── seshxpert/                          # Seshxpert mode protocol chunks (5 min)
+        └── 03-quick-setup.md               # Import/auto-generate workflow
 ```
 
 ## Integration Points
@@ -213,9 +266,9 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 - `context_compaction` - Phrases for context compaction (default: ["lets compact", "squish"])
 
 **Blocked Actions (`blocked_actions`):**
-- `implementation_only_tools` - Tools blocked in discussion mode (default: Edit, Write, MultiEdit, NotebookEdit)
-- `bash_read_patterns` - Patterns that are considered "read only" in Bash tool inputs and are allowed in discussion mode
-- `bash_write_patterns` - Patterns that are considered "write-like" in Bash tool inputs and are blocked in discussion mode
+- `implementation_only_tools` - Tools blocked in discussion mode (default: Edit, Write, MultiEdit, NotebookEdit), managed via `config tools` commands with CCTools enum validation
+- `bash_read_patterns` - Patterns considered "read only" in Bash tool inputs and allowed in discussion mode, managed via `config read` commands
+- `bash_write_patterns` - Patterns considered "write-like" in Bash tool inputs and blocked in discussion mode, managed via `config write` commands
 - `extrasafe` - Enhanced blocking mode
 
 **Git Preferences (`git_preferences`):**
@@ -299,6 +352,79 @@ Configuration in `.claude/settings.json`:
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
 ## Recent Enhancements
+
+### Kickstart Onboarding Protocol System (v0.3.6+)
+
+Comprehensive first-run onboarding system providing interactive guided setup and configuration for new cc-sessions installations:
+
+**Three Mode Variants:**
+- **Full Mode** (30-45 min): Complete walkthrough with 12 protocol chunks covering DAIC enforcement, trigger phrases, state management, task workflows, agent customization, tool configuration, and advanced features with interactive exercises and validation
+- **API Mode** (10-15 min): Condensed 8 protocol chunks with same functionality but concise presentation for token budget consciousness
+- **Seshxpert Mode** (5 min): Single protocol chunk with import/auto-generate support for experienced users setting up new repos
+
+**Core Architecture:**
+- **API-Driven Flow**: Protocols call `python -m sessions.kickstart` commands for state management and progression
+- **Numbered Protocol Chunks**: Discrete markdown files (01-14) per learning module, loaded sequentially via `next` command
+- **Mode-Specific Directories**: `kickstart/full/` (12 chunks), `kickstart/api/` (8 chunks), `kickstart/seshxpert/` (1 chunk) with variant implementations
+- **Interactive Learning**: Demonstrates concepts through practice with real commands and immediate feedback
+- **Dummy Task Integration**: Uses `h-kickstart-setup.md` template as practice task throughout onboarding
+
+**Session Start Integration:**
+- Automatically triggered when `STATE.flags.noob` is `True` during session initialization
+- Loads `kickstart/01-entry.md` with yes/later/never options and natural language date parsing
+- Resume support for multi-session onboarding with progress preserved in `STATE.metadata.kickstart_progress`
+- Reminder system checks `kickstart_reminder_date` and re-presents entry prompt when time expires
+
+**Full Mode Protocol Sequence:**
+1. Core workflow and DAIC enforcement (03) - Interactive demonstration with trigger phrase practice
+2. Trigger phrase customization (04) - Configuration of all six trigger categories
+3. Orphaned todos management (05) - State system overview with practical examples
+4. Task and branch workflows (06) - Task types, priorities, branch mapping, and enforcement
+5. Task startup protocol (07) - Practice with dummy task and configuration of startup preferences
+6. Create first task (08) - Guided creation of real task for current project work
+7. Always-available protocols (09) - Completion, compaction, and helper protocols
+8. Agent customization (10-11) - Context-gathering and code-review agent setup with tech stack assessment
+9. Tool configuration (12) - Custom readonly commands and bash pattern management
+10. Advanced features (13) - Directory tasks, bypass mode, task indexes, stashed todos
+11. Graduation (14) - Cleanup, summary, quick reference card, and next steps
+
+**API Mode Compression:**
+- Same functionality as Full mode with condensed language and fewer examples
+- Skips advanced features module (13) to reduce time investment
+- Focus on essential configuration with minimal explanations
+- 8 protocol chunks total covering core workflows through agent customization
+
+**Seshxpert Mode Fast Path:**
+- Single protocol chunk (03-quick-setup.md) with import/auto-generate workflow
+- Copy sessions-config.json from existing repo (local or GitHub URL)
+- Copy agent overrides from `.claude/agents/` directory
+- Auto-generate configuration from repository detection
+- Skip all explanatory content and move directly to graduation
+
+**State Management:**
+- Progress tracking in `STATE.metadata.kickstart_progress` with mode, started timestamp, last_active timestamp, current_module, completed_modules array
+- Agent-specific progress tracking for customization workflow
+- Reminder date storage in `STATE.metadata.kickstart_reminder_date` for "later" responses with dd:hh format parsing
+- Graduation cleanup: Clears `noob` flag and kickstart metadata while preserving all configuration changes and agent overrides
+
+**API Commands:**
+- `python -m sessions.kickstart next` - Load next protocol chunk based on mode and current progress
+- `python -m sessions.kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode and set initial progress state
+- `python -m sessions.kickstart remind <dd:hh>` - Set reminder for later onboarding (format: days:hours, e.g., "1:00" for tomorrow)
+- `python -m sessions.kickstart complete` - Exit kickstart, clear noob flag, remove progress metadata, preserve configuration
+
+**Protocol Files:**
+- Base entry and mode selection: `cc_sessions/protocols/kickstart/01-entry.md`, `02-mode-selection.md`
+- Full mode chunks (12): `cc_sessions/protocols/kickstart/full/03-core-workflow.md` through `14-graduation.md`
+- API mode chunks (8): `cc_sessions/protocols/kickstart/api/03-core-workflow.md` through `10-graduation.md`
+- Seshxpert mode chunk (1): `cc_sessions/protocols/kickstart/seshxpert/03-quick-setup.md`
+- Dummy task template: `cc_sessions/templates/h-kickstart-setup.md` for onboarding practice
+
+**Supporting Infrastructure:**
+- Kickstart API module: `cc_sessions/scripts/api/kickstart_commands.py` with next, mode, remind, complete commands
+- Sessions API enhancements for bash pattern management: config read/write commands
+- Agent customization guide: `cc_sessions/kickstart/agent-customization-guide.md` for tech stack-specific customization
+- KICKSTART_APPROACH.md: Documents API-driven protocol pattern and implementation philosophy
 
 ### Directory Task Support (v0.3.5+)
 
@@ -466,6 +592,8 @@ These improvements maintain data integrity and atomic file operations while sign
 - **Type-Safe Enums**: CCTools, TriggerCategory, GitCommitStyle, UserOS, UserShell for validation
 - **Nested Dataclasses**: TriggerPhrases, BlockingPatterns, GitPreferences, SessionsEnv for organization
 - **Runtime Configuration Methods**: Add/remove trigger phrases, manage blocked tools, update preferences programmatically
+- **Bash Pattern Management**: `config read` and `config write` commands for managing bash_read_patterns and bash_write_patterns
+- **Tool Blocking Management**: `config tools` commands with CCTools enum validation for implementation_only_tools
 - **Atomic Configuration Updates**: edit_config() context manager with file locking prevents configuration corruption
 - **Configuration Validation**: Automatic type coercion and error handling for user inputs
 - **Default Fallbacks**: Comprehensive defaults ensure system functionality without configuration
@@ -654,6 +782,12 @@ All slash commands use: `!python -m sessions.api <command> $ARGUMENTS --from-sla
 - `python -m sessions.api protocol startup-load <task-file>` - Load task and return full file content during startup protocol
 - Permission-based access controlled by active_protocol and api.startup_load states
 
+**Kickstart Operations:**
+- `python -m sessions.kickstart next` - Load next module chunk in onboarding sequence
+- `python -m sessions.kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode
+- `python -m sessions.kickstart remind <dd:hh>` - Schedule reminder for later onboarding (format: days:hours)
+- `python -m sessions.kickstart complete` - Exit kickstart, clear noob flag and progress metadata
+
 **Configuration Operations:**
 - `python -m sessions.api config [--json] [--from-slash]` - Full configuration inspection with optional contextual formatting
 - `python -m sessions.api config phrases list [category] [--from-slash]` - View trigger phrases
@@ -664,6 +798,15 @@ All slash commands use: `!python -m sessions.api <command> $ARGUMENTS --from-sla
 - `python -m sessions.api config git set <setting> <value> [--from-slash]` - Update git preference
 - `python -m sessions.api config env show [--from-slash]` - View environment settings
 - `python -m sessions.api config env set <setting> <value> [--from-slash]` - Update environment setting
+- `python -m sessions.api config read list [--from-slash]` - List bash read patterns
+- `python -m sessions.api config read add <pattern> [--from-slash]` - Add bash read pattern
+- `python -m sessions.api config read remove <pattern> [--from-slash]` - Remove bash read pattern
+- `python -m sessions.api config write list [--from-slash]` - List bash write patterns
+- `python -m sessions.api config write add <pattern> [--from-slash]` - Add bash write pattern
+- `python -m sessions.api config write remove <pattern> [--from-slash]` - Remove bash write pattern
+- `python -m sessions.api config tools list [--from-slash]` - List implementation-only tools
+- `python -m sessions.api config tools block <ToolName> [--from-slash]` - Block tool in discussion mode
+- `python -m sessions.api config tools unblock <ToolName> [--from-slash]` - Unblock tool
 
 **Slash Command Integration:**
 - All API commands support `--from-slash` flag for enhanced error messages and user-friendly output formatting

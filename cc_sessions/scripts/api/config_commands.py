@@ -11,7 +11,7 @@ import json
 ##-##
 
 ## ===== LOCAL ===== ##
-from hooks.shared_state import load_config, edit_config, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell
+from hooks.shared_state import load_config, edit_config, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools
 ##-##
 
 #-#
@@ -68,8 +68,12 @@ def handle_config_command(args: List[str], json_output: bool = False, from_slash
         return handle_env_command(section_args, json_output, from_slash)
     elif section == 'features':
         return handle_features_command(section_args, json_output, from_slash)
-    elif section in ['readonly', 'perms']:
-        return handle_readonly_command(section_args, json_output, from_slash)
+    elif section == 'read':
+        return handle_read_command(section_args, json_output, from_slash)
+    elif section == 'write':
+        return handle_write_command(section_args, json_output, from_slash)
+    elif section == 'tools':
+        return handle_tools_command(section_args, json_output, from_slash)
     elif section == 'validate':
         return validate_config(json_output)
     else:
@@ -86,8 +90,10 @@ def format_config_help() -> str:
         "  /sessions config trigger ...    - Manage trigger phrases",
         "  /sessions config git ...        - Manage git preferences",
         "  /sessions config env ...        - Manage environment settings",
-        "  /sessions config readonly ...   - Manage readonly bash commands",
         "  /sessions config features ...   - Manage feature toggles",
+        "  /sessions config read ...       - Manage bash read patterns",
+        "  /sessions config write ...      - Manage bash write patterns",
+        "  /sessions config tools ...      - Manage blocked tools",
         "",
         "Use '/sessions config <section> help' for section-specific help"
     ]
@@ -730,68 +736,246 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
         raise ValueError(f"Unknown features action: {action}. Valid actions: show, set, toggle")
 #!<
 
-#!> Readonly commands handlers
-def handle_readonly_command(args: List[str], json_output: bool = False) -> Any:
+#!> Bash read patterns handlers
+def handle_read_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
     """
-    Handle custom readonly command management.
+    Handle bash read pattern management.
 
     Usage:
-        config readonly list              - List all custom readonly commands
-        config readonly add <command>     - Add a command to readonly list
-        config readonly remove <command>  - Remove a command from readonly list
+        config read list              - List all bash read patterns
+        config read add <pattern>     - Add a pattern to read list
+        config read remove <pattern>  - Remove a pattern from read list
     """
     if not args or args[0] == 'list':
-        # List all readonly commands
+        # List all read patterns
         config = load_config()
-        commands = config.blocked_actions.list_readonly_commands()
+        patterns = config.blocked_actions.bash_read_patterns
 
         if json_output:
-            return {"readonly_commands": commands}
+            return {"bash_read_patterns": patterns}
 
-        if commands:
-            lines = ["Custom Readonly Commands:"]
-            for cmd in commands:
-                lines.append(f"  - {cmd}")
+        if patterns:
+            lines = ["Bash Read Patterns (allowed in discussion mode):"]
+            for pattern in patterns:
+                lines.append(f"  - {pattern}")
             return "\n".join(lines)
         else:
-            return "No custom readonly commands configured"
+            return "No custom bash read patterns configured"
 
     action = args[0].lower()
 
     if action == 'add':
         if len(args) < 2:
-            raise ValueError("Usage: config readonly add <command>")
+            if from_slash:
+                return "Missing pattern for add command\nUsage: /sessions config read add <pattern>\n\nExample: /sessions config read add 'docker ps'"
+            raise ValueError("Usage: config read add <pattern>")
 
-        command = args[1]
+        pattern = ' '.join(args[1:])
 
         with edit_config() as config:
-            added = config.blocked_actions.add_readonly_command(command)
+            if pattern not in config.blocked_actions.bash_read_patterns:
+                config.blocked_actions.bash_read_patterns.append(pattern)
+                added = True
+            else:
+                added = False
 
         if json_output:
-            return {"added": added, "command": command}
+            return {"added": added, "pattern": pattern}
         if added:
-            return f"Added '{command}' to readonly commands"
+            return f"Added '{pattern}' to bash read patterns"
         else:
-            return f"'{command}' already exists in readonly commands"
+            return f"'{pattern}' already exists in bash read patterns"
 
     elif action == 'remove':
         if len(args) < 2:
-            raise ValueError("Usage: config readonly remove <command>")
+            if from_slash:
+                return "Missing pattern for remove command\nUsage: /sessions config read remove <pattern>"
+            raise ValueError("Usage: config read remove <pattern>")
 
-        command = args[1]
+        pattern = ' '.join(args[1:])
 
         with edit_config() as config:
-            removed = config.blocked_actions.remove_readonly_command(command)
+            if pattern in config.blocked_actions.bash_read_patterns:
+                config.blocked_actions.bash_read_patterns.remove(pattern)
+                removed = True
+            else:
+                removed = False
 
         if json_output:
-            return {"removed": removed, "command": command}
+            return {"removed": removed, "pattern": pattern}
         if removed:
-            return f"Removed '{command}' from readonly commands"
+            return f"Removed '{pattern}' from bash read patterns"
         else:
-            return f"'{command}' not found in readonly commands"
+            return f"'{pattern}' not found in bash read patterns"
 
     else:
-        raise ValueError(f"Unknown readonly action: {action}. Valid actions: list, add, remove")
+        if from_slash:
+            return f"Unknown read command: {action}\n\nValid actions: list, add, remove\n\nUsage:\n  /sessions config read list\n  /sessions config read add <pattern>\n  /sessions config read remove <pattern>"
+        raise ValueError(f"Unknown read action: {action}. Valid actions: list, add, remove")
+#!<
+
+#!> Bash write patterns handlers
+def handle_write_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
+    """
+    Handle bash write pattern management.
+
+    Usage:
+        config write list              - List all bash write patterns
+        config write add <pattern>     - Add a pattern to write list
+        config write remove <pattern>  - Remove a pattern from write list
+    """
+    if not args or args[0] == 'list':
+        # List all write patterns
+        config = load_config()
+        patterns = config.blocked_actions.bash_write_patterns
+
+        if json_output:
+            return {"bash_write_patterns": patterns}
+
+        if patterns:
+            lines = ["Bash Write Patterns (blocked in discussion mode):"]
+            for pattern in patterns:
+                lines.append(f"  - {pattern}")
+            return "\n".join(lines)
+        else:
+            return "No custom bash write patterns configured"
+
+    action = args[0].lower()
+
+    if action == 'add':
+        if len(args) < 2:
+            if from_slash:
+                return "Missing pattern for add command\nUsage: /sessions config write add <pattern>\n\nExample: /sessions config write add 'rm -rf'"
+            raise ValueError("Usage: config write add <pattern>")
+
+        pattern = ' '.join(args[1:])
+
+        with edit_config() as config:
+            if pattern not in config.blocked_actions.bash_write_patterns:
+                config.blocked_actions.bash_write_patterns.append(pattern)
+                added = True
+            else:
+                added = False
+
+        if json_output:
+            return {"added": added, "pattern": pattern}
+        if added:
+            return f"Added '{pattern}' to bash write patterns"
+        else:
+            return f"'{pattern}' already exists in bash write patterns"
+
+    elif action == 'remove':
+        if len(args) < 2:
+            if from_slash:
+                return "Missing pattern for remove command\nUsage: /sessions config write remove <pattern>"
+            raise ValueError("Usage: config write remove <pattern>")
+
+        pattern = ' '.join(args[1:])
+
+        with edit_config() as config:
+            if pattern in config.blocked_actions.bash_write_patterns:
+                config.blocked_actions.bash_write_patterns.remove(pattern)
+                removed = True
+            else:
+                removed = False
+
+        if json_output:
+            return {"removed": removed, "pattern": pattern}
+        if removed:
+            return f"Removed '{pattern}' from bash write patterns"
+        else:
+            return f"'{pattern}' not found in bash write patterns"
+
+    else:
+        if from_slash:
+            return f"Unknown write command: {action}\n\nValid actions: list, add, remove\n\nUsage:\n  /sessions config write list\n  /sessions config write add <pattern>\n  /sessions config write remove <pattern>"
+        raise ValueError(f"Unknown write action: {action}. Valid actions: list, add, remove")
+#!<
+
+#!> Implementation-only tools handlers
+def handle_tools_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
+    """
+    Handle implementation-only tools management.
+
+    Usage:
+        config tools list                - List all blocked tools
+        config tools block <ToolName>    - Block a tool in discussion mode
+        config tools unblock <ToolName>  - Unblock a tool
+    """
+    if not args or args[0] == 'list':
+        # List all blocked tools
+        config = load_config()
+        tools = config.blocked_actions.implementation_only_tools
+
+        if json_output:
+            return {"implementation_only_tools": tools}
+
+        if tools:
+            lines = ["Implementation-Only Tools (blocked in discussion mode):"]
+            for tool in tools:
+                lines.append(f"  - {tool}")
+            return "\n".join(lines)
+        else:
+            return "No tools configured as implementation-only"
+
+    action = args[0].lower()
+
+    if action == 'block':
+        if len(args) < 2:
+            if from_slash:
+                valid_tools = ", ".join([t.value for t in CCTools])
+                return f"Missing tool name for block command\nUsage: /sessions config tools block <ToolName>\n\nValid tools: {valid_tools}"
+            raise ValueError("Usage: config tools block <ToolName>")
+
+        tool_name = args[1]
+
+        # Validate against CCTools enum
+        valid_tool_values = [t.value for t in CCTools]
+        if tool_name not in valid_tool_values:
+            if from_slash:
+                return f"Invalid tool name: {tool_name}\n\nValid tools: {', '.join(valid_tool_values)}"
+            raise ValueError(f"Invalid tool name: {tool_name}. Valid tools: {', '.join(valid_tool_values)}")
+
+        with edit_config() as config:
+            if tool_name not in config.blocked_actions.implementation_only_tools:
+                config.blocked_actions.implementation_only_tools.append(tool_name)
+                added = True
+            else:
+                added = False
+
+        if json_output:
+            return {"blocked": added, "tool": tool_name}
+        if added:
+            return f"Blocked '{tool_name}' in discussion mode"
+        else:
+            return f"'{tool_name}' is already blocked in discussion mode"
+
+    elif action == 'unblock':
+        if len(args) < 2:
+            if from_slash:
+                return "Missing tool name for unblock command\nUsage: /sessions config tools unblock <ToolName>"
+            raise ValueError("Usage: config tools unblock <ToolName>")
+
+        tool_name = args[1]
+
+        with edit_config() as config:
+            if tool_name in config.blocked_actions.implementation_only_tools:
+                config.blocked_actions.implementation_only_tools.remove(tool_name)
+                removed = True
+            else:
+                removed = False
+
+        if json_output:
+            return {"unblocked": removed, "tool": tool_name}
+        if removed:
+            return f"Unblocked '{tool_name}' (now allowed in discussion mode)"
+        else:
+            return f"'{tool_name}' was not blocked"
+
+    else:
+        if from_slash:
+            return f"Unknown tools command: {action}\n\nValid actions: list, block, unblock\n\nUsage:\n  /sessions config tools list\n  /sessions config tools block <ToolName>\n  /sessions config tools unblock <ToolName>"
+        raise ValueError(f"Unknown tools action: {action}. Valid actions: list, block, unblock")
 #!<
 
 #!> Config validation

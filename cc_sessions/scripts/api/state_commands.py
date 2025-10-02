@@ -110,11 +110,17 @@ def handle_state_command(args: List[str], json_output: bool = False, from_slash:
             return "No active task"
         elif component == 'todos':
             if json_output:
-                return {"todos": state.todos.to_dict()}
+                active_todos_dicts = []
+                for todo in state.todos.active: active_todos_dicts.append({"content": todo.content, "status": todo.status})
+                todos = {"active": active_todos_dicts}
+                if state.todos.stashed:
+                    stashed_todos_dicts = []
+                    for todo in state.todos.stashed: stashed_todos_dicts.append({"content": todo.content, "status": todo.status})
+                    todos['stashed'] = stashed_todos_dicts
+                return todos
             return format_todos_human(state.todos)
         elif component == 'flags':
-            if json_output:
-                return {"flags": state.flags.to_dict()}
+            if json_output: return {"flags": state.flags.__dict__}
             return format_flags_human(state.flags)
         elif component == 'metadata':
             if json_output:
@@ -380,12 +386,17 @@ def handle_todos_command(args: List[str], json_output: bool = False) -> Any:
     if not args:
         # Show current todos
         state = load_state()
-        if json_output:
-            return {"todos": state.todos.to_dict()}
+        if json_output: 
+            todos_dicts = []
+            for todo in state.todos.active:
+                todos_dicts.append({"content": todo.content, "status": todo.status,})
+            return {"todos": todos_dicts}
+
+
         lines = ["Active Todos:"]
         for todo in state.todos.active:
-            status = todo.get('status', 'pending')
-            content = todo.get('content', 'Unknown')
+            status = todo.status
+            content = todo.content
             lines.append(f"  [{status}] {content}")
         if not state.todos.active:
             lines.append("  (none)")

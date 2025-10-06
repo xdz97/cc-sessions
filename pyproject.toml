@@ -48,24 +48,14 @@ Issues = "https://github.com/GWUDCAP/cc-sessions/issues"
 [project.scripts]
 cc-sessions = "cc_sessions.install:main"
 cc-sessions-install = "cc_sessions.install:main"
-daic = "cc_sessions.daic:main"
 
 [tool.setuptools]
 packages = ["cc_sessions"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-"*" = [
-    "hooks/*.py",
-    "protocols/**/*.md",
+"cc_sessions" = [
+    "python/**/*",
     "agents/*.md",
-    "commands/sessions.md",
-    "commands/old-commands/*",
-    "templates/*.md",
-    "templates/*.py",
-    "scripts/*.py",
-    "scripts/api/*.py",
     "knowledge/**/*.md",
-    "kickstart/**/*.md",
-    "install.py",
 ]

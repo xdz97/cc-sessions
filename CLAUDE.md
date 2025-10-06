@@ -40,7 +40,8 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
-- `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
+- `cc_sessions/install.py` - Python-specific installer module (uses only python/ files)
+- `install.js` - JavaScript-specific installer at package root (uses only javascript/ files)
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
 - `cc_sessions/protocols/kickstart/` - Kickstart onboarding protocol directory with mode-specific chunks
 - `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling
@@ -66,13 +67,18 @@ The framework includes persistent task management with git branch enforcement, c
 - `pyproject.toml` - Package configuration with console script entry points
 
 ## Installation Methods
-**Python Variant:**
+**Python Variant (No Node.js required):**
 - `pipx install cc-sessions` - Isolated Python install (recommended)
 - `pip install cc-sessions` - Direct pip install
+- `uv pip install cc-sessions` - UV package manager install
+- Installer: `cc_sessions/install.py` module entry point
+- Uses only: `cc_sessions/python/`, `cc_sessions/agents/`, `cc_sessions/knowledge/`
 
-**JavaScript Variant:**
+**JavaScript Variant (No Python required):**
 - `npm install -g cc-sessions` - Global npm install
 - `npx cc-sessions` - One-time execution
+- Installer: `install.js` at package root
+- Uses only: `cc_sessions/javascript/`, `cc_sessions/agents/`, `cc_sessions/knowledge/`
 
 **Development:**
 - Direct bash: `./install.sh` from repository
@@ -354,6 +360,43 @@ Configuration in `.claude/settings.json`:
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
 ## Recent Enhancements
+
+### Installer Refactoring for Language Separation (v0.3.8+)
+
+Complete separation of Python and JavaScript installation paths eliminates cross-language dependencies:
+
+**Architecture Changes:**
+- **Separate Installers**: `install.js` (root) for npm, `cc_sessions/install.py` (module) for pip
+- **Language-Specific File Trees**: All runtime files organized under `cc_sessions/javascript/` or `cc_sessions/python/`
+- **No Cross-Language Dependencies**: npm installation works without Python runtime, pip installation works without Node.js runtime
+- **Shared Resources**: Agents and knowledge base included in both packages for identical functionality
+
+**File Organization:**
+- JavaScript variant: Uses only `cc_sessions/javascript/` (hooks, api, statusline, protocols, commands, templates)
+- Python variant: Uses only `cc_sessions/python/` (hooks, api, statusline, protocols, commands, templates)
+- Both variants: Include `cc_sessions/agents/` and `cc_sessions/knowledge/`
+
+**Package Configuration Updates:**
+- **package.json**: Files list now only includes `javascript/`, `agents/`, `knowledge/` (removed Python files)
+- **pyproject.toml**: Package-data now only includes `python/**/*` (removed JavaScript files)
+- **Dependency Cleanup**: Removed tiktoken dependency from both variants (dead code eliminated)
+
+**State Initialization Enhancement:**
+- Both installers now call `loadState()`/`load_state()` and `loadConfig()`/`load_config()` during installation
+- State files (`sessions-state.json`, `sessions-config.json`) created early rather than lazy initialization on first hook run
+- Ensures state infrastructure exists before first session starts
+
+**Installation Commands:**
+- npm/npx: `npx cc-sessions` or `npm install -g cc-sessions && cc-sessions` (Node.js only)
+- pip/pipx: `cc-sessions` command after install (Python only)
+- Both variants provide identical DAIC enforcement, task management, and protocol functionality
+
+**Benefits:**
+- Simplified installation process with no mixed-language complexity
+- Smaller package sizes (each variant only ships its language-specific files)
+- No Python availability checks in JavaScript installer
+- No Node.js dependency handling in Python installer
+- Cleaner separation of concerns for future maintenance
 
 ### Kickstart Onboarding Protocol System (v0.3.6+)
 
@@ -683,6 +726,31 @@ Code organization improvements in todo serialization eliminate duplication and e
 - **Symlinked Development Setup**: Use cc-sessions package locally without installation via symlinks
 - **Cross-platform compatibility** (macOS, Linux, Windows 10/11)
 - **Complete feature parity** between Python and JavaScript implementations
+
+### Installer Architecture (v0.3.8+)
+
+The cc-sessions package provides separate language-specific installers with no cross-language dependencies:
+
+**Language-Specific Installers:**
+- **JavaScript Installer**: `install.js` at package root - only uses `cc_sessions/javascript/` files
+- **Python Installer**: `cc_sessions/install.py` as module entry point - only uses `cc_sessions/python/` files
+- **No Cross-Language Dependencies**: Each installer operates entirely within its language ecosystem
+
+**File Structure Organization:**
+- `cc_sessions/javascript/` - JavaScript-specific files (hooks, api, statusline, protocols, commands, templates)
+- `cc_sessions/python/` - Python-specific files (hooks, api, statusline, protocols, commands, templates)
+- `cc_sessions/agents/` - Shared agent definitions (included in both packages)
+- `cc_sessions/knowledge/` - Shared knowledge base (included in both packages)
+
+**Package Configuration:**
+- **package.json**: Only includes `javascript/`, `agents/`, `knowledge/` (no Python files)
+- **pyproject.toml**: Only includes `python/**/*` via package-data (no JavaScript files)
+- **State Initialization**: Both installers call `loadState()`/`load_state()` and `loadConfig()`/`load_config()` during installation to create `sessions-state.json` and `sessions-config.json` early
+
+**Installation Commands:**
+- JavaScript: `npx cc-sessions` or `npm install -g cc-sessions && cc-sessions`
+- Python: `cc-sessions` command (after pip/pipx install)
+- Both: Require only their respective runtime (Node.js OR Python, not both)
 
 ### Language Implementation Status
 - **Python Implementation**: Complete and fully functional (reference implementation)

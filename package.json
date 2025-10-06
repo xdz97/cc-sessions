@@ -5,8 +5,7 @@
   "main": "install.js",
   "bin": {
     "cc-sessions": "install.js",
-    "cc-sessions-install": "install.js",
-    "daic": "daic.js"
+    "cc-sessions-install": "install.js"
   },
   "scripts": {
     "test": "echo \"No test specified yet\""
@@ -43,17 +42,9 @@
   "preferGlobal": true,
   "files": [
     "install.js",
-    "install.sh",
-    "cc_sessions/hooks/*.js",
-    "cc_sessions/scripts/api/*.js",
-    "cc_sessions/scripts/statusline.js",
-    "cc_sessions/commands/sessions.js.md",
-    "cc_sessions/protocols/",
+    "cc_sessions/javascript/",
     "cc_sessions/agents/",
     "cc_sessions/knowledge/",
-    "cc_sessions/templates/",
-    "cc_sessions/kickstart/",
-    "docs/",
     "README.md",
     "LICENSE"
   ]

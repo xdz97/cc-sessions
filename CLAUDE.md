@@ -40,8 +40,8 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
-- `cc_sessions/install.py` - Python-specific installer module (uses only python/ files)
-- `install.js` - JavaScript-specific installer at package root (uses only javascript/ files)
+- `cc_sessions/install.py` - Python-specific installer module with backup/restore functions: `create_backup()` creates timestamped backups, `restore_tasks()` restores task files after installation, content detection via task file counting, backup verification before proceeding
+- `install.js` - JavaScript-specific installer at package root with backup/restore functions: `createBackup()` creates timestamped backups, `restoreTasks()` restores task files after installation, content detection via recursive directory traversal, backup verification before proceeding
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
 - `cc_sessions/protocols/kickstart/` - Kickstart onboarding protocol directory with mode-specific chunks
 - `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling
@@ -83,6 +83,12 @@ The framework includes persistent task management with git branch enforcement, c
 **Development:**
 - Direct bash: `./install.sh` from repository
 - **Symlinked Development Setup**: Use cc-sessions package locally without installation via symlinks
+
+**Update/Reinstall Behavior:**
+- Both installers detect existing installations and preserve user content automatically
+- Timestamped backups created in `.claude/.backup-YYYYMMDD-HHMMSS/` before installation
+- Task files and agent customizations restored after installation completes
+- State and config files regenerate fresh (not backed up)
 
 ## Core Features
 
@@ -360,6 +366,51 @@ Configuration in `.claude/settings.json`:
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
 ## Recent Enhancements
+
+### Backup and Restore During Reinstall (v0.3.9+)
+
+Both Python and JavaScript installers now automatically preserve user content during updates and reinstalls:
+
+**Detection and Verification:**
+- Installers detect existing `sessions/` directory and check for actual user content
+- Content verification ensures only meaningful installations are backed up (not just empty directories)
+- Recursive scanning of `sessions/tasks/` directory looks for any `.md` files to determine if backup is needed
+
+**Backup Process:**
+- Creates timestamped backup directory: `.claude/.backup-YYYYMMDD-HHMMSS/`
+- Backs up all task files from `sessions/tasks/` (includes `done/`, `indexes/`, and all subdirectories)
+- Backs up agent customizations from `.claude/agents/` directory
+- Verifies backup integrity by comparing file counts before proceeding with installation
+- Aborts installation if backup verification fails to prevent data loss
+
+**Restoration Process:**
+- After installation completes, automatically restores task files to `sessions/tasks/`
+- Preserves all directory structure and subdirectories during restoration
+- Graceful error handling with fallback to manual recovery if restoration fails
+- Agent files preserved in backup for manual restoration if needed
+
+**User Experience:**
+- Clear color-coded messaging throughout backup/restore process
+- Displays backup location with relative paths for easy access
+- Provides file counts for verification (e.g., "Backed up 12 task files")
+- Fresh install vs update detection with appropriate messaging
+
+**What Gets Preserved:**
+- All task files in `sessions/tasks/` (including `done/`, `indexes/`, subdirectories)
+- Agent customizations in `.claude/agents/` (backed up for manual restoration)
+
+**What Gets Updated:**
+- All hook files (`sessions/hooks/`) - Always updated for bug fixes and new features
+- All API files (`sessions/api/`) - Always updated for command improvements
+- All protocol files (`sessions/protocols/`) - Always updated for protocol enhancements
+- All knowledge files (`sessions/knowledge/`) - Always updated for documentation
+- State and config files (`sessions-state.json`, `sessions-config.json`) - Regenerate fresh via kickstart
+
+**Implementation Details:**
+- Python: Lines 380-443 in `cc_sessions/install.py` (create_backup, restore_tasks functions)
+- JavaScript: Lines 423-524 in `install.js` (createBackup, restoreTasks functions)
+- Both implementations use identical logic with language-specific file operations
+- Backup directories remain in `.claude/` directory for safety and manual recovery
 
 ### Installer Refactoring for Language Separation (v0.3.8+)
 
@@ -751,6 +802,15 @@ The cc-sessions package provides separate language-specific installers with no c
 - JavaScript: `npx cc-sessions` or `npm install -g cc-sessions && cc-sessions`
 - Python: `cc-sessions` command (after pip/pipx install)
 - Both: Require only their respective runtime (Node.js OR Python, not both)
+
+**Backup and Restore System:**
+- **Existing Installation Detection**: Installers check for `sessions/` directory with actual user content (not just empty directories)
+- **Automatic Backup**: Creates timestamped backup directory `.claude/.backup-YYYYMMDD-HHMMSS/` before updating installation
+- **Content Verification**: Validates backup integrity by comparing file counts before proceeding with installation
+- **Selective Preservation**: Backs up `sessions/tasks/` (all subdirectories) and user-customized agents from `.claude/agents/`
+- **Automatic Restoration**: Restores task files after installation completes, with graceful error handling and fallback to manual recovery
+- **Clear User Messaging**: Displays backup location and restoration status with color-coded feedback
+- **State File Regeneration**: State and config files (`sessions-state.json`, `sessions-config.json`) intentionally regenerate fresh via kickstart onboarding
 
 ### Language Implementation Status
 - **Python Implementation**: Complete and fully functional (reference implementation)

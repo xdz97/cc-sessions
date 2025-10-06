@@ -27,16 +27,38 @@ async function main() {
   console.log(color('║         CC-SESSIONS INSTALLER (JavaScript Edition)            ║', colors.cyan));
   console.log(color('╚════════════════════════════════════════════════════════════════╝\n', colors.cyan));
 
-  // Check if already installed
+  // Check if already installed and backup if needed
   const sessionsDir = path.join(PROJECT_ROOT, 'sessions');
+  let backupDir = null;
+
   if (fs.existsSync(sessionsDir)) {
-    console.log(color('⚠️  cc-sessions appears to be already installed (sessions/ directory exists).', colors.yellow));
-    console.log(color('Update/reinstall logic will be available in a future version.', colors.yellow));
-    console.log(color('Exiting without changes.\n', colors.yellow));
-    process.exit(0);
+    // Check if there's actual content to preserve
+    const tasksDir = path.join(sessionsDir, 'tasks');
+    let hasContent = false;
+    if (fs.existsSync(tasksDir)) {
+      const checkContent = (dir) => {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory()) {
+            if (checkContent(path.join(dir, entry.name))) return true;
+          } else if (entry.name.endsWith('.md')) {
+            return true;
+          }
+        }
+        return false;
+      };
+      hasContent = checkContent(tasksDir);
+    }
+
+    if (!hasContent) {
+      console.log(color('🆕 Detected empty sessions directory, treating as fresh install', colors.cyan));
+    } else {
+      console.log(color('🔍 Detected existing cc-sessions installation', colors.cyan));
+      backupDir = createBackup(PROJECT_ROOT);
+    }
   }
 
-  console.log(color('Installing cc-sessions to: ' + PROJECT_ROOT, colors.cyan));
+  console.log(color('\n⚙️  Installing cc-sessions to: ' + PROJECT_ROOT, colors.cyan));
   console.log();
 
   try {
@@ -58,10 +80,23 @@ async function main() {
     // Initialize state and config files
     initializeStateFiles();
 
+    // Restore tasks if this was an update
+    if (backupDir) {
+      restoreTasks(PROJECT_ROOT, backupDir);
+      const relPath = path.relative(PROJECT_ROOT, backupDir);
+      console.log(color(`\n📁 Backup saved at: ${relPath}/`, colors.cyan));
+      console.log(color('   (Agents backed up for manual restoration if needed)', colors.cyan));
+    }
+
     console.log(color('\n✅ cc-sessions installed successfully!\n', colors.green));
     console.log(color('Next steps:', colors.bold));
     console.log('  1. Restart your Claude Code session (or run /clear)');
-    console.log('  2. The kickstart onboarding will guide you through setup\n');
+    if (backupDir) {
+      console.log('  2. Reconfigure settings (or use kickstart onboarding)');
+      console.log('  3. Check backup/ for any custom agents you want to restore\n');
+    } else {
+      console.log('  2. The kickstart onboarding will guide you through setup\n');
+    }
 
   } catch (error) {
     console.error(color('\n❌ Installation failed:', colors.red), error.message);
@@ -382,6 +417,109 @@ function copyDirectory(src, dest) {
     } else {
       copyFile(srcPath, destPath);
     }
+  }
+}
+
+function createBackup(projectRoot) {
+  // Create timestamped backup of tasks and agents before reinstall
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0].replace('T', '-').slice(0, 15);
+  const backupDir = path.join(projectRoot, '.claude', `.backup-${timestamp}`);
+
+  const relPath = path.relative(projectRoot, backupDir);
+  console.log(color(`\n💾 Creating backup at ${relPath}/...`, colors.cyan));
+
+  fs.mkdirSync(backupDir, { recursive: true });
+
+  // Backup all task files (includes done/, indexes/, and all task files)
+  const tasksSrc = path.join(projectRoot, 'sessions', 'tasks');
+  let taskCount = 0;
+  if (fs.existsSync(tasksSrc)) {
+    const tasksDest = path.join(backupDir, 'tasks');
+    copyDirectory(tasksSrc, tasksDest);
+
+    // Count task files for user feedback and verification
+    function countTasksInDir(dir) {
+      let count = 0;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          count += countTasksInDir(fullPath);
+        } else if (entry.name.endsWith('.md')) {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    taskCount = countTasksInDir(tasksSrc);
+    const backedUpCount = countTasksInDir(tasksDest);
+
+    if (taskCount !== backedUpCount) {
+      console.log(color(`   ✗ Backup verification failed: ${backedUpCount}/${taskCount} files backed up`, colors.red));
+      throw new Error('Backup verification failed - aborting to prevent data loss');
+    }
+
+    console.log(color(`   ✓ Backed up ${taskCount} task files`, colors.green));
+  }
+
+  // Backup all agents
+  const agentsSrc = path.join(projectRoot, '.claude', 'agents');
+  let agentCount = 0;
+  if (fs.existsSync(agentsSrc)) {
+    const agentsDest = path.join(backupDir, 'agents');
+    copyDirectory(agentsSrc, agentsDest);
+
+    const agentFiles = fs.readdirSync(agentsSrc).filter(f => f.endsWith('.md'));
+    const backedUpAgents = fs.readdirSync(agentsDest).filter(f => f.endsWith('.md'));
+    agentCount = agentFiles.length;
+
+    if (agentCount !== backedUpAgents.length) {
+      console.log(color(`   ✗ Backup verification failed: ${backedUpAgents.length}/${agentCount} agents backed up`, colors.red));
+      throw new Error('Backup verification failed - aborting to prevent data loss');
+    }
+
+    console.log(color(`   ✓ Backed up ${agentCount} agent files`, colors.green));
+  }
+
+  return backupDir;
+}
+
+function restoreTasks(projectRoot, backupDir) {
+  // Restore tasks from backup after installation
+  console.log(color('\n♻️  Restoring tasks...', colors.cyan));
+
+  try {
+    const tasksBackup = path.join(backupDir, 'tasks');
+    if (fs.existsSync(tasksBackup)) {
+      const tasksDest = path.join(projectRoot, 'sessions', 'tasks');
+      copyDirectory(tasksBackup, tasksDest);
+
+      // Count restored task files
+      function countTasksInDir(dir) {
+        let count = 0;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            count += countTasksInDir(fullPath);
+          } else if (entry.name.endsWith('.md')) {
+            count++;
+          }
+        }
+        return count;
+      }
+
+      const taskCount = countTasksInDir(tasksBackup);
+      console.log(color(`   ✓ Restored ${taskCount} task files`, colors.green));
+    }
+  } catch (e) {
+    const relPath = path.relative(projectRoot, backupDir);
+    console.log(color(`   ✗ Restore failed: ${e.message}`, colors.red));
+    console.log(color(`   Your backup is safe at: ${relPath}/`, colors.yellow));
+    console.log(color('   Manually copy files from backup/tasks/ to sessions/tasks/', colors.yellow));
+    // Don't throw - let user recover manually
   }
 }
 

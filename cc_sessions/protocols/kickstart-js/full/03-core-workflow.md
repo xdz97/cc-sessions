@@ -1,3 +1,4 @@
+SAY TO THE USER >>>
 # Core Workflow: How cc-sessions Actually Works
 
 I'm gonna walk you through the fundamental way cc-sessions operates. This'll make the difference between Claude editing your code randomly vs you staying in complete control.
@@ -22,8 +23,7 @@ Right now, you're in **discussion mode**. I can't edit any code. But if you say 
 ## Let's Try It
 
 Go ahead - use the trigger phrase **"yert"** now.
-
----
+<<<
 
 **Instructions when user says "yert":**
 
@@ -41,26 +41,26 @@ Load these todos into state using TodoWrite:
 
 ### b. If "yert" didn't work:
 
-Say: "That's unexpected - the trigger phrase system might not be fully configured yet. Let's set up your trigger phrase now."
+>>>That's unexpected - the trigger phrase system might not be fully configured yet. Let's set up your trigger phrase now.<<<
 
 ### Then (in either case):
 
-Ask: "What phrase would feel natural for you to tell me to start implementing something? Pick something distinctive that you won't accidentally say during normal conversation."
+>>>What phrase would feel natural for you to tell me to start implementing something? Pick something distinctive that you won't accidentally say during normal conversation.
 
 Good examples: "run that", "make it so", "pleasegodgonow", "dont screw this up"
-Bad examples: "let's do it", "go", "ok" (too common in normal conversation)
+Bad examples: "let's do it", "go", "ok" (too common in normal conversation)<<<
 
 [Wait for user's response, then:]
 
-Run: `python -m sessions.api config triggers add go <user's phrase>`
+Run: `node sessions/scripts/api/index.js config triggers add go <user's phrase>`
 
-Example: `python -m sessions.api config triggers add go ship it now`
+Example: `node sessions/scripts/api/index.js config triggers add go ship it now`
 
 Confirm it was added.
 
 ### Show them how to list phrases:
 
-Run: `python -m sessions.api config triggers list go`
+Run: `node sessions/scripts/api/index.js config triggers list go`
 
 Show them the output so they can see their phrase alongside any defaults.
 
@@ -80,4 +80,4 @@ Then load these todos into state using TodoWrite:
 
 ### Finally:
 
-Run: `python -m sessions.kickstart next`
+Run: `node sessions/scripts/api/index.js kickstart next`

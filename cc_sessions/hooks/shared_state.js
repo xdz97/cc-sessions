@@ -614,6 +614,7 @@ class SessionsState {
         const stashedTodos = (todosData.stashed || []).map(t => SessionsState._coerceTodo(t));
 
         // Handle flags with legacy format support
+
         const flagsData = data.flags || {};
         const context85 = flagsData.context_85 ||
                           (flagsData.context_warnings && flagsData.context_warnings['85%']) ||

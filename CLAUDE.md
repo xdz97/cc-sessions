@@ -370,7 +370,6 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 - **Mode-Specific Directories**: `kickstart/full/` (12 chunks), `kickstart/api/` (8 chunks), `kickstart/seshxpert/` (1 chunk) with variant implementations
 - **Interactive Learning**: Demonstrates concepts through practice with real commands and immediate feedback
 - **Dummy Task Integration**: Uses `h-kickstart-setup.md` template as practice task throughout onboarding
-- **Language Variants**: Uses `install_lang` metadata to determine Python or JavaScript variant for hook and command paths
 
 **Session Start Integration:**
 - Dedicated `kickstart_session_start.py|.js` hooks registered in settings.json for first-run detection
@@ -411,7 +410,6 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 - Progress tracking in `STATE.metadata.kickstart_progress` with mode, started timestamp, last_active timestamp, current_module, completed_modules array
 - Agent-specific progress tracking for customization workflow in kickstart_progress.agent_progress
 - Reminder date storage in `STATE.metadata.kickstart_reminder_date` for "later" responses with dd:hh format parsing
-- Language variant tracking in `STATE.metadata.install_lang` (py or js) for cleanup path selection
 - Graduation cleanup: Clears `noob` flag and kickstart metadata while preserving all configuration changes and agent overrides
 
 **API Commands:**
@@ -422,8 +420,8 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 
 **Self-Cleanup System:**
 - Hybrid approach: Automated deletion of kickstart protocols, hooks, and setup task files
+- Language detection: Determines Python vs JavaScript installation by checking which kickstart_session_start hook file exists (py vs js)
 - Manual cleanup instructions for router imports, COMMAND_HANDLERS entries, settings.json hooks, and API command files
-- Language-specific cleanup paths based on install_lang metadata (Python vs JavaScript variants)
 - Preserves `.claude/agents/` directory and all user customizations during cleanup
 - Switches to implementation mode automatically before file deletion to bypass DAIC enforcement
 - Returns formatted todo list for manual cleanup steps that can't be automated

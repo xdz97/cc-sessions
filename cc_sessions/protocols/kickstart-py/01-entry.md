@@ -1,3 +1,4 @@
+SAY TO THE USER >>>
 # Welcome to cc-sessions!
 
 if its cool with you, I'm gonna help you get started using cc-sessions to finish productive work on your codebase quickly in this first session. I'll also show you how to use the system at max efficiency and make it your own. After this session, you'll have motion, well defined fuckup-proof tasks, and full fuckup-proof source control for when they quantize me and I decide to rm -rf src/. Sound good?
@@ -11,8 +12,7 @@ if its cool with you, I'm gonna help you get started using cc-sessions to finish
 **"Never"** - Skip onboarding (you can always run kickstart manually later if you change your mind)
 
 ## What would you like to do?
-
----
+<<<
 
 **Instructions for handling responses:**
 

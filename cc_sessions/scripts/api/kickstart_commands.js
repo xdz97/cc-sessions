@@ -14,6 +14,8 @@ const { loadState, editState, loadConfig, PROJECT_ROOT, Mode } = require('../../
 //-#
 
 // ===== GLOBALS ===== #
+const CONFIG = loadConfig();
+const STATE = loadState();
 
 const FULL_MODE_SEQUENCE = [
     '03-core-workflow',
@@ -164,7 +166,6 @@ function formatKickstartHelp(jsonOutput) {
 
 function loadNextModule(jsonOutput = false) {
     /**Load next module chunk based on current progress.*/
-    const STATE = loadState();
     const progress = STATE.metadata?.kickstart_progress || {};
 
     if (!progress || Object.keys(progress).length === 0) {
@@ -222,8 +223,7 @@ function loadNextModule(jsonOutput = false) {
 
     // Format with config if needed
     if (protocolContent.includes('{config}')) {
-        const config = loadConfig();
-        const configDisplay = formatConfigForDisplay(config);
+        const configDisplay = formatConfigForDisplay(CONFIG);
         protocolContent = protocolContent.replace('{config}', configDisplay);
     }
 
@@ -270,8 +270,7 @@ function setKickstartMode(modeStr, jsonOutput = false) {
 
     // Format with config if needed
     if (protocolContent.includes('{config}')) {
-        const config = loadConfig();
-        const configDisplay = formatConfigForDisplay(config);
+        const configDisplay = formatConfigForDisplay(CONFIG);
         protocolContent = protocolContent.replace('{config}', configDisplay);
     }
 
@@ -333,11 +332,6 @@ function setReminder(dateStr, jsonOutput = false) {
 
 function completeKickstart(jsonOutput = false) {
     /**Exit kickstart mode, clean up files, and return cleanup instructions.*/
-    const STATE = loadState();
-
-    // Get install language (default to 'py' if not set)
-    const installLang = STATE.metadata?.install_lang || 'py';
-
     // Switch to implementation mode if in discussion mode
     if (STATE.mode === Mode.NO) {
         editState(s => {
@@ -348,13 +342,17 @@ function completeKickstart(jsonOutput = false) {
     // Delete kickstart files immediately
     const sessionsDir = path.join(PROJECT_ROOT, 'sessions');
 
-    // 1. Delete kickstart hook (language-specific)
-    const hookFile = installLang === 'py'
-        ? path.join(sessionsDir, 'hooks', 'kickstart_session_start.py')
-        : path.join(sessionsDir, 'hooks', 'kickstart_session_start.js');
+    // 1. Delete kickstart hook (check both language variants)
+    const pyHook = path.join(sessionsDir, 'hooks', 'kickstart_session_start.py');
+    const jsHook = path.join(sessionsDir, 'hooks', 'kickstart_session_start.js');
 
-    if (fs.existsSync(hookFile)) {
-        fs.unlinkSync(hookFile);
+    let isPython = true;
+    if (fs.existsSync(pyHook)) {
+        fs.unlinkSync(pyHook);
+        isPython = true;
+    } else if (fs.existsSync(jsHook)) {
+        fs.unlinkSync(jsHook);
+        isPython = false;
     }
 
     // 2. Delete kickstart protocols directory
@@ -380,9 +378,9 @@ function completeKickstart(jsonOutput = false) {
         delete s.metadata.kickstart_reminder_date;
     });
 
-    // Generate language-specific cleanup instructions
+    // Generate language-specific cleanup instructions based on which hook was found
     let instructions;
-    if (installLang === 'py') {
+    if (isPython) {
         instructions = `Kickstart complete! The noob flag has been cleared.
 
 I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
@@ -393,14 +391,14 @@ I've deleted the kickstart protocols, hook, and setup task. Now you need to comp
 □ Delete sessions/scripts/api/kickstart_commands.py
 
 After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install.`;
-    } else { // 'js'
+    } else { // JavaScript
         instructions = `Kickstart complete! The noob flag has been cleared.
 
 I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
 
 □ Remove kickstart import from sessions/scripts/api/router.js
 □ Remove 'kickstart': handleKickstartCommand from COMMAND_HANDLERS in router.js
-□ Remove kickstart SessionStart hook entry from .claude/settings.json.js
+□ Remove kickstart SessionStart hook entry from .claude/settings.json
 □ Delete sessions/scripts/api/kickstart_commands.js
 
 After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install.`;
@@ -409,7 +407,6 @@ After completing these todos, kickstart will be fully removed. These files won't
     if (jsonOutput) {
         return {
             success: true,
-            install_lang: installLang,
             instructions: instructions
         };
     }

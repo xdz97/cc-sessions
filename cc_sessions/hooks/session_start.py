@@ -69,39 +69,50 @@ def list_open_tasks_grouped() -> str:
     tasks_dir = PROJECT_ROOT / 'sessions' / 'tasks'
     indexes_dir = tasks_dir / 'indexes'
 
-    # First collect all tasks as before
-    task_files = []
-    if tasks_dir.exists():
-        task_files = sorted([f for f in tasks_dir.glob('*.md') if f.name != 'TEMPLATE.md'])
-    for task_dir in sorted([d for d in tasks_dir.iterdir() if d.is_dir() and d.name not in ['done', 'indexes']]):
-        readme_file = task_dir / 'README.md'
-        if readme_file.exists():
-            task_files.append(task_dir)
-        subtask_files = sorted([f for f in task_dir.glob('*.md') if f.name not in ['TEMPLATE.md', 'README.md']])
-        task_files.extend(subtask_files)
-
-    # Build task status map
-    task_status = {}
-    for task_file in task_files:
-        fpath = get_task_file_path(task_file)
-        if not fpath.exists():
-            continue
+    # Helper to get status from a task file
+    def get_task_status(task_path):
         try:
-            with fpath.open('r', encoding='utf-8') as f:
+            with task_path.open('r', encoding='utf-8') as f:
                 lines = f.readlines()[:10]
+            for line in lines:
+                if line.startswith('status:'):
+                    status = line.split(':')[1].strip()
+                    if status != 'complete':
+                        return status
         except (IOError, UnicodeDecodeError):
-            continue
-        task_name = f"{task_file.name}/" if is_directory_task(task_file) else task_file.name
-        status = None
-        for line in lines:
-            if line.startswith('status:'):
-                status = line.split(':')[1].strip()
-                break
-        if status:
-            task_status[task_name] = status
+            pass
+        return None
 
-    # Parse all index files
-    indexed_tasks = {}
+    # Step 1: Collect all .md files directly under tasks/ (exclude TEMPLATE.md)
+    file_tasks_map = {}  # name -> status
+    if tasks_dir.exists():
+        for file in sorted(tasks_dir.glob('*.md')):
+            if file.name != 'TEMPLATE.md':
+                status = get_task_status(file)
+                if status:
+                    file_tasks_map[file.name] = status
+
+    # Step 2: Collect all subdirectories (exclude indexes/ and done/)
+    dir_tasks_map = {}  # dirname -> {status, subtasks: []}
+    if tasks_dir.exists():
+        for task_dir in sorted([d for d in tasks_dir.iterdir() if d.is_dir() and d.name not in ['done', 'indexes']]):
+            readme_file = task_dir / 'README.md'
+            if readme_file.exists():
+                status = get_task_status(readme_file)
+                if status:
+                    dir_tasks_map[task_dir.name] = {'status': status, 'subtasks': []}
+
+                    # Collect subtasks
+                    for subtask in sorted(task_dir.glob('*.md')):
+                        if subtask.name not in ['TEMPLATE.md', 'README.md']:
+                            subtask_status = get_task_status(subtask)
+                            if subtask_status:
+                                dir_tasks_map[task_dir.name]['subtasks'].append({
+                                    'name': f"{task_dir.name}/{subtask.name}",
+                                    'status': subtask_status
+                                })
+
+    # Step 3: Parse index files
     index_info = {}
     if indexes_dir.exists():
         for index_file in sorted(indexes_dir.glob('*.md')):
@@ -115,41 +126,89 @@ def list_open_tasks_grouped() -> str:
                         'description': metadata.get('description', ''),
                         'tasks': []
                     }
+
                     # Extract task names from the lines
                     for line in task_lines:
-                        # Extract task name from format: - `task-name.md` - description
                         if '`' in line:
                             try:
                                 start = line.index('`') + 1
                                 end = line.index('`', start)
                                 task = line[start:end]
-                                if task in task_status:
-                                    indexed_tasks[task] = index_id
-                                    index_info[index_id]['tasks'].append(task)
+                                index_info[index_id]['tasks'].append(task)
                             except ValueError:
-                                # Malformed line, skip it
                                 continue
 
-    # Build output
+    # Step 4: For each index, match against file tasks
+    for index_id in index_info:
+        valid_tasks = []
+        for task in index_info[index_id]['tasks']:
+            if task in file_tasks_map:
+                valid_tasks.append({'name': task, 'status': file_tasks_map[task]})
+                del file_tasks_map[task]  # Remove from unindexed
+        index_info[index_id]['tasks'] = valid_tasks
+
+    # Step 5: For each index, match against directory tasks and expand
+    for index_id in index_info:
+        expanded_tasks = []
+        for task in index_info[index_id]['tasks']:
+            expanded_tasks.append(task)  # Keep existing file tasks
+
+        # Re-parse to get original task list for this index
+        original_tasks = []
+        if indexes_dir.exists():
+            for index_file in sorted(indexes_dir.glob('*.md')):
+                result = parse_index_file(index_file)
+                if result:
+                    metadata, task_lines = result
+                    if metadata and metadata.get('index') == index_id:
+                        for line in task_lines:
+                            if '`' in line:
+                                try:
+                                    start = line.index('`') + 1
+                                    end = line.index('`', start)
+                                    original_tasks.append(line[start:end])
+                                except ValueError:
+                                    continue
+
+        for task in original_tasks:
+            # Check if it's a directory reference (with or without trailing /)
+            dir_name = task.rstrip('/')
+            if dir_name in dir_tasks_map:
+                # Add the directory itself with / suffix
+                expanded_tasks.append({'name': f"{dir_name}/", 'status': dir_tasks_map[dir_name]['status']})
+                # Add all subtasks
+                for subtask in dir_tasks_map[dir_name]['subtasks']:
+                    expanded_tasks.append(subtask)
+                del dir_tasks_map[dir_name]  # Remove from unindexed
+
+        index_info[index_id]['tasks'] = expanded_tasks
+
+    # Step 6: Build output
     output = "No active task set. Available tasks:\n\n"
 
-    # Display tasks grouped by index
+    # Display indexed tasks
     for index_id, info in sorted(index_info.items()):
-        if info['tasks']:  # Only show indexes with tasks
+        if info['tasks']:
             output += f"## {info['name']}\n"
             if info['description']:
                 output += f"{info['description']}\n"
             for task in info['tasks']:
-                if task in task_status:
-                    output += f"  • {task} ({task_status[task]})\n"
+                output += f"  • {task['name']} ({task['status']})\n"
             output += "\n"
 
-    # Show unindexed tasks
-    unindexed = [task for task in task_status if task not in indexed_tasks]
-    if unindexed:
+    # Display unindexed tasks (remaining in file_tasks_map and dir_tasks_map)
+    unindexed_tasks = []
+    for name, status in file_tasks_map.items():
+        unindexed_tasks.append({'name': name, 'status': status})
+    for name, data in dir_tasks_map.items():
+        unindexed_tasks.append({'name': f"{name}/", 'status': data['status']})
+        for subtask in data['subtasks']:
+            unindexed_tasks.append(subtask)
+
+    if unindexed_tasks:
         output += "## Uncategorized\n"
-        for task in sorted(unindexed):
-            output += f"  • {task} ({task_status[task]})\n"
+        for task in sorted(unindexed_tasks, key=lambda x: x['name']):
+            output += f"  • {task['name']} ({task['status']})\n"
         output += "\n"
 
     # Add startup instructions

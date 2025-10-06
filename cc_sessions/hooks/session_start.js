@@ -107,16 +107,43 @@ function listOpenTasksGrouped() {
     const tasksDir = path.join(PROJECT_ROOT, 'sessions', 'tasks');
     const indexesDir = path.join(tasksDir, 'indexes');
 
-    // First collect all tasks as before
-    const taskFiles = [];
+    // Helper to get status from a task file
+    function getTaskStatus(taskPath) {
+        try {
+            const content = fs.readFileSync(taskPath, 'utf8');
+            const lines = content.split('\n').slice(0, 10);
+            for (const line of lines) {
+                if (line.startsWith('status:')) {
+                    const status = line.split(':')[1].trim();
+                    if (status !== 'complete') {
+                        return status;
+                    }
+                }
+            }
+        } catch (error) {
+            // Ignore read errors
+        }
+        return null;
+    }
+
+    // Step 1: Collect all .md files directly under tasks/ (exclude TEMPLATE.md)
+    const fileTasksMap = {}; // name -> status
     if (fs.existsSync(tasksDir)) {
         const files = fs.readdirSync(tasksDir)
             .filter(f => f.endsWith('.md') && f !== 'TEMPLATE.md')
             .sort();
-        taskFiles.push(...files);
+
+        for (const file of files) {
+            const filePath = path.join(tasksDir, file);
+            const status = getTaskStatus(filePath);
+            if (status) {
+                fileTasksMap[file] = status;
+            }
+        }
     }
 
-    // Check subdirectories
+    // Step 2: Collect all subdirectories (exclude indexes/ and done/)
+    const dirTasksMap = {}; // dirname -> {status, subtasks: []}
     if (fs.existsSync(tasksDir)) {
         const dirs = fs.readdirSync(tasksDir)
             .filter(item => {
@@ -128,52 +155,32 @@ function listOpenTasksGrouped() {
         for (const dir of dirs) {
             const readmePath = path.join(tasksDir, dir, 'README.md');
             if (fs.existsSync(readmePath)) {
-                taskFiles.push(dir);
-            }
-            const subTasks = fs.readdirSync(path.join(tasksDir, dir))
-                .filter(f => f.endsWith('.md') && !['TEMPLATE.md', 'README.md'].includes(f))
-                .sort()
-                .map(f => path.join(dir, f));
-            taskFiles.push(...subTasks);
-        }
-    }
+                const status = getTaskStatus(readmePath);
+                if (status) {
+                    dirTasksMap[dir] = { status, subtasks: [] };
 
-    // Build task status map
-    const taskStatus = {};
-    for (const taskFile of taskFiles) {
-        const fullPath = path.join(tasksDir, taskFile);
-        const fpath = getTaskFilePath(fullPath);
+                    // Collect subtasks
+                    const subtaskFiles = fs.readdirSync(path.join(tasksDir, dir))
+                        .filter(f => f.endsWith('.md') && !['TEMPLATE.md', 'README.md'].includes(f))
+                        .sort();
 
-        if (!fs.existsSync(fpath)) {
-            continue;
-        }
-
-        try {
-            const content = fs.readFileSync(fpath, 'utf8');
-            const lines = content.split('\n').slice(0, 10);
-
-            const taskName = isDirectoryTask(fullPath) ? `${taskFile}/` : taskFile;
-            let status = null;
-
-            for (const line of lines) {
-                if (line.startsWith('status:')) {
-                    status = line.split(':')[1].trim();
-                    break;
+                    for (const subtask of subtaskFiles) {
+                        const subtaskPath = path.join(tasksDir, dir, subtask);
+                        const subtaskStatus = getTaskStatus(subtaskPath);
+                        if (subtaskStatus) {
+                            dirTasksMap[dir].subtasks.push({
+                                name: `${dir}/${subtask}`,
+                                status: subtaskStatus
+                            });
+                        }
+                    }
                 }
             }
-
-            if (status) {
-                taskStatus[taskName] = status;
-            }
-        } catch (error) {
-            continue;
         }
     }
 
-    // Parse all index files
-    const indexedTasks = {};
+    // Step 3: Parse index files
     const indexInfo = {};
-
     if (fs.existsSync(indexesDir)) {
         const indexFiles = fs.readdirSync(indexesDir)
             .filter(f => f.endsWith('.md'))
@@ -193,18 +200,13 @@ function listOpenTasksGrouped() {
 
                     // Extract task names from the lines
                     for (const line of taskLines) {
-                        // Extract task name from format: - `task-name.md` - description
                         if (line.includes('`')) {
                             try {
                                 const start = line.indexOf('`') + 1;
                                 const end = line.indexOf('`', start);
-                                const task = line.substring(start, end);
-                                if (taskStatus[task]) {
-                                    indexedTasks[task] = indexId;
-                                    indexInfo[indexId].tasks.push(task);
-                                }
+                                let task = line.substring(start, end);
+                                indexInfo[indexId].tasks.push(task);
                             } catch (error) {
-                                // Malformed line, skip it
                                 continue;
                             }
                         }
@@ -214,32 +216,97 @@ function listOpenTasksGrouped() {
         }
     }
 
-    // Build output
+    // Step 4: For each index, match against file tasks
+    for (const indexId in indexInfo) {
+        const validTasks = [];
+        for (const task of indexInfo[indexId].tasks) {
+            if (task in fileTasksMap) {
+                validTasks.push({ name: task, status: fileTasksMap[task] });
+                delete fileTasksMap[task]; // Remove from unindexed
+            }
+        }
+        indexInfo[indexId].tasks = validTasks;
+    }
+
+    // Step 5: For each index, match against directory tasks and expand
+    for (const indexId in indexInfo) {
+        const expandedTasks = [];
+        for (const task of indexInfo[indexId].tasks) {
+            expandedTasks.push(task); // Keep existing file tasks
+        }
+
+        // Check the original task list again for directories
+        const originalTasks = [];
+        if (fs.existsSync(indexesDir)) {
+            for (const indexFile of fs.readdirSync(indexesDir).filter(f => f.endsWith('.md'))) {
+                const result = parseIndexFile(path.join(indexesDir, indexFile));
+                if (result) {
+                    const [metadata, taskLines] = result;
+                    if (metadata && metadata.index === indexId) {
+                        for (const line of taskLines) {
+                            if (line.includes('`')) {
+                                const start = line.indexOf('`') + 1;
+                                const end = line.indexOf('`', start);
+                                originalTasks.push(line.substring(start, end));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for (const task of originalTasks) {
+            // Check if it's a directory reference (with or without trailing /)
+            const dirName = task.endsWith('/') ? task.slice(0, -1) : task;
+            if (dirName in dirTasksMap) {
+                // Add the directory itself with / suffix
+                expandedTasks.push({ name: `${dirName}/`, status: dirTasksMap[dirName].status });
+                // Add all subtasks
+                for (const subtask of dirTasksMap[dirName].subtasks) {
+                    expandedTasks.push(subtask);
+                }
+                delete dirTasksMap[dirName]; // Remove from unindexed
+            }
+        }
+
+        indexInfo[indexId].tasks = expandedTasks;
+    }
+
+    // Step 6: Build output
     let output = "No active task set. Available tasks:\n\n";
 
-    // Display tasks grouped by index
+    // Display indexed tasks
     const sortedIndexes = Object.entries(indexInfo).sort((a, b) => a[0].localeCompare(b[0]));
     for (const [indexId, info] of sortedIndexes) {
-        if (info.tasks.length > 0) {  // Only show indexes with tasks
+        if (info.tasks.length > 0) {
             output += `## ${info.name}\n`;
             if (info.description) {
                 output += `${info.description}\n`;
             }
             for (const task of info.tasks) {
-                if (taskStatus[task]) {
-                    output += `  • ${task} (${taskStatus[task]})\n`;
-                }
+                output += `  • ${task.name} (${task.status})\n`;
             }
             output += "\n";
         }
     }
 
-    // Show unindexed tasks
-    const unindexed = Object.keys(taskStatus).filter(task => !indexedTasks[task]);
-    if (unindexed.length > 0) {
+    // Display unindexed tasks (remaining in fileTasksMap and dirTasksMap)
+    const unindexedTasks = [];
+    for (const [name, status] of Object.entries(fileTasksMap)) {
+        unindexedTasks.push({ name, status });
+    }
+    for (const [name, data] of Object.entries(dirTasksMap)) {
+        unindexedTasks.push({ name: `${name}/`, status: data.status });
+        for (const subtask of data.subtasks) {
+            unindexedTasks.push(subtask);
+        }
+    }
+
+    if (unindexedTasks.length > 0) {
         output += "## Uncategorized\n";
-        for (const task of unindexed.sort()) {
-            output += `  • ${task} (${taskStatus[task]})\n`;
+        unindexedTasks.sort((a, b) => a.name.localeCompare(b.name));
+        for (const task of unindexedTasks) {
+            output += `  • ${task.name} (${task.status})\n`;
         }
         output += "\n";
     }

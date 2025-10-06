@@ -266,9 +266,9 @@ if tool_name == "Bash" and STATE.mode is Mode.NO and not STATE.flags.bypass_mode
     if not is_bash_read_only(command):
         print("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n"
               "Note: Both Claude and the user can configure allowed commands:\n"
-              "  - View allowed: python -m sessions.api config readonly list\n"
-              "  - Add command: python -m sessions.api config readonly add <command>\n"
-              "  - Remove command: python -m sessions.api config readonly remove <command>", file=sys.stderr); sys.exit(2)  # Block with feedback
+              "  - View allowed: python -m sessions.api config read list\n"
+              "  - Add command: python -m sessions.api config read add <command>\n"
+              "  - Remove command: python -m sessions.api config read remove <command>", file=sys.stderr); sys.exit(2)  # Block with feedback
     else: sys.exit(0)
 #!<
 

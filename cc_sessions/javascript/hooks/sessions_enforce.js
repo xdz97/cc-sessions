@@ -333,9 +333,9 @@ if (toolName === "Bash" && STATE.mode === Mode.NO && !STATE.flags.bypass_mode) {
     if (!isBashReadOnly(command)) {
         console.error("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n" +
                       "Note: Both Claude and the user can configure allowed commands:\n" +
-                      "  - View allowed: python -m sessions.api config readonly list\n" +
-                      "  - Add command: python -m sessions.api config readonly add <command>\n" +
-                      "  - Remove command: python -m sessions.api config readonly remove <command>");
+                      "  - View allowed: python -m sessions.api config read list\n" +
+                      "  - Add command: python -m sessions.api config read add <command>\n" +
+                      "  - Remove command: python -m sessions.api config read remove <command>");
         process.exit(2);  // Block with feedback
     } else {
         process.exit(0);

@@ -107,7 +107,7 @@ def format_slash_help() -> str:
         "  /sessions config trigger ...    - Manage trigger phrases",
         "  /sessions config git ...        - Manage git preferences",
         "  /sessions config env ...        - Manage environment settings",
-        "  /sessions config readonly ...   - Manage readonly bash commands",
+        "  /sessions config read ...   - Manage readonly bash commands",
         "  /sessions config features ...   - Manage feature toggles", "",
         "## Quick Reference", "", "**Common Operations:**", "  /sessions tasks idx list                    # Browse available tasks",
         "  /sessions tasks start @my-task              # Start a task",

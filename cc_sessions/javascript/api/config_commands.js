@@ -88,7 +88,7 @@ function formatConfigHelp() {
         "  /sessions config read ...       - Manage bash read patterns",
         "  /sessions config write ...      - Manage bash write patterns",
         "  /sessions config tools ...      - Manage implementation-only tools",
-        "  /sessions config readonly ...   - Manage readonly bash commands",
+        "  /sessions config read ...   - Manage readonly bash commands",
         "",
         "Use '/sessions config <section> help' for section-specific help"
     ];
@@ -846,9 +846,9 @@ function handleReadonlyCommand(args, jsonOutput = false, fromSlash = false) {
      * Handle custom readonly command management.
      *
      * Usage:
-     *     config readonly list              - List all custom readonly commands
-     *     config readonly add <command>     - Add a command to readonly list
-     *     config readonly remove <command>  - Remove a command from readonly list
+     *     config read list              - List all custom readonly commands
+     *     config read add <command>     - Add a command to readonly list
+     *     config read remove <command>  - Remove a command from readonly list
      */
     if (!args || args.length === 0 || args[0] === 'list') {
         // List all readonly commands
@@ -874,7 +874,7 @@ function handleReadonlyCommand(args, jsonOutput = false, fromSlash = false) {
 
     if (action === 'add') {
         if (args.length < 2) {
-            throw new Error("Usage: config readonly add <command>");
+            throw new Error("Usage: config read add <command>");
         }
 
         const command = args[1];
@@ -895,7 +895,7 @@ function handleReadonlyCommand(args, jsonOutput = false, fromSlash = false) {
 
     } else if (action === 'remove') {
         if (args.length < 2) {
-            throw new Error("Usage: config readonly remove <command>");
+            throw new Error("Usage: config read remove <command>");
         }
 
         const command = args[1];

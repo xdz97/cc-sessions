@@ -489,7 +489,7 @@ Alright, you're convinced. **Let's unfuck your workflow.**
 
 You need:
 - **Claude Code** _(you have this or you wouldn't be here)_
-- **Python 3 + pip** _(for the hooks)_
+- **Python 3.8+ OR Node.js 16+** _(pick one - you don't need both)_
 - **Git** _(probably)_
 - **5 minutes**
 
@@ -497,23 +497,23 @@ You need:
 
 Pick your poison:
 
-**NPM/NPX** (TypeScript Andys):
+**NPM/NPX** (TypeScript/JavaScript users):
 ```bash
 cd your-broken-project
-npx cc-sessions                  # One-time install
+npx cc-sessions                  # One-time install (no Python required)
 # or
 npm install -g cc-sessions       # Global install
 cc-sessions                      # Run in your project
 ```
 
-**Pip/Pipx/UV** (Pythonistas):
+**Pip/Pipx/UV** (Python users):
 ```bash
-pipx install cc-sessions         # Isolated install (recommended)
+pipx install cc-sessions         # Isolated install (recommended, no Node.js required)
 cd your-broken-project
 cc-sessions                      # Run the installer
 # or
 pip install cc-sessions          # Regular pip
-# or  
+# or
 uv pip install cc-sessions       # UV package manager
 ```
 
@@ -523,6 +523,8 @@ git clone https://github.com/GWUDCAP/cc-sessions
 cd your-broken-project
 /path/to/cc-sessions/install.sh
 ```
+
+**Note**: Each installer only requires its respective runtime. The npm package doesn't need Python, and the pip package doesn't need Node.js. Both provide identical functionality.
 
 The installer asks you:
 - Your name (so Claude knows who it's disappointing)

@@ -123,19 +123,7 @@ function handleStateCommand(args, jsonOutput = false, fromSlash = false) {
             return "No active task";
         } else if (component === 'todos') {
             if (jsonOutput) {
-                const activeTodosDicts = [];
-                for (const todo of STATE.todos.active) {
-                    activeTodosDicts.push({ content: todo.content, status: todo.status });
-                }
-                const todos = { active: activeTodosDicts };
-                if (STATE.todos.stashed && STATE.todos.stashed.length > 0) {
-                    const stashedTodosDicts = [];
-                    for (const todo of STATE.todos.stashed) {
-                        stashedTodosDicts.push({ content: todo.content, status: todo.status });
-                    }
-                    todos.stashed = stashedTodosDicts;
-                }
-                return { todos: todos };
+                return { todos: STATE.todos.toDict() };
             }
             return formatTodosHuman(STATE.todos);
         } else if (component === 'flags') {
@@ -459,19 +447,7 @@ function handleTodosCommand(args, jsonOutput = false) {
     if (!args || args.length === 0) {
         // Show current todos
         if (jsonOutput) {
-            const activeTodosDicts = [];
-            for (const todo of STATE.todos.active) {
-                activeTodosDicts.push({ content: todo.content, status: todo.status });
-            }
-            const todos = { active: activeTodosDicts };
-            if (STATE.todos.stashed && STATE.todos.stashed.length > 0) {
-                const stashedTodosDicts = [];
-                for (const todo of STATE.todos.stashed) {
-                    stashedTodosDicts.push({ content: todo.content, status: todo.status });
-                }
-                todos.stashed = stashedTodosDicts;
-            }
-            return { todos: todos };
+            return { todos: STATE.todos.toList('active') };
         }
         const lines = ["Active Todos:"];
         if (STATE.todos.active && STATE.todos.active.length > 0) {

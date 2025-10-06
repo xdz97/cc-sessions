@@ -98,14 +98,7 @@ def handle_state_command(args: List[str], json_output: bool = False, from_slash:
             return "No active task"
         elif component == 'todos':
             if json_output:
-                active_todos_dicts = []
-                for todo in STATE.todos.active: active_todos_dicts.append({"content": todo.content, "status": todo.status})
-                todos = {"active": active_todos_dicts}
-                if STATE.todos.stashed:
-                    stashed_todos_dicts = []
-                    for todo in STATE.todos.stashed: stashed_todos_dicts.append({"content": todo.content, "status": todo.status})
-                    todos['stashed'] = stashed_todos_dicts
-                return {"todos": todos}
+                return {"todos": STATE.todos.to_dict()}
             return format_todos_human(STATE.todos)
         elif component == 'flags':
             if json_output: return {"flags": STATE.flags.__dict__}
@@ -351,10 +344,8 @@ def handle_todos_command(args: List[str], json_output: bool = False) -> Any:
     """
     if not args:
         # Show current todos
-        if json_output: 
-            todos_dicts = []
-            for todo in STATE.todos.active: todos_dicts.append({"content": todo.content, "status": todo.status,})
-            return {"todos": todos_dicts}
+        if json_output:
+            return {"todos": STATE.todos.to_list('active')}
 
 
         lines = ["Active Todos:"]

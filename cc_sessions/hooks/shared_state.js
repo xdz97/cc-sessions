@@ -543,6 +543,15 @@ class SessionsTodos {
         const todos = which === 'active' ? this.active : this.stashed;
         return todos.map(t => t.content);
     }
+
+    toDict() {
+        /**Return complete todos structure with both active and stashed.*/
+        const result = { active: this.toList('active') };
+        if (this.stashed && this.stashed.length > 0) {
+            result.stashed = this.toList('stashed');
+        }
+        return result;
+    }
 }
 
 class APIPerms {

@@ -18,7 +18,7 @@ The v0.3.5+ enhancement adds first-class support for directory-based tasks with 
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, and simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input (both Python and JavaScript implementations)
+- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, and SessionsTodos.to_dict() serialization method for complete todos structure (both Python and JavaScript implementations)
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration, dual-import pattern, and kickstart protocol detection via `STATE.flags.noob` (both Python and JavaScript implementations)
 - `cc_sessions/hooks/kickstart_session_start.py|.js` - Kickstart-only SessionStart hook that checks noob flag, handles reminder dates, loads entry/resume protocols, and short-circuits to let normal hooks run when noob=false (both Python and JavaScript implementations)
@@ -36,7 +36,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/protocols/kickstart/api/` - 8 protocol chunks for API mode (10-15 min condensed version)
 - `cc_sessions/protocols/kickstart/seshxpert/` - 1 protocol chunk for Seshxpert mode (5 min import/auto-generate)
 - `cc_sessions/templates/h-kickstart-setup.md` - Dummy task template used for onboarding practice
-- `cc_sessions/scripts/api/state_commands.py|.js` - State inspection and limited write operations (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/state_commands.py|.js` - State inspection and limited write operations, uses SessionsTodos.to_dict() for simplified todo serialization in state component access and SessionsTodos.to_list('active') for todos command (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
@@ -572,6 +572,26 @@ Recent stability enhancements in `shared_state.py` address intermittent failures
 
 These improvements maintain data integrity and atomic file operations while significantly improving system responsiveness and reliability during concurrent hook operations.
 
+### Todo Serialization Refactoring (2025-10-06)
+Code organization improvements in todo serialization eliminate duplication and establish single source of truth:
+
+**New SessionsTodos Method:**
+- **to_dict() Implementation**: Added serialization method to SessionsTodos class in shared_state.py:504-509 and shared_state.js:547-554
+- **Complete Structure Output**: Returns `{"active": [...], "stashed": [...]}` format with stashed only included if present
+- **Leverages Existing Methods**: Uses existing to_list(which) method for individual bucket serialization
+
+**API Command Refactoring:**
+- **state_commands.py Cleanup**: Replaced duplicated serialization code at lines 99-108 and 353-357 with single to_dict() call
+- **state_commands.js Cleanup**: Replaced duplicated serialization code at lines 125-138 and 461-474 with single toDict() call
+- **Differential Command Scoping**: state todos command shows complete structure via to_dict(), todos command shows only active via to_list('active')
+- **Identical Output Verification**: Tested both Python and JavaScript implementations produce byte-for-byte identical JSON output
+
+**Code Quality Benefits:**
+- Eliminates 30+ lines of duplicated serialization logic across 4 locations
+- Provides single source of truth for todos structure format
+- Simplifies future maintenance by centralizing serialization patterns
+- Maintains complete feature parity between Python and JavaScript implementations
+
 ## Key Patterns
 
 ### Hook Architecture
@@ -584,6 +604,7 @@ These improvements maintain data integrity and atomic file operations while sign
 - **Configurable Trigger Detection**: user_messages.py supports user-defined trigger phrases for all workflow transitions
 - **Protocol Auto-Loading**: `load_protocol_file()` helper eliminates manual "read this file" instructions
 - **Centralized Protocol Todo System**: `format_todos_for_protocol()` provides consistent todo formatting across all protocols
+- **Centralized Todo Serialization**: SessionsTodos.to_dict() method eliminates duplicated serialization code across API commands, providing single source of truth for todos structure
 - **Template-Based Protocol System**: Protocols auto-adapt based on configuration without conditional instructions
 - **Automatic Task Status Updates**: Task lifecycle management through state system (status, started dates)
 - **Commit Style Templating**: Dynamic commit message templates based on user preferences and branch patterns

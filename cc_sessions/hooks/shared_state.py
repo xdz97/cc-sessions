@@ -501,6 +501,13 @@ class SessionsTodos:
         todos = self.active if which == 'active' else self.stashed
         return [t.content for t in todos]
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Return complete todos structure with both active and stashed."""
+        result = {"active": self.to_list('active')}
+        if self.stashed:
+            result["stashed"] = self.to_list('stashed')
+        return result
+
 @dataclass
 class APIPerms:
     startup_load: bool = False

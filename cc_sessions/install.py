@@ -38,15 +38,22 @@ def main():
     print(color('║           CC-SESSIONS INSTALLER (Python Edition)              ║', Colors.CYAN))
     print(color('╚════════════════════════════════════════════════════════════════╝\n', Colors.CYAN))
 
-    # Check if already installed
+    # Check if already installed and backup if needed
     sessions_dir = PROJECT_ROOT / 'sessions'
-    if sessions_dir.exists():
-        print(color('⚠️  cc-sessions appears to be already installed (sessions/ directory exists).', Colors.YELLOW))
-        print(color('Update/reinstall logic will be available in a future version.', Colors.YELLOW))
-        print(color('Exiting without changes.\n', Colors.YELLOW))
-        sys.exit(0)
+    backup_dir = None
 
-    print(color(f'Installing cc-sessions to: {PROJECT_ROOT}', Colors.CYAN))
+    if sessions_dir.exists():
+        # Check if there's actual content to preserve
+        tasks_dir = sessions_dir / 'tasks'
+        has_content = tasks_dir.exists() and any(tasks_dir.rglob('*.md'))
+
+        if not has_content:
+            print(color('🆕 Detected empty sessions directory, treating as fresh install', Colors.CYAN))
+        else:
+            print(color('🔍 Detected existing cc-sessions installation', Colors.CYAN))
+            backup_dir = create_backup(PROJECT_ROOT)
+
+    print(color(f'\n⚙️  Installing cc-sessions to: {PROJECT_ROOT}', Colors.CYAN))
     print()
 
     try:
@@ -68,10 +75,20 @@ def main():
         # Initialize state and config files
         initialize_state_files(PROJECT_ROOT)
 
+        # Restore tasks if this was an update
+        if backup_dir:
+            restore_tasks(PROJECT_ROOT, backup_dir)
+            print(color(f'\n📁 Backup saved at: {backup_dir.relative_to(PROJECT_ROOT)}/', Colors.CYAN))
+            print(color('   (Agents backed up for manual restoration if needed)', Colors.CYAN))
+
         print(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN))
         print(color('Next steps:', Colors.BOLD))
         print('  1. Restart your Claude Code session (or run /clear)')
-        print('  2. The kickstart onboarding will guide you through setup\n')
+        if backup_dir:
+            print('  2. Reconfigure settings (or use kickstart onboarding)')
+            print('  3. Check backup/ for any custom agents you want to restore\n')
+        else:
+            print('  2. The kickstart onboarding will guide you through setup\n')
 
     except Exception as error:
         print(color(f'\n❌ Installation failed: {error}', Colors.RED), file=sys.stderr)
@@ -359,6 +376,70 @@ def copy_directory(src, dest):
             copy_directory(src_path, dest_path)
         else:
             copy_file(src_path, dest_path)
+
+def create_backup(project_root):
+    """Create timestamped backup of tasks and agents before reinstall."""
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    backup_dir = project_root / '.claude' / f'.backup-{timestamp}'
+
+    print(color(f'\n💾 Creating backup at {backup_dir.relative_to(project_root)}/...', Colors.CYAN))
+
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    # Backup all task files (includes done/, indexes/, and all task files)
+    tasks_src = project_root / 'sessions' / 'tasks'
+    task_count = 0
+    if tasks_src.exists():
+        tasks_dest = backup_dir / 'tasks'
+        copy_directory(tasks_src, tasks_dest)
+
+        # Count task files for user feedback and verification
+        task_count = sum(1 for f in tasks_src.rglob('*.md'))
+        backed_up_count = sum(1 for f in tasks_dest.rglob('*.md'))
+
+        if task_count != backed_up_count:
+            print(color(f'   ✗ Backup verification failed: {backed_up_count}/{task_count} files backed up', Colors.RED))
+            raise Exception('Backup verification failed - aborting to prevent data loss')
+
+        print(color(f'   ✓ Backed up {task_count} task files', Colors.GREEN))
+
+    # Backup all agents
+    agents_src = project_root / '.claude' / 'agents'
+    agent_count = 0
+    if agents_src.exists():
+        agents_dest = backup_dir / 'agents'
+        copy_directory(agents_src, agents_dest)
+
+        agent_count = len(list(agents_src.glob('*.md')))
+        backed_up_agents = len(list(agents_dest.glob('*.md')))
+
+        if agent_count != backed_up_agents:
+            print(color(f'   ✗ Backup verification failed: {backed_up_agents}/{agent_count} agents backed up', Colors.RED))
+            raise Exception('Backup verification failed - aborting to prevent data loss')
+
+        print(color(f'   ✓ Backed up {agent_count} agent files', Colors.GREEN))
+
+    return backup_dir
+
+def restore_tasks(project_root, backup_dir):
+    """Restore tasks from backup after installation."""
+    print(color('\n♻️  Restoring tasks...', Colors.CYAN))
+
+    try:
+        tasks_backup = backup_dir / 'tasks'
+        if tasks_backup.exists():
+            tasks_dest = project_root / 'sessions' / 'tasks'
+            copy_directory(tasks_backup, tasks_dest)
+
+            task_count = sum(1 for f in tasks_backup.rglob('*.md'))
+            print(color(f'   ✓ Restored {task_count} task files', Colors.GREEN))
+    except Exception as e:
+        print(color(f'   ✗ Restore failed: {e}', Colors.RED))
+        print(color(f'   Your backup is safe at: {backup_dir.relative_to(project_root)}/', Colors.YELLOW))
+        print(color('   Manually copy files from backup/tasks/ to sessions/tasks/', Colors.YELLOW))
+        # Don't raise - let user recover manually
 
 if __name__ == '__main__':
     try:

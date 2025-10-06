@@ -25,12 +25,7 @@ const {
 //-#
 
 // ===== GLOBALS ===== #
-//-#
-
-// ===== DECLARATIONS ===== #
-//-#
-
-// ===== CLASSES ===== #
+const STATE = loadState();
 //-#
 
 // ===== FUNCTIONS ===== #
@@ -55,11 +50,10 @@ function handleStateCommand(args, jsonOutput = false, fromSlash = false) {
             return formatStateHelp();
         } else if (!args || args.length === 0) {
             // Show full state when no args
-            const state = loadState();
             if (jsonOutput) {
-                return state.toDict();
+                return STATE.toDict();
             }
-            return formatStateHuman(state);
+            return formatStateHuman(STATE);
         }
     }
 
@@ -82,13 +76,12 @@ function handleStateCommand(args, jsonOutput = false, fromSlash = false) {
         return handleFlagsCommand(cleanedSectionArgs, jsonOutput);
     } else {
         // For backward compatibility, support direct component access
-        const state = loadState();
         const component = section;
 
         // Handle nested access (e.g., task.name, flags.noob)
         if (component.includes('.')) {
             const parts = component.split('.');
-            let result = state.toDict();
+            let result = STATE.toDict();
             try {
                 for (const part of parts) {
                     if (typeof result === 'object' && result !== null) {
@@ -117,32 +110,44 @@ function handleStateCommand(args, jsonOutput = false, fromSlash = false) {
         // Handle top-level components for backward compatibility
         if (component === 'mode') {
             if (jsonOutput) {
-                return { mode: state.mode.value || state.mode };
+                return { mode: STATE.mode.value || STATE.mode };
             }
-            return `Mode: ${state.mode.value || state.mode}`;
+            return `Mode: ${STATE.mode.value || STATE.mode}`;
         } else if (component === 'task') {
             if (jsonOutput) {
-                return { task: state.current_task ? state.current_task.task_state : null };
+                return { task: STATE.current_task ? STATE.current_task.taskState : null };
             }
-            if (state.current_task) {
-                return formatTaskHuman(state.current_task);
+            if (STATE.current_task) {
+                return formatTaskHuman(STATE.current_task);
             }
             return "No active task";
         } else if (component === 'todos') {
             if (jsonOutput) {
-                return { todos: state.todos.toDict() };
+                const activeTodosDicts = [];
+                for (const todo of STATE.todos.active) {
+                    activeTodosDicts.push({ content: todo.content, status: todo.status });
+                }
+                const todos = { active: activeTodosDicts };
+                if (STATE.todos.stashed && STATE.todos.stashed.length > 0) {
+                    const stashedTodosDicts = [];
+                    for (const todo of STATE.todos.stashed) {
+                        stashedTodosDicts.push({ content: todo.content, status: todo.status });
+                    }
+                    todos.stashed = stashedTodosDicts;
+                }
+                return { todos: todos };
             }
-            return formatTodosHuman(state.todos);
+            return formatTodosHuman(STATE.todos);
         } else if (component === 'flags') {
             if (jsonOutput) {
-                return { flags: state.flags.toDict() };
+                return { flags: { ...STATE.flags } };
             }
-            return formatFlagsHuman(state.flags);
+            return formatFlagsHuman(STATE.flags);
         } else if (component === 'metadata') {
             if (jsonOutput) {
-                return { metadata: state.metadata };
+                return { metadata: STATE.metadata };
             }
-            return `Metadata: ${JSON.stringify(state.metadata, null, 2)}`;
+            return `Metadata: ${JSON.stringify(STATE.metadata, null, 2)}`;
         } else {
             if (fromSlash) {
                 return `Unknown command: ${section}\n\n${formatStateHelp()}`;
@@ -295,12 +300,11 @@ function handleModeCommand(args, jsonOutput = false, fromSlash = false) {
      */
     if (!args || args.length === 0) {
         // Just show current mode and bypass status
-        const state = loadState();
         if (jsonOutput) {
-            return { mode: state.mode.value || state.mode, bypass_mode: state.flags.bypass_mode };
+            return { mode: STATE.mode.value || STATE.mode, bypass_mode: STATE.flags.bypass_mode };
         }
-        let result = `Current mode: ${state.mode.value || state.mode}`;
-        if (state.flags.bypass_mode) {
+        let result = `Current mode: ${STATE.mode.value || STATE.mode}`;
+        if (STATE.flags.bypass_mode) {
             result += "\nBypass mode: ACTIVE (behavioral constraints disabled)";
         }
         return result;
@@ -406,11 +410,10 @@ function handleFlagsCommand(args, jsonOutput = false) {
      */
     if (!args || args.length === 0) {
         // Show current flags
-        const state = loadState();
         if (jsonOutput) {
-            return { flags: state.flags.toDict() };
+            return { flags: { ...STATE.flags } };
         }
-        return formatFlagsHuman(state.flags);
+        return formatFlagsHuman(STATE.flags);
     }
 
     const action = args[0].toLowerCase();
@@ -455,13 +458,24 @@ function handleTodosCommand(args, jsonOutput = false) {
      */
     if (!args || args.length === 0) {
         // Show current todos
-        const state = loadState();
         if (jsonOutput) {
-            return { todos: state.todos.toDict() };
+            const activeTodosDicts = [];
+            for (const todo of STATE.todos.active) {
+                activeTodosDicts.push({ content: todo.content, status: todo.status });
+            }
+            const todos = { active: activeTodosDicts };
+            if (STATE.todos.stashed && STATE.todos.stashed.length > 0) {
+                const stashedTodosDicts = [];
+                for (const todo of STATE.todos.stashed) {
+                    stashedTodosDicts.push({ content: todo.content, status: todo.status });
+                }
+                todos.stashed = stashedTodosDicts;
+            }
+            return { todos: todos };
         }
         const lines = ["Active Todos:"];
-        if (state.todos.active && state.todos.active.length > 0) {
-            for (const todo of state.todos.active) {
+        if (STATE.todos.active && STATE.todos.active.length > 0) {
+            for (const todo of STATE.todos.active) {
                 const status = todo.status || 'pending';
                 const content = todo.content || 'Unknown';
                 lines.push(`  [${status}] ${content}`);
@@ -484,8 +498,7 @@ function handleTodosCommand(args, jsonOutput = false) {
 
     if (action === 'clear') {
         // Check if we have permission (only for API calls, not slash commands)
-        const state = loadState();
-        if (!isSlashCommand && !state.api.todos_clear) {
+        if (!isSlashCommand && !STATE.api.todos_clear) {
             if (jsonOutput) {
                 return { error: "Permission denied: todos clear command is not available in this context" };
             }
@@ -524,12 +537,11 @@ function handleTaskCommand(args, jsonOutput = false, fromSlash = false) {
      */
     if (!args || args.length === 0) {
         // Show current task by default
-        const state = loadState();
-        if (state.current_task) {
+        if (STATE.current_task) {
             if (jsonOutput) {
-                return { task: state.current_task.task_state };
+                return { task: STATE.current_task.task_state };
             }
-            return formatTaskHuman(state.current_task);
+            return formatTaskHuman(STATE.current_task);
         } else {
             if (jsonOutput) {
                 return { task: null };
@@ -551,12 +563,11 @@ function handleTaskCommand(args, jsonOutput = false, fromSlash = false) {
         return "Task cleared";
 
     } else if (action === 'show') {
-        const state = loadState();
-        if (state.current_task) {
+        if (STATE.current_task) {
             if (jsonOutput) {
-                return { task: state.current_task.task_state };
+                return { task: STATE.current_task.task_state };
             }
-            return formatTaskHuman(state.current_task);
+            return formatTaskHuman(STATE.current_task);
         } else {
             if (jsonOutput) {
                 return { task: null };
@@ -632,11 +643,10 @@ function handleShowCommand(args, jsonOutput = false) {
     } else if (subsection === 'flags') {
         return handleFlagsCommand([], jsonOutput);
     } else if (subsection === 'mode') {
-        const state = loadState();
         if (jsonOutput) {
-            return { mode: state.mode.value || state.mode };
+            return { mode: STATE.mode.value || STATE.mode };
         }
-        return `Mode: ${state.mode.value || state.mode}`;
+        return `Mode: ${STATE.mode.value || STATE.mode}`;
     } else {
         throw new Error(`Unknown show subsection: ${subsection}. Valid: task, todos, flags, mode`);
     }
@@ -648,11 +658,9 @@ function handleStatusCommand(args, jsonOutput = false) {
     /**
      * Handle status command - human-readable summary of current state.
      */
-    const state = loadState();
-
     if (jsonOutput) {
         // For JSON, just return the full state
-        return state.toDict();
+        return STATE.toDict();
     }
 
     // Human-readable status summary
@@ -661,25 +669,25 @@ function handleStatusCommand(args, jsonOutput = false) {
         "║      CC-Sessions Status Summary      ║",
         "╚══════════════════════════════════════╝",
         "",
-        `Mode: ${(state.mode.value || state.mode || '').toUpperCase()}`,
+        `Mode: ${(STATE.mode.value || STATE.mode || '').toUpperCase()}`,
     ];
 
-    if (state.current_task && state.current_task.name) {
-        lines.push(`Task: ${state.current_task.name} (${state.current_task.status || 'unknown'})`);
+    if (STATE.current_task && STATE.current_task.name) {
+        lines.push(`Task: ${STATE.current_task.name} (${STATE.current_task.status || 'unknown'})`);
     } else {
         lines.push("Task: None");
     }
 
-    const activeCount = state.todos.active ? state.todos.active.length : 0;
-    const completed = state.todos.active ? state.todos.active.filter(t => t.status === 'completed').length : 0;
+    const activeCount = STATE.todos.active ? STATE.todos.active.length : 0;
+    const completed = STATE.todos.active ? STATE.todos.active.filter(t => t.status === 'completed').length : 0;
     lines.push(`Todos: ${completed}/${activeCount} completed`);
 
     // Warnings
     const warnings = [];
-    if (state.flags.context_85) {
+    if (STATE.flags.context_85) {
         warnings.push("85% context usage");
     }
-    if (state.flags.context_90) {
+    if (STATE.flags.context_90) {
         warnings.push("90% context usage");
     }
     if (warnings.length > 0) {

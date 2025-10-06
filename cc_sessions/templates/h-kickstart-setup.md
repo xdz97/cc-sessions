@@ -1,5 +1,5 @@
 ---
-name: kickstart-config
+name: kickstart-setup
 branch: feature/kickstart-setup
 status: pending
 created: 2025-10-02

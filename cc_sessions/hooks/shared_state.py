@@ -333,8 +333,7 @@ class SessionsConfig:
             blocked_actions=BlockingPatterns(**d.get("blocked_actions", {})),
             features=EnabledFeatures.from_dict(d.get("features", {})))
 
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> Dict[str, Any]: return asdict(self)
 #!<
 
 #!> State components
@@ -602,20 +601,16 @@ def is_directory_task(task_path: Union[str, Path]) -> bool:
     # Normalize to string first for consistent '/' detection
     path_str = str(task_path) if isinstance(task_path, Path) else task_path
     # If the string contains a slash, it's a directory task or subtask
-    if '/' in path_str:
-        return True
+    if '/' in path_str: return True
     # Otherwise check if it's a directory with README.md
     task_path = task_path if isinstance(task_path, Path) else Path(task_path)
-    if task_path.is_dir() and (task_path / 'README.md').exists():
-        return True
+    if task_path.is_dir() and (task_path / 'README.md').exists(): return True
     return False
 
 def get_task_file_path(task_path: Union[str, Path]) -> Path:
     """Get the actual .md file path for a task (handles both directory and file tasks)."""
-    if isinstance(task_path, str):
-        task_path = Path(task_path)
-    if is_directory_task(task_path):
-        return task_path / 'README.md'
+    if isinstance(task_path, str): task_path = Path(task_path)
+    if is_directory_task(task_path): return task_path / 'README.md'
     return task_path
 
 def list_open_tasks() -> str:

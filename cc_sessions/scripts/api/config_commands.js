@@ -3,7 +3,7 @@
 // ===== IMPORTS ===== #
 
 // ===== LOCAL ===== //
-const { loadConfig, editConfig, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell } = require('../../hooks/shared_state.js');
+const { loadConfig, editConfig, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools } = require('../../hooks/shared_state.js');
 
 //-#
 
@@ -57,6 +57,12 @@ function handleConfigCommand(args, jsonOutput = false, fromSlash = false) {
         return handleEnvCommand(sectionArgs, jsonOutput, fromSlash);
     } else if (section === 'features') {
         return handleFeaturesCommand(sectionArgs, jsonOutput, fromSlash);
+    } else if (section === 'read') {
+        return handleReadCommand(sectionArgs, jsonOutput, fromSlash);
+    } else if (section === 'write') {
+        return handleWriteCommand(sectionArgs, jsonOutput, fromSlash);
+    } else if (section === 'tools') {
+        return handleToolsCommand(sectionArgs, jsonOutput, fromSlash);
     } else if (['readonly', 'perms'].includes(section)) {
         return handleReadonlyCommand(sectionArgs, jsonOutput, fromSlash);
     } else if (section === 'validate') {
@@ -65,7 +71,7 @@ function handleConfigCommand(args, jsonOutput = false, fromSlash = false) {
         if (fromSlash) {
             return `Unknown command: ${section}\n\n${formatConfigHelp()}`;
         }
-        throw new Error(`Unknown config section: ${section}. Valid sections: phrases, git, env, features, readonly, validate`);
+        throw new Error(`Unknown config section: ${section}. Valid sections: phrases, git, env, features, read, write, tools, readonly, validate`);
     }
 }
 
@@ -78,8 +84,11 @@ function formatConfigHelp() {
         "  /sessions config trigger ...    - Manage trigger phrases",
         "  /sessions config git ...        - Manage git preferences",
         "  /sessions config env ...        - Manage environment settings",
-        "  /sessions config readonly ...   - Manage readonly bash commands",
         "  /sessions config features ...   - Manage feature toggles",
+        "  /sessions config read ...       - Manage bash read patterns",
+        "  /sessions config write ...      - Manage bash write patterns",
+        "  /sessions config tools ...      - Manage implementation-only tools",
+        "  /sessions config readonly ...   - Manage readonly bash commands",
         "",
         "Use '/sessions config <section> help' for section-specific help"
     ];
@@ -411,20 +420,14 @@ function handleGitCommand(args, jsonOutput = false, fromSlash = false) {
 
     editConfig(config => {
         if (['add', 'add_pattern'].includes(key)) {
-            // Map friendly values
-            if (fromSlash) {
-                if (!['ask', 'all'].includes(value)) {
-                    throw new Error(`Invalid value '${value}' for git add\nValid options: ask (prompt for files) or all (stage everything)\n\nUse '/sessions config git help' for more info`);
-                }
-            }
-            try {
-                config.git_preferences.add_pattern = GitAddPattern.coerce(value);
-            } catch (e) {
+            // Validate value is valid
+            if (!['ask', 'all'].includes(value)) {
                 if (fromSlash) {
-                    throw new Error(`Invalid add pattern: ${value}. Valid options: ask, all`);
+                    throw new Error(`Invalid value '${value}' for git add\nValid options: ask (prompt for files) or all (stage everything)\n\nUse '/sessions config git help' for more info`);
                 }
                 throw new Error(`Invalid add pattern: ${value}. Valid options: ask, all`);
             }
+            config.git_preferences.add_pattern = value;
 
         } else if (['branch', 'default_branch'].includes(key)) {
             config.git_preferences.default_branch = value;
@@ -435,18 +438,15 @@ function handleGitCommand(args, jsonOutput = false, fromSlash = false) {
             if (fromSlash) {
                 const styleMap = { 'reg': 'conventional', 'simp': 'simple', 'op': 'detailed' };
                 style = styleMap[value] || value;
-                if (!['conventional', 'simple', 'detailed'].includes(style)) {
-                    throw new Error(`Invalid style '${value}'\nValid styles: conventional, simple, detailed\n  conventional - feat: add feature (conventional commits)\n  simple       - Add feature (simple descriptions)\n  detailed     - Add feature with extended description\n\nUse '/sessions config git help' for more info`);
-                }
             }
-            try {
-                config.git_preferences.commit_style = GitCommitStyle.coerce(style);
-            } catch (e) {
+            // Validate style is valid
+            if (!['conventional', 'simple', 'detailed'].includes(style)) {
                 if (fromSlash) {
-                    throw new Error(`Invalid commit style: ${value}. Valid options: conventional, simple, detailed`);
+                    throw new Error(`Invalid style '${value}'\nValid styles: conventional, simple, detailed\n  conventional - feat: add feature (conventional commits)\n  simple       - Add feature (simple descriptions)\n  detailed     - Add feature with extended description\n\nUse '/sessions config git help' for more info`);
                 }
                 throw new Error(`Invalid commit style: ${value}. Valid options: conventional, simple, detailed`);
             }
+            config.git_preferences.commit_style = style;
 
         } else if (['merge', 'auto_merge'].includes(key)) {
             if (fromSlash) {
@@ -627,18 +627,15 @@ function handleEnvCommand(args, jsonOutput = false, fromSlash = false) {
             if (fromSlash) {
                 const osMap = { 'mac': 'macos', 'win': 'windows' };
                 osVal = osMap[value.toLowerCase()] || value.toLowerCase();
-                if (!['linux', 'macos', 'windows'].includes(osVal)) {
-                    throw new Error(`Invalid OS '${value}'\nValid options: linux, macos, windows\n\nUse '/sessions config env help' for more info`);
-                }
             }
-            try {
-                config.environment.os = UserOS.coerce(osVal);
-            } catch (e) {
+            // Validate OS value is valid
+            if (!['linux', 'macos', 'windows'].includes(osVal)) {
                 if (fromSlash) {
-                    throw new Error(`Invalid OS: ${value}. Valid values: linux, macos, windows`);
+                    throw new Error(`Invalid OS '${value}'\nValid options: linux, macos, windows\n\nUse '/sessions config env help' for more info`);
                 }
                 throw new Error(`Invalid os: ${value}. Valid values: linux, macos, windows`);
             }
+            config.environment.os = osVal;
 
         } else if (key === 'shell') {
             // Map friendly values
@@ -646,18 +643,15 @@ function handleEnvCommand(args, jsonOutput = false, fromSlash = false) {
             if (fromSlash) {
                 const shellMap = { 'pwr': 'powershell' };
                 shellVal = shellMap[value.toLowerCase()] || value.toLowerCase();
-                if (!['bash', 'zsh', 'fish', 'powershell', 'cmd'].includes(shellVal)) {
-                    throw new Error(`Invalid shell '${value}'\nValid options: bash, zsh, fish, powershell, cmd\n\nUse '/sessions config env help' for more info`);
-                }
             }
-            try {
-                config.environment.shell = UserShell.coerce(shellVal);
-            } catch (e) {
+            // Validate shell value is valid
+            if (!['bash', 'zsh', 'fish', 'powershell', 'cmd'].includes(shellVal)) {
                 if (fromSlash) {
-                    throw new Error(`Invalid shell: ${value}. Valid values: bash, zsh, fish, powershell, cmd`);
+                    throw new Error(`Invalid shell '${value}'\nValid options: bash, zsh, fish, powershell, cmd\n\nUse '/sessions config env help' for more info`);
                 }
                 throw new Error(`Invalid shell: ${value}. Valid values: bash, zsh, fish, powershell, cmd`);
             }
+            config.environment.shell = shellVal;
 
         } else if (['developer_name', 'name'].includes(key)) {
             config.environment.developer_name = value;
@@ -922,6 +916,304 @@ function handleReadonlyCommand(args, jsonOutput = false, fromSlash = false) {
 
     } else {
         throw new Error(`Unknown readonly action: ${action}. Valid actions: list, add, remove`);
+    }
+}
+//!<
+
+//!> Bash read patterns handlers
+function handleReadCommand(args, jsonOutput = false, fromSlash = false) {
+    /**
+     * Handle bash read pattern management.
+     *
+     * Usage:
+     *     config read list              - List all bash read patterns
+     *     config read add <pattern>     - Add a pattern to read list
+     *     config read remove <pattern>  - Remove a pattern from read list
+     */
+    if (!args || args.length === 0 || args[0] === 'list') {
+        // List all read patterns
+        const config = loadConfig();
+        const patterns = config.blocked_actions.bash_read_patterns;
+
+        if (jsonOutput) {
+            return { bash_read_patterns: patterns };
+        }
+
+        if (patterns && patterns.length > 0) {
+            const lines = ["Bash Read Patterns (allowed in discussion mode):"];
+            for (const pattern of patterns) {
+                lines.push(`  - ${pattern}`);
+            }
+            return lines.join('\n');
+        } else {
+            return "No custom bash read patterns configured";
+        }
+    }
+
+    const action = args[0].toLowerCase();
+
+    if (action === 'add') {
+        if (args.length < 2) {
+            if (fromSlash) {
+                return "Missing pattern for add command\nUsage: /sessions config read add <pattern>\n\nExample: /sessions config read add 'docker ps'";
+            }
+            throw new Error("Usage: config read add <pattern>");
+        }
+
+        const pattern = args.slice(1).join(' ');
+        let added = false;
+
+        editConfig(config => {
+            if (!config.blocked_actions.bash_read_patterns.includes(pattern)) {
+                config.blocked_actions.bash_read_patterns.push(pattern);
+                added = true;
+            }
+        });
+
+        if (jsonOutput) {
+            return { added: added, pattern: pattern };
+        }
+        if (added) {
+            return `Added '${pattern}' to bash read patterns`;
+        } else {
+            return `'${pattern}' already exists in bash read patterns`;
+        }
+
+    } else if (action === 'remove') {
+        if (args.length < 2) {
+            if (fromSlash) {
+                return "Missing pattern for remove command\nUsage: /sessions config read remove <pattern>";
+            }
+            throw new Error("Usage: config read remove <pattern>");
+        }
+
+        const pattern = args.slice(1).join(' ');
+        let removed = false;
+
+        editConfig(config => {
+            const index = config.blocked_actions.bash_read_patterns.indexOf(pattern);
+            if (index !== -1) {
+                config.blocked_actions.bash_read_patterns.splice(index, 1);
+                removed = true;
+            }
+        });
+
+        if (jsonOutput) {
+            return { removed: removed, pattern: pattern };
+        }
+        if (removed) {
+            return `Removed '${pattern}' from bash read patterns`;
+        } else {
+            return `'${pattern}' not found in bash read patterns`;
+        }
+
+    } else {
+        if (fromSlash) {
+            return `Unknown read command: ${action}\n\nValid actions: list, add, remove\n\nUsage:\n  /sessions config read list\n  /sessions config read add <pattern>\n  /sessions config read remove <pattern>`;
+        }
+        throw new Error(`Unknown read action: ${action}. Valid actions: list, add, remove`);
+    }
+}
+//!<
+
+//!> Bash write patterns handlers
+function handleWriteCommand(args, jsonOutput = false, fromSlash = false) {
+    /**
+     * Handle bash write pattern management.
+     *
+     * Usage:
+     *     config write list              - List all bash write patterns
+     *     config write add <pattern>     - Add a pattern to write list
+     *     config write remove <pattern>  - Remove a pattern from write list
+     */
+    if (!args || args.length === 0 || args[0] === 'list') {
+        // List all write patterns
+        const config = loadConfig();
+        const patterns = config.blocked_actions.bash_write_patterns;
+
+        if (jsonOutput) {
+            return { bash_write_patterns: patterns };
+        }
+
+        if (patterns && patterns.length > 0) {
+            const lines = ["Bash Write Patterns (blocked in discussion mode):"];
+            for (const pattern of patterns) {
+                lines.push(`  - ${pattern}`);
+            }
+            return lines.join('\n');
+        } else {
+            return "No custom bash write patterns configured";
+        }
+    }
+
+    const action = args[0].toLowerCase();
+
+    if (action === 'add') {
+        if (args.length < 2) {
+            if (fromSlash) {
+                return "Missing pattern for add command\nUsage: /sessions config write add <pattern>\n\nExample: /sessions config write add 'rm -rf'";
+            }
+            throw new Error("Usage: config write add <pattern>");
+        }
+
+        const pattern = args.slice(1).join(' ');
+        let added = false;
+
+        editConfig(config => {
+            if (!config.blocked_actions.bash_write_patterns.includes(pattern)) {
+                config.blocked_actions.bash_write_patterns.push(pattern);
+                added = true;
+            }
+        });
+
+        if (jsonOutput) {
+            return { added: added, pattern: pattern };
+        }
+        if (added) {
+            return `Added '${pattern}' to bash write patterns`;
+        } else {
+            return `'${pattern}' already exists in bash write patterns`;
+        }
+
+    } else if (action === 'remove') {
+        if (args.length < 2) {
+            if (fromSlash) {
+                return "Missing pattern for remove command\nUsage: /sessions config write remove <pattern>";
+            }
+            throw new Error("Usage: config write remove <pattern>");
+        }
+
+        const pattern = args.slice(1).join(' ');
+        let removed = false;
+
+        editConfig(config => {
+            const index = config.blocked_actions.bash_write_patterns.indexOf(pattern);
+            if (index !== -1) {
+                config.blocked_actions.bash_write_patterns.splice(index, 1);
+                removed = true;
+            }
+        });
+
+        if (jsonOutput) {
+            return { removed: removed, pattern: pattern };
+        }
+        if (removed) {
+            return `Removed '${pattern}' from bash write patterns`;
+        } else {
+            return `'${pattern}' not found in bash write patterns`;
+        }
+
+    } else {
+        if (fromSlash) {
+            return `Unknown write command: ${action}\n\nValid actions: list, add, remove\n\nUsage:\n  /sessions config write list\n  /sessions config write add <pattern>\n  /sessions config write remove <pattern>`;
+        }
+        throw new Error(`Unknown write action: ${action}. Valid actions: list, add, remove`);
+    }
+}
+//!<
+
+//!> Implementation-only tools handlers
+function handleToolsCommand(args, jsonOutput = false, fromSlash = false) {
+    /**
+     * Handle implementation-only tools management.
+     *
+     * Usage:
+     *     config tools list                - List all blocked tools
+     *     config tools block <ToolName>    - Block a tool in discussion mode
+     *     config tools unblock <ToolName>  - Unblock a tool
+     */
+    if (!args || args.length === 0 || args[0] === 'list') {
+        // List all blocked tools
+        const config = loadConfig();
+        const tools = config.blocked_actions.implementation_only_tools;
+
+        if (jsonOutput) {
+            return { implementation_only_tools: tools };
+        }
+
+        if (tools && tools.length > 0) {
+            const lines = ["Implementation-Only Tools (blocked in discussion mode):"];
+            for (const tool of tools) {
+                lines.push(`  - ${tool}`);
+            }
+            return lines.join('\n');
+        } else {
+            return "No tools configured as implementation-only";
+        }
+    }
+
+    const action = args[0].toLowerCase();
+
+    if (action === 'block') {
+        if (args.length < 2) {
+            if (fromSlash) {
+                const validTools = Object.values(CCTools).join(', ');
+                return `Missing tool name for block command\nUsage: /sessions config tools block <ToolName>\n\nValid tools: ${validTools}`;
+            }
+            throw new Error("Usage: config tools block <ToolName>");
+        }
+
+        const toolName = args[1];
+
+        // Validate against CCTools enum
+        const validToolValues = Object.values(CCTools);
+        if (!validToolValues.includes(toolName)) {
+            if (fromSlash) {
+                return `Invalid tool name: ${toolName}\n\nValid tools: ${validToolValues.join(', ')}`;
+            }
+            throw new Error(`Invalid tool name: ${toolName}. Valid tools: ${validToolValues.join(', ')}`);
+        }
+
+        let added = false;
+        editConfig(config => {
+            if (!config.blocked_actions.implementation_only_tools.includes(toolName)) {
+                config.blocked_actions.implementation_only_tools.push(toolName);
+                added = true;
+            }
+        });
+
+        if (jsonOutput) {
+            return { blocked: added, tool: toolName };
+        }
+        if (added) {
+            return `Blocked '${toolName}' in discussion mode`;
+        } else {
+            return `'${toolName}' is already blocked in discussion mode`;
+        }
+
+    } else if (action === 'unblock') {
+        if (args.length < 2) {
+            if (fromSlash) {
+                return "Missing tool name for unblock command\nUsage: /sessions config tools unblock <ToolName>";
+            }
+            throw new Error("Usage: config tools unblock <ToolName>");
+        }
+
+        const toolName = args[1];
+        let removed = false;
+
+        editConfig(config => {
+            const index = config.blocked_actions.implementation_only_tools.indexOf(toolName);
+            if (index !== -1) {
+                config.blocked_actions.implementation_only_tools.splice(index, 1);
+                removed = true;
+            }
+        });
+
+        if (jsonOutput) {
+            return { unblocked: removed, tool: toolName };
+        }
+        if (removed) {
+            return `Unblocked '${toolName}' (now allowed in discussion mode)`;
+        } else {
+            return `'${toolName}' was not blocked`;
+        }
+
+    } else {
+        if (fromSlash) {
+            return `Unknown tools command: ${action}\n\nValid actions: list, block, unblock\n\nUsage:\n  /sessions config tools list\n  /sessions config tools block <ToolName>\n  /sessions config tools unblock <ToolName>`;
+        }
+        throw new Error(`Unknown tools action: ${action}. Valid actions: list, block, unblock`);
     }
 }
 //!<

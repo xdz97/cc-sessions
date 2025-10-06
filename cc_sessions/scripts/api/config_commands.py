@@ -16,14 +16,16 @@ from hooks.shared_state import load_config, edit_config, TriggerCategory, GitAdd
 
 #-#
 
-# ===== GLOBALS ===== #
-#-#
-
-# ===== DECLARATIONS ===== #
-#-#
-
-# ===== CLASSES ===== #
-#-#
+"""
+╔═════════════════════════════════════════════════════╗
+║     ██╗ █████╗ █████╗ ██╗  ██╗██████╗██████╗ █████╗ ║
+║    ██╔╝██╔═══╝██╔══██╗███╗ ██║██╔═══╝╚═██╔═╝██╔═══╝ ║
+║   ██╔╝ ██║    ██║  ██║████╗██║█████╗   ██║  ██║     ║
+║  ██╔╝  ██║    ██║  ██║██╔████║██╔══╝   ██║  ██║ ██╗ ║
+║ ██╔╝   ╚█████╗╚█████╔╝██║╚███║██║    ██████╗╚█████║ ║
+║ ╚═╝     ╚════╝ ╚════╝ ╚═╝ ╚══╝╚═╝    ╚═════╝ ╚════╝ ║
+╚═════════════════════════════════════════════════════╝
+"""
 
 # ===== FUNCTIONS ===== #
 
@@ -40,104 +42,79 @@ def handle_config_command(args: List[str], json_output: bool = False, from_slash
         config features <operation>     - Manage feature toggles
         config validate                 - Validate configuration
     """
-    # Handle help command specially for slash command integration
-    if not args or (args and args[0].lower() in ['help', '']):
-        if from_slash and (not args or args[0].lower() == 'help'):
-            return format_config_help()
-        elif not args:
-            # Show full config when no args
-            config = load_config()
-            if json_output:
-                return config.to_dict()
-            return format_config_human(config)
+    # Handle no args and help
+    if not args or args[0].lower() in ['help', '']:
+        # Return root level help doc for /sessions config help
+        if from_slash: return format_config_help()
+        # Show full config when no args
+        config = load_config()
+        if json_output: return config.to_dict()
+        return format_config_human(config)
 
+    # Get config subsystem command
     section = args[0].lower()
+    # Get arguments for subsystem command
     section_args = args[1:] if len(args) > 1 else []
 
     # Handle show command
     if section == 'show':
         config = load_config()
-        if json_output:
-            return config.to_dict()
+        if json_output: return config.to_dict()
         return format_config_human(config)
-    elif section in ['trigger', 'triggers', 'phrases']:
-        return handle_phrases_command(section_args, json_output, from_slash)
-    elif section == 'git':
-        return handle_git_command(section_args, json_output, from_slash)
-    elif section == 'env':
-        return handle_env_command(section_args, json_output, from_slash)
-    elif section == 'features':
-        return handle_features_command(section_args, json_output, from_slash)
-    elif section == 'read':
-        return handle_read_command(section_args, json_output, from_slash)
-    elif section == 'write':
-        return handle_write_command(section_args, json_output, from_slash)
-    elif section == 'tools':
-        return handle_tools_command(section_args, json_output, from_slash)
-    elif section == 'validate':
-        return validate_config(json_output)
+    elif section in ['trigger', 'triggers', 'phrases']: return handle_phrases_command(section_args, json_output, from_slash)
+    elif section == 'git': return handle_git_command(section_args, json_output, from_slash)
+    elif section == 'env': return handle_env_command(section_args, json_output, from_slash)
+    elif section == 'features': return handle_features_command(section_args, json_output, from_slash)
+    elif section == 'read': return handle_read_command(section_args, json_output, from_slash)
+    elif section == 'write': return handle_write_command(section_args, json_output, from_slash)
+    elif section == 'tools': return handle_tools_command(section_args, json_output, from_slash)
+    elif section == 'validate': return validate_config(json_output)
     else:
-        if from_slash:
-            return f"Unknown command: {section}\n\n{format_config_help()}"
+        if from_slash: return f"Unknown command: {section}\n\n{format_config_help()}"
         raise ValueError(f"Unknown config section: {section}. Valid sections: phrases, git, env, features, readonly, validate")
 
 def format_config_help() -> str:
     """Format help output for slash command."""
-    lines = [
-        "Sessions Configuration Commands:",
-        "",
-        "  /sessions config show           - Display current configuration",
-        "  /sessions config trigger ...    - Manage trigger phrases",
-        "  /sessions config git ...        - Manage git preferences",
-        "  /sessions config env ...        - Manage environment settings",
-        "  /sessions config features ...   - Manage feature toggles",
-        "  /sessions config read ...       - Manage bash read patterns",
-        "  /sessions config write ...      - Manage bash write patterns",
-        "  /sessions config tools ...      - Manage blocked tools",
-        "",
-        "Use '/sessions config <section> help' for section-specific help"
-    ]
+    lines = [   "Sessions Configuration Commands:", "",
+                "  /sessions config show           - Display current configuration",
+                "  /sessions config trigger ...    - Manage trigger phrases",
+                "  /sessions config git ...        - Manage git preferences",
+                "  /sessions config env ...        - Manage environment settings",
+                "  /sessions config features ...   - Manage feature toggles",
+                "  /sessions config read ...       - Manage bash read patterns",
+                "  /sessions config write ...      - Manage bash write patterns",
+                "  /sessions config tools ...      - Manage blocked tools", "",
+                "Use '/sessions config <section> help' for section-specific help"]
     return "\n".join(lines)
 
 def format_config_human(config) -> str:
     """Format full config for human reading."""
     # Helper to safely get value from enum or string
-    def get_value(field):
-        return field.value if hasattr(field, 'value') else field
+    def get_value(field): return field.value if hasattr(field, 'value') else field
 
-    lines = [
-        "=== Sessions Configuration ===",
-        "",
-        "Trigger Phrases:",
-    ]
+    lines = ["=== Sessions Configuration ===", "", "Trigger Phrases:",]
 
     for category in TriggerCategory:
         phrases = getattr(config.trigger_phrases, category.value, [])
-        if phrases:
-            lines.append(f"  {category.value}: {', '.join(phrases)}")
+        if phrases: lines.append(f"  {category.value}: {', '.join(phrases)}")
 
-    lines.extend([
-        "",
-        "Git Preferences:",
-        f"  Add Pattern: {get_value(config.git_preferences.add_pattern)}",
-        f"  Default Branch: {config.git_preferences.default_branch}",
-        f"  Commit Style: {get_value(config.git_preferences.commit_style)}",
-        f"  Auto Merge: {config.git_preferences.auto_merge}",
-        f"  Auto Push: {config.git_preferences.auto_push}",
-        f"  Has Submodules: {config.git_preferences.has_submodules}",
-        "",
-        "Environment:",
-        f"  OS: {get_value(config.environment.os)}",
-        f"  Shell: {get_value(config.environment.shell)}",
-        f"  Developer Name: {config.environment.developer_name}",
-        "",
-        "Features:",
-        f"  Branch Enforcement: {config.features.branch_enforcement}",
-        f"  Task Detection: {config.features.task_detection}",
-        f"  Auto Ultrathink: {config.features.auto_ultrathink}",
-        f"  Context Warnings (85%): {config.features.context_warnings.warn_85}",
-        f"  Context Warnings (90%): {config.features.context_warnings.warn_90}",
-    ])
+    lines.extend(["",   "Git Preferences:",
+                            f"  Add Pattern: {get_value(config.git_preferences.add_pattern)}",
+                            f"  Default Branch: {config.git_preferences.default_branch}",
+                            f"  Commit Style: {get_value(config.git_preferences.commit_style)}",
+                            f"  Auto Merge: {config.git_preferences.auto_merge}",
+                            f"  Auto Push: {config.git_preferences.auto_push}",
+                            f"  Has Submodules: {config.git_preferences.has_submodules}", "",
+                        "Environment:",
+                            f"  OS: {get_value(config.environment.os)}",
+                            f"  Shell: {get_value(config.environment.shell)}",
+                            f"  Developer Name: {config.environment.developer_name}", "",
+                        "Features:",
+                            f"  Branch Enforcement: {config.features.branch_enforcement}",
+                            f"  Task Detection: {config.features.task_detection}",
+                            f"  Auto Ultrathink: {config.features.auto_ultrathink}",
+                            f"  Context Warnings (85%): {config.features.context_warnings.warn_85}",
+                            f"  Context Warnings (90%): {config.features.context_warnings.warn_90}", ])
 
     return "\n".join(lines)
 #!<
@@ -154,29 +131,24 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
         config phrases clear <category>
     """
     if not args or (args and args[0].lower() == 'help'):
-        if from_slash:
-            return format_phrases_help()
+        if from_slash: return format_phrases_help()
         # List all phrases
         config = load_config()
         phrases = config.trigger_phrases.list_phrases()
-        if json_output:
-            return {"phrases": phrases}
+        if json_output: return {"phrases": phrases}
         return format_phrases_human(phrases)
     
     action = args[0].lower()
 
     # Map friendly category names for slash commands
     def map_category(cat: str) -> str:
-        if not from_slash:
-            return cat
-        mapping = {
-            'go': 'implementation_mode',
-            'no': 'discussion_mode',
-            'create': 'task_creation',
-            'start': 'task_startup',
-            'complete': 'task_completion',
-            'compact': 'context_compaction'
-        }
+        if not from_slash: return cat
+        mapping = { 'go': 'implementation_mode',
+                    'no': 'discussion_mode',
+                    'create': 'task_creation',
+                    'start': 'task_startup',
+                    'complete': 'task_completion',
+                    'compact': 'context_compaction'}
         return mapping.get(cat, cat)
 
     if action == 'list':
@@ -185,12 +157,8 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
             # List specific category
             category = map_category(args[1])
             phrases = config.trigger_phrases.list_phrases(category)
-        else:
-            # List all
-            phrases = config.trigger_phrases.list_phrases()
-        
-        if json_output:
-            return {"phrases": phrases}
+        else: phrases = config.trigger_phrases.list_phrases() # List all
+        if json_output: return {"phrases": phrases}
         return format_phrases_human(phrases)
     
     elif action == 'add':
@@ -216,15 +184,11 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
 
         phrase = ' '.join(args[2:])
         
-        with edit_config() as config:
-            added = config.trigger_phrases.add_phrase(category, phrase)
+        with edit_config() as config: added = config.trigger_phrases.add_phrase(category, phrase)
         
-        if json_output:
-            return {"added": added, "category": category, "phrase": phrase}
-        if added:
-            return f"Added '{phrase}' to {category}"
-        else:
-            return f"'{phrase}' already exists in {category}"
+        if json_output: return {"added": added, "category": category, "phrase": phrase}
+        if added: return f"Added '{phrase}' to {category}"
+        else: return f"'{phrase}' already exists in {category}"
     
     elif action == 'remove':
         if len(args) < 2:
@@ -249,66 +213,48 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
 
         phrase = ' '.join(args[2:])
         
-        with edit_config() as config:
-            removed = config.trigger_phrases.remove_phrase(category, phrase)
+        with edit_config() as config: removed = config.trigger_phrases.remove_phrase(category, phrase)
         
-        if json_output:
-            return {"removed": removed, "category": category, "phrase": phrase}
-        if removed:
-            return f"Removed '{phrase}' from {category}"
-        else:
-            return f"'{phrase}' not found in {category}"
+        if json_output: return {"removed": removed, "category": category, "phrase": phrase}
+        if removed: return f"Removed '{phrase}' from {category}"
+        else: return f"'{phrase}' not found in {category}"
     
     elif action == 'clear':
-        if len(args) < 2:
-            raise ValueError("Usage: config phrases clear <category>")
-        
+        if len(args) < 2: raise ValueError("Usage: config phrases clear <category>")
         category = args[1]
-        
         with edit_config() as config:
             # Clear the category by setting it to empty list
             category_enum = config.trigger_phrases._coax_phrase_type(category)
             setattr(config.trigger_phrases, category_enum.value, [])
-        
-        if json_output:
-            return {"cleared": category}
+        if json_output: return {"cleared": category}
         return f"Cleared all phrases in {category}"
     
     elif action == 'show':
         # Show specific category
-        if len(args) < 2:
-            raise ValueError("Usage: config phrases show <category>")
-        
+        if len(args) < 2: raise ValueError("Usage: config phrases show <category>")
         category = args[1]
         config = load_config()
         phrases = config.trigger_phrases.list_phrases(category)
-        
-        if json_output:
-            return {"phrases": phrases}
+        if json_output: return {"phrases": phrases}
         return format_phrases_human(phrases)
     
     else:
-        if from_slash:
-            return f"Unknown trigger command: {action}\n\n{format_phrases_help()}"
+        if from_slash: return f"Unknown trigger command: {action}\n\n{format_phrases_help()}"
         raise ValueError(f"Unknown phrases action: {action}. Valid actions: list, add, remove, clear, show")
 
 def format_phrases_help() -> str:
     """Format phrases help for slash command."""
-    lines = [
-        "Trigger Phrase Commands:",
-        "",
-        "  /sessions config trigger list [category]           - List trigger phrases",
-        "  /sessions config trigger add <category> <phrase>   - Add trigger phrase",
-        "  /sessions config trigger remove <category> <phrase> - Remove trigger phrase",
-        "",
-        "Categories:",
-        "  go       - implementation_mode triggers (yert, make it so, run that)",
-        "  no       - discussion_mode triggers (stop, silence)",
-        "  create   - task_creation triggers (mek:, mekdis)",
-        "  start    - task_startup triggers (start^, begin task:)",
-        "  complete - task_completion triggers (finito)",
-        "  compact  - context_compaction triggers (lets compact, squish)"
-    ]
+    lines = [   "Trigger Phrase Commands:", "",
+                "  /sessions config trigger list [category]           - List trigger phrases",
+                "  /sessions config trigger add <category> <phrase>   - Add trigger phrase",
+                "  /sessions config trigger remove <category> <phrase> - Remove trigger phrase", "",
+                "Categories:",
+                "  go       - implementation_mode triggers (yert, make it so, run that)",
+                "  no       - discussion_mode triggers (stop, silence)",
+                "  create   - task_creation triggers (mek:, mekdis)",
+                "  start    - task_startup triggers (start^, begin task:)",
+                "  complete - task_completion triggers (finito)",
+                "  compact  - context_compaction triggers (lets compact, squish)"]
     return "\n".join(lines)
 
 def format_phrases_human(phrases: Dict[str, List[str]]) -> str:
@@ -317,10 +263,8 @@ def format_phrases_human(phrases: Dict[str, List[str]]) -> str:
     for category, phrase_list in phrases.items():
         if phrase_list:
             lines.append(f"  {category}:")
-            for phrase in phrase_list:
-                lines.append(f"    - {phrase}")
-        else:
-            lines.append(f"  {category}: (none)")
+            for phrase in phrase_list: lines.append(f"    - {phrase}")
+        else: lines.append(f"  {category}: (none)")
     return "\n".join(lines)
 #!<
 
@@ -334,14 +278,11 @@ def handle_git_command(args: List[str], json_output: bool = False, from_slash: b
         config git set <key> <value>
     """
     if not args or args[0].lower() in ['help', '']:
-        if from_slash:
-            return format_git_help()
+        if from_slash: return format_git_help()
         # If not from slash and no args, show git preferences
-        if not args:
-            return handle_git_show(json_output)
+        if not args: return handle_git_show(json_output)
 
-    if args and args[0] == 'show':
-        return handle_git_show(json_output)
+    if args and args[0] == 'show': return handle_git_show(json_output)
 
     # Handle old 'set' command or direct subcommands
     action = args[0].lower()
@@ -350,20 +291,17 @@ def handle_git_command(args: List[str], json_output: bool = False, from_slash: b
     if action in ['add', 'branch', 'commit', 'merge', 'push', 'repo']:
         key = action
         if len(args) < 2:
-            if from_slash:
-                return format_git_missing_value(key)
+            if from_slash: return format_git_missing_value(key)
             raise ValueError(f"Missing value for git {key}")
         value = ' '.join(args[1:]) if action == 'branch' else args[1]
     elif action == 'set':
         if len(args) < 3:
-            if from_slash:
-                return "Missing key and value\nUsage: /sessions config git <setting> <value>"
+            if from_slash: return "Missing key and value\nUsage: /sessions config git <setting> <value>"
             raise ValueError("Usage: config git set <key> <value>")
         key = args[1].lower()
         value = args[2]
     else:
-        if from_slash:
-            return f"Unknown git command: {action}\n\n{format_git_help()}"
+        if from_slash: return f"Unknown git command: {action}\n\n{format_git_help()}"
         raise ValueError(f"Unknown git command: {args[0]}")
 
     with edit_config() as config:
@@ -372,15 +310,12 @@ def handle_git_command(args: List[str], json_output: bool = False, from_slash: b
             if from_slash:
                 if value not in ['ask', 'all']:
                     return f"Invalid value '{value}' for git add\nValid options: ask (prompt for files) or all (stage everything)\n\nUse '/sessions config git help' for more info"
-            try:
-                config.git_preferences.add_pattern = GitAddPattern.coerce(value)
+            try: config.git_preferences.add_pattern = GitAddPattern(value)
             except ValueError as e:
-                if from_slash:
-                    return f"Invalid add pattern: {value}. Valid options: ask, all"
+                if from_slash: return f"Invalid add pattern: {value}. Valid options: ask, all"
                 raise ValueError(f"Invalid add pattern: {value}. Valid options: ask, all")
 
-        elif key in ['branch', 'default_branch']:
-            config.git_preferences.default_branch = value
+        elif key in ['branch', 'default_branch']: config.git_preferences.default_branch = value
 
         elif key in ['commit', 'commit_style']:
             # Map friendly values
@@ -390,8 +325,7 @@ def handle_git_command(args: List[str], json_output: bool = False, from_slash: b
                 style = style_map.get(value, value)
                 if style not in ['conventional', 'simple', 'detailed']:
                     return f"Invalid style '{value}'\nValid styles: conventional, simple, detailed\n  conventional - feat: add feature (conventional commits)\n  simple       - Add feature (simple descriptions)\n  detailed     - Add feature with extended description\n\nUse '/sessions config git help' for more info"
-            try:
-                config.git_preferences.commit_style = GitCommitStyle.coerce(style)
+            try: config.git_preferences.commit_style = GitCommitStyle(style)
             except ValueError as e:
                 if from_slash:
                     return f"Invalid commit style: {value}. Valid options: conventional, simple, detailed"
@@ -399,44 +333,30 @@ def handle_git_command(args: List[str], json_output: bool = False, from_slash: b
 
         elif key in ['merge', 'auto_merge']:
             if from_slash:
-                if value == 'auto':
-                    config.git_preferences.auto_merge = True
-                elif value == 'ask':
-                    config.git_preferences.auto_merge = False
-                else:
-                    return f"Invalid value '{value}' for merge\nValid options: auto (merge automatically) or ask (prompt first)\n\nUse '/sessions config git help' for more info"
-            else:
-                config.git_preferences.auto_merge = value.lower() in ['true', 'yes', '1', 'auto']
+                if value == 'auto': config.git_preferences.auto_merge = True
+                elif value == 'ask': config.git_preferences.auto_merge = False
+                else: return f"Invalid value '{value}' for merge\nValid options: auto (merge automatically) or ask (prompt first)\n\nUse '/sessions config git help' for more info"
+            else: config.git_preferences.auto_merge = value.lower() in ['true', 'yes', '1', 'auto']
 
         elif key in ['push', 'auto_push']:
             if from_slash:
-                if value == 'auto':
-                    config.git_preferences.auto_push = True
-                elif value == 'ask':
-                    config.git_preferences.auto_push = False
-                else:
-                    return f"Invalid value '{value}' for push\nValid options: auto (push automatically) or ask (prompt first)\n\nUse '/sessions config git help' for more info"
-            else:
-                config.git_preferences.auto_push = value.lower() in ['true', 'yes', '1', 'auto']
+                if value == 'auto': config.git_preferences.auto_push = True
+                elif value == 'ask': config.git_preferences.auto_push = False
+                else: return f"Invalid value '{value}' for push\nValid options: auto (push automatically) or ask (prompt first)\n\nUse '/sessions config git help' for more info"
+            else: config.git_preferences.auto_push = value.lower() in ['true', 'yes', '1', 'auto']
 
         elif key in ['repo', 'has_submodules']:
             if from_slash:
-                if value == 'super':
-                    config.git_preferences.has_submodules = True
-                elif value == 'mono':
-                    config.git_preferences.has_submodules = False
-                else:
-                    return f"Invalid value '{value}' for repo type\nValid options: super (has submodules) or mono (single repo)\n\nUse '/sessions config git help' for more info"
-            else:
-                config.git_preferences.has_submodules = value.lower() in ['true', 'yes', '1', 'super']
+                if value == 'super': config.git_preferences.has_submodules = True
+                elif value == 'mono': config.git_preferences.has_submodules = False
+                else: return f"Invalid value '{value}' for repo type\nValid options: super (has submodules) or mono (single repo)\n\nUse '/sessions config git help' for more info"
+            else: config.git_preferences.has_submodules = value.lower() in ['true', 'yes', '1', 'super']
 
         else:
-            if from_slash:
-                return f"Unknown git setting: {key}\n\n{format_git_help()}"
+            if from_slash: return f"Unknown git setting: {key}\n\n{format_git_help()}"
             raise ValueError(f"Unknown git setting: {key}")
 
-    if json_output:
-        return {"updated": key, "value": value}
+    if json_output: return {"updated": key, "value": value}
     return f"Updated git {key} to {value}"
 
 def handle_git_show(json_output: bool = False) -> Any:
@@ -445,46 +365,37 @@ def handle_git_show(json_output: bool = False) -> Any:
     git_prefs = config.git_preferences
 
     # Helper to safely get value from enum or string
-    def get_value(field):
-        return field.value if hasattr(field, 'value') else field
+    def get_value(field): return field.value if hasattr(field, 'value') else field
 
     if json_output:
-        return {
-            "git_preferences": {
-                "add_pattern": get_value(git_prefs.add_pattern),
-                "default_branch": git_prefs.default_branch,
-                "commit_style": get_value(git_prefs.commit_style),
-                "auto_merge": git_prefs.auto_merge,
-                "auto_push": git_prefs.auto_push,
-                "has_submodules": git_prefs.has_submodules,
-            }
-        }
+        return { "git_preferences": {
+                    "add_pattern": get_value(git_prefs.add_pattern),
+                    "default_branch": git_prefs.default_branch,
+                    "commit_style": get_value(git_prefs.commit_style),
+                    "auto_merge": git_prefs.auto_merge,
+                    "auto_push": git_prefs.auto_push,
+                    "has_submodules": git_prefs.has_submodules, } }
 
-    lines = [
-        "Git Preferences:",
-        f"  Add Pattern: {get_value(git_prefs.add_pattern)}",
-        f"  Default Branch: {git_prefs.default_branch}",
-        f"  Commit Style: {get_value(git_prefs.commit_style)}",
-        f"  Auto Merge: {git_prefs.auto_merge}",
-        f"  Auto Push: {git_prefs.auto_push}",
-        f"  Has Submodules: {git_prefs.has_submodules}",
-    ]
+    lines = [   "Git Preferences:",
+                f"  Add Pattern: {get_value(git_prefs.add_pattern)}",
+                f"  Default Branch: {git_prefs.default_branch}",
+                f"  Commit Style: {get_value(git_prefs.commit_style)}",
+                f"  Auto Merge: {git_prefs.auto_merge}",
+                f"  Auto Push: {git_prefs.auto_push}",
+                f"  Has Submodules: {git_prefs.has_submodules}", ]
     return "\n".join(lines)
 
 def format_git_help() -> str:
     """Format git help for slash command."""
-    lines = [
-        "Git Preference Commands:",
-        "",
-        "  /sessions config git show                - Display git preferences",
-        "  /sessions config git add <ask|all>       - Set staging behavior",
-        "  /sessions config git branch <name>       - Set default branch",
-        "  /sessions config git commit <style>      - Set commit style",
-        "    Styles: conventional, simple, detailed",
-        "  /sessions config git merge <auto|ask>    - Set merge behavior",
-        "  /sessions config git push <auto|ask>     - Set push behavior",
-        "  /sessions config git repo <super|mono>   - Set repository type"
-    ]
+    lines = [   "Git Preference Commands:", "",
+                "  /sessions config git show                - Display git preferences",
+                "  /sessions config git add <ask|all>       - Set staging behavior",
+                "  /sessions config git branch <name>       - Set default branch",
+                "  /sessions config git commit <style>      - Set commit style",
+            "    Styles: conventional, simple, detailed",
+                "  /sessions config git merge <auto|ask>    - Set merge behavior",
+                "  /sessions config git push <auto|ask>     - Set push behavior",
+                "  /sessions config git repo <super|mono>   - Set repository type" ]
     return "\n".join(lines)
 
 def format_git_missing_value(key: str) -> str:
@@ -552,7 +463,7 @@ def handle_env_command(args: List[str], json_output: bool = False, from_slash: b
                 if os_val not in ['linux', 'macos', 'windows']:
                     return f"Invalid OS '{value}'\nValid options: linux, macos, windows\n\nUse '/sessions config env help' for more info"
             try:
-                config.environment.os = UserOS.coerce(os_val)
+                config.environment.os = UserOS(os_val)
             except ValueError:
                 if from_slash:
                     return f"Invalid OS: {value}. Valid values: linux, macos, windows"
@@ -567,7 +478,7 @@ def handle_env_command(args: List[str], json_output: bool = False, from_slash: b
                 if shell_val not in ['bash', 'zsh', 'fish', 'powershell', 'cmd']:
                     return f"Invalid shell '{value}'\nValid options: bash, zsh, fish, powershell, cmd\n\nUse '/sessions config env help' for more info"
             try:
-                config.environment.shell = UserShell.coerce(shell_val)
+                config.environment.shell = UserShell(shell_val)
             except ValueError:
                 if from_slash:
                     return f"Invalid shell: {value}. Valid values: bash, zsh, fish, powershell, cmd"

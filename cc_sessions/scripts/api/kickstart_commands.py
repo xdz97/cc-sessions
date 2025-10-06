@@ -51,7 +51,23 @@ SESHXPERT_SEQUENCE = [
     '05-graduation'
 ]
 
+CONFIG = load_config()
+STATE = load_state()
+
 #-#
+
+"""
+╔═══════════════════════════════════════════════════════════════════════════╗
+║     ██╗██╗  ██╗██████╗ █████╗██╗  ██╗██████╗██████╗ █████╗ █████╗ ██████╗ ║
+║    ██╔╝██║ ██╔╝╚═██╔═╝██╔═══╝██║ ██╔╝██╔═══╝╚═██╔═╝██╔══██╗██╔═██╗╚═██╔═╝ ║
+║   ██╔╝ █████╔╝   ██║  ██║    █████╔╝ ██████╗  ██║  ███████║█████╔╝  ██║   ║
+║  ██╔╝  ██╔═██╗   ██║  ██║    ██╔═██╗ ╚═══██║  ██║  ██╔══██║██╔═██╗  ██║   ║
+║ ██╔╝   ██║  ██╗██████╗╚█████╗██║  ██╗██████║  ██║  ██║  ██║██║ ██║  ██║   ║
+║ ╚═╝    ╚═╝  ╚═╝╚═════╝ ╚════╝╚═╝  ╚═╝╚═════╝  ╚═╝  ╚═╝  ╚═╝╚═╝ ╚═╝  ╚═╝   ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+Kickstart API handlers
+"""
+
 
 # ===== FUNCTIONS ===== #
 
@@ -158,7 +174,6 @@ def format_kickstart_help(json_output: bool) -> Any:
 
 def load_next_module(json_output: bool = False) -> Any:
     """Load next module chunk based on current progress."""
-    STATE = load_state()
     progress = STATE.metadata.get('kickstart_progress', {})
 
     if not progress:
@@ -199,14 +214,14 @@ def load_next_module(json_output: bool = False) -> Any:
             s.metadata['kickstart_progress']['completed_modules'] = []
         s.metadata['kickstart_progress']['completed_modules'].append(current)
         s.metadata['kickstart_progress']['last_active'] = datetime.now().isoformat()
+        STATE = s
 
     # Load protocol content
     protocol_content = load_protocol_file(f'kickstart/{mode}/{next_module}.md')
 
     # Format with config if needed
     if '{config}' in protocol_content:
-        config = load_config()
-        config_display = format_config_for_display(config)
+        config_display = format_config_for_display(CONFIG)
         protocol_content = protocol_content.format(config=config_display)
 
     if json_output:
@@ -248,8 +263,7 @@ def set_kickstart_mode(mode_str: str, json_output: bool = False) -> Any:
 
     # Format with config if needed
     if '{config}' in protocol_content:
-        config = load_config()
-        config_display = format_config_for_display(config)
+        config_display = format_config_for_display(CONFIG)
         protocol_content = protocol_content.format(config=config_display)
 
     if json_output:
@@ -294,11 +308,6 @@ def set_reminder(date_str: str, json_output: bool = False) -> Any:
 
 def complete_kickstart(json_output: bool = False) -> Any:
     """Exit kickstart mode, clean up files, and return cleanup instructions."""
-    STATE = load_state()
-
-    # Get install language (default to 'py' if not set)
-    install_lang = STATE.metadata.get('install_lang', 'py')
-
     # Switch to implementation mode if in discussion mode
     if STATE.mode == Mode.NO:
         with edit_state() as s:
@@ -307,14 +316,18 @@ def complete_kickstart(json_output: bool = False) -> Any:
     # Delete kickstart files immediately
     sessions_dir = PROJECT_ROOT / 'sessions'
 
-    # 1. Delete kickstart hook (language-specific)
-    if install_lang == 'py':
-        hook_file = sessions_dir / 'hooks' / 'kickstart_session_start.py'
-    else:  # 'js'
-        hook_file = sessions_dir / 'hooks' / 'kickstart_session_start.js'
+    # 1. Delete kickstart hook (check both language variants)
+    py_hook = sessions_dir / 'hooks' / 'kickstart_session_start.py'
+    js_hook = sessions_dir / 'hooks' / 'kickstart_session_start.js'
 
-    if hook_file.exists():
-        hook_file.unlink()
+    if py_hook.exists():
+        py_hook.unlink()
+        is_python = True
+    elif js_hook.exists():
+        js_hook.unlink()
+        is_python = False
+    else:
+        is_python = True  # default fallback
 
     # 2. Delete kickstart protocols directory
     protocols_dir = sessions_dir / 'protocols' / 'kickstart'
@@ -335,8 +348,8 @@ def complete_kickstart(json_output: bool = False) -> Any:
         s.metadata.pop('kickstart_progress', None)
         s.metadata.pop('kickstart_reminder_date', None)
 
-    # Generate language-specific cleanup instructions
-    if install_lang == 'py':
+    # Generate language-specific cleanup instructions based on which hook was found
+    if is_python:
         instructions = """Kickstart complete! The noob flag has been cleared.
 
 I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
@@ -347,14 +360,14 @@ I've deleted the kickstart protocols, hook, and setup task. Now you need to comp
 □ Delete sessions/scripts/api/kickstart_commands.py
 
 After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install."""
-    else:  # 'js'
+    else:  # JavaScript
         instructions = """Kickstart complete! The noob flag has been cleared.
 
 I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
 
 □ Remove kickstart import from sessions/scripts/api/router.js
 □ Remove 'kickstart': handleKickstartCommand from COMMAND_HANDLERS in router.js
-□ Remove kickstart SessionStart hook entry from .claude/settings.json.js
+□ Remove kickstart SessionStart hook entry from .claude/settings.json
 □ Delete sessions/scripts/api/kickstart_commands.js
 
 After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install."""
@@ -362,7 +375,6 @@ After completing these todos, kickstart will be fully removed. These files won't
     if json_output:
         return {
             "success": True,
-            "install_lang": install_lang,
             "instructions": instructions
         }
 

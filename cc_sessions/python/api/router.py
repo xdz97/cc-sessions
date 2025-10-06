@@ -15,6 +15,7 @@ from api.kickstart_commands import handle_kickstart_command
 from api.protocol_commands import handle_protocol_command
 from api.config_commands import handle_config_command
 from api.task_commands import handle_task_command
+from api.uninstall_commands import handle_uninstall_command
 ##-##
 
 #-#
@@ -32,6 +33,7 @@ COMMAND_HANDLERS = {
     'todos': handle_todos_command,
     'tasks': handle_task_command,
     'kickstart': handle_kickstart_command,
+    'uninstall': handle_uninstall_command,
 }
 
 #-#
@@ -74,17 +76,18 @@ def route_command(command: str, args: List[str], json_output: bool = False, from
         subsystem_args = args[1:] if len(args) > 1 else []
 
         # Route to appropriate subsystem
-        if subsystem in ['tasks', 'state', 'config']: return route_command(subsystem, subsystem_args, 
+        if subsystem in ['tasks', 'state', 'config', 'uninstall']: return route_command(subsystem, subsystem_args,
                                                                            json_output=json_output, from_slash=True)
+        elif subsystem == 'bypass': return route_command('mode', ['bypass'], json_output=json_output, from_slash=True)
         elif subsystem == 'help': return format_slash_help()
         else:
-            return f"Unknown subsystem: {subsystem}\n\nValid subsystems: tasks, state, config\n\nUse '/sessions help' for full usage information."
+            return f"Unknown subsystem: {subsystem}\n\nValid subsystems: tasks, state, config, uninstall, bypass\n\nUse '/sessions help' for full usage information."
 
     if command not in COMMAND_HANDLERS: raise ValueError(f"Unknown command: {command}. Available commands: {', '.join(COMMAND_HANDLERS.keys())}")
     handler = COMMAND_HANDLERS[command]
 
     # Pass from_slash to commands that support it
-    if command in ['config', 'state', 'tasks']: return handler(args, json_output=json_output, from_slash=from_slash)
+    if command in ['config', 'state', 'tasks', 'uninstall']: return handler(args, json_output=json_output, from_slash=from_slash)
     else:
         # For commands that don't support from_slash, add it to args for backward compatibility
         if from_slash and '--from-slash' not in args: args = args + ['--from-slash']
@@ -109,6 +112,9 @@ def format_slash_help() -> str:
         "  /sessions config env ...        - Manage environment settings",
         "  /sessions config read ...   - Manage readonly bash commands",
         "  /sessions config features ...   - Manage feature toggles", "",
+        "### Uninstall", "  /sessions uninstall             - Safely remove cc-sessions framework",
+        "  /sessions uninstall --dry-run   - Preview what would be removed", "",
+        "### Quick Shortcuts", "  /sessions bypass                - Disable bypass mode (return to normal)", "",
         "## Quick Reference", "", "**Common Operations:**", "  /sessions tasks idx list                    # Browse available tasks",
         "  /sessions tasks start @my-task              # Start a task",
         "  /sessions state show task                   # Check current task",

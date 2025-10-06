@@ -18,6 +18,7 @@ const { handleConfigCommand } = require('./config_commands.js');
 const { handleProtocolCommand } = require('./protocol_commands.js');
 const { handleTaskCommand } = require('./task_commands.js');
 const { handleKickstartCommand } = require('./kickstart_commands.js');
+const { handleUninstallCommand } = require('./uninstall_commands.js');
 //--//
 
 //-#
@@ -35,6 +36,7 @@ const COMMAND_HANDLERS = {
     'todos': handleTodosCommand,
     'tasks': handleTaskCommand,
     'kickstart': handleKickstartCommand,
+    'uninstall': handleUninstallCommand,
 };
 
 //-#
@@ -74,12 +76,14 @@ function routeCommand(command, args, jsonOutput = false, fromSlash = false) {
         const subsystemArgs = args.length > 1 ? args.slice(1) : [];
 
         // Route to appropriate subsystem
-        if (['tasks', 'state', 'config'].includes(subsystem)) {
+        if (['tasks', 'state', 'config', 'uninstall'].includes(subsystem)) {
             return routeCommand(subsystem, subsystemArgs, jsonOutput, true);
+        } else if (subsystem === 'bypass') {
+            return routeCommand('mode', ['bypass'], jsonOutput, true);
         } else if (subsystem === 'help') {
             return formatSlashHelp();
         } else {
-            return `Unknown subsystem: ${subsystem}\n\nValid subsystems: tasks, state, config\n\nUse '/sessions help' for full usage information.`;
+            return `Unknown subsystem: ${subsystem}\n\nValid subsystems: tasks, state, config, uninstall, bypass\n\nUse '/sessions help' for full usage information.`;
         }
     }
 
@@ -90,7 +94,7 @@ function routeCommand(command, args, jsonOutput = false, fromSlash = false) {
     const handler = COMMAND_HANDLERS[command];
 
     // Pass fromSlash to commands that support it
-    if (['config', 'state', 'tasks'].includes(command)) {
+    if (['config', 'state', 'tasks', 'uninstall'].includes(command)) {
         return handler(args, jsonOutput, fromSlash);
     } else {
         // For commands that don't support fromSlash, add it to args for backward compatibility
@@ -130,6 +134,13 @@ function formatSlashHelp() {
         "  /sessions config env ...        - Manage environment settings",
         "  /sessions config read ...   - Manage readonly bash commands",
         "  /sessions config features ...   - Manage feature toggles",
+        "",
+        "### Uninstall",
+        "  /sessions uninstall             - Safely remove cc-sessions framework",
+        "  /sessions uninstall --dry-run   - Preview what would be removed",
+        "",
+        "### Quick Shortcuts",
+        "  /sessions bypass                - Disable bypass mode (return to normal)",
         "",
         "## Quick Reference",
         "",

@@ -78,6 +78,6 @@ Then follow their choice (yes/no for running the agent).
 
 **After task creation protocol completes:**
 
-Run: `node sessions/scripts/api/index.js kickstart next`
+Run: `sessions kickstart next`
 
 This will move to the next module.

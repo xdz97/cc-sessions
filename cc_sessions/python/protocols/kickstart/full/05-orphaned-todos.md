@@ -57,7 +57,7 @@ The cc-sessions statusline shows:
 
 ### If they want the cc-sessions statusline:
 
-`python -m sessions.api state flags
+`sessions state flags
 
 Update their `.claude/settings.json`:
 
@@ -84,6 +84,6 @@ If no:
 
 ---
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will load the next module.

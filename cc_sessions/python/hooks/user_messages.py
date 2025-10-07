@@ -424,7 +424,7 @@ if not is_api_command and task_start_detected:
     # Check if task will be auto-loaded
     context += "[Task Startup Notice]\n**If the user mentioned which task to start, *YOU MUST***:\n"
     context += "1. Return to project root directory\n"
-    context += "2. Run: `python -m sessions.api protocol startup-load <task-file>`\n"
+    context += "2. Run: `sessions protocol startup-load <task-file>`\n"
     context += "You must do this *BEFORE* the task startup protocol.\n"
     context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n"
 

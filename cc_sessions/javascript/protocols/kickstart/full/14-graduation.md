@@ -74,7 +74,7 @@ When they're ready:
 
 Let me finalize your kickstart completion.
 
-Run: `node sessions/scripts/api/index.js kickstart complete`
+Run: `sessions kickstart complete`
 
 [Wait for command to run]
 

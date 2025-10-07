@@ -117,6 +117,6 @@ For each agent they choose:
 
 **If they're good with defaults:**
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will move to the next module.

@@ -27,7 +27,7 @@ Continue to manual config.
 
 ## Current Configuration
 
-Run: `python -m sessions.api config`
+Run: `sessions config`
 
 [Show full config]
 
@@ -41,31 +41,31 @@ Run: `python -m sessions.api config`
 
 ```bash
 # Trigger Phrases
-python -m sessions.api config triggers add <category> "<phrase>"
-python -m sessions.api config triggers remove <category> "<phrase>"
+sessions config triggers add <category> "<phrase>"
+sessions config triggers remove <category> "<phrase>"
 # Categories: go, no, create, start, complete, compact
 
 # Git Preferences
-python -m sessions.api config git set <setting> <value>
+sessions config git set <setting> <value>
 # Settings: default_branch, commit_style, auto_merge, auto_push, has_submodules
 
 # Environment Settings
-python -m sessions.api config env set <setting> <value>
+sessions config env set <setting> <value>
 # Settings: os, shell, developer_name
 
 # Feature Toggles
-python -m sessions.api config features toggle <key>
+sessions config features toggle <key>
 # Keys: branch_enforcement, task_detection, auto_ultrathink, context_warnings, extrasafe
 
 # Tool Blocking
-python -m sessions.api config tools block <ToolName>
-python -m sessions.api config tools unblock <ToolName>
+sessions config tools block <ToolName>
+sessions config tools unblock <ToolName>
 
 # Bash Patterns
-python -m sessions.api config read add "<pattern>"
-python -m sessions.api config read remove "<pattern>"
-python -m sessions.api config write add "<pattern>"
-python -m sessions.api config write remove "<pattern>"
+sessions config read add "<pattern>"
+sessions config read remove "<pattern>"
+sessions config write add "<pattern>"
+sessions config write remove "<pattern>"
 ```
 
 Work through their requested changes.
@@ -95,6 +95,6 @@ Brief tech stack discussion, update `.claude/agents/[agent-name].md`
 
 ## Complete
 
-Run: `python -m sessions.kickstart complete`
+Run: `sessions kickstart complete`
 
 You're ready. Run `/clear` and start working.

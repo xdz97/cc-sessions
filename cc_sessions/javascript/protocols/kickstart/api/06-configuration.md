@@ -139,4 +139,4 @@ Run: `/sessions config`
 
 ---
 
-Run: `node sessions/scripts/api/index.js kickstart next`
+Run: `sessions kickstart next`

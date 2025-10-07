@@ -144,7 +144,7 @@ if (STATE.mode === Mode.GO && toolName === "TodoWrite" && STATE.todos.allComplet
         });
         mod = true;
         if (numRestored > 0) {
-            console.error(`Your previous ${numRestored} todos have been restored:\n\n${JSON.stringify(restored, null, 2)}\n\nIf these todos are no longer relevant, you should clear them using: python -m sessions.api todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n`);
+            console.error(`Your previous ${numRestored} todos have been restored:\n\n${JSON.stringify(restored, null, 2)}\n\nIf these todos are no longer relevant, you should clear them using: sessions todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n`);
         }
     } else {
         editState(s => {
@@ -219,7 +219,7 @@ if (["Edit", "Write", "MultiEdit"].includes(toolName) && STATE.current_task.name
 if (STATE.api.todos_clear && toolName === "Bash") {
     // Check if this is the todos clear command
     const command = toolInput.command || '';
-    if (!command.includes('python -m sessions.api todos clear')) {
+    if (!command.includes('sessions todos clear')) {
         // Not the todos clear command, disable the permission
         editState(s => {
             s.api.todos_clear = false;

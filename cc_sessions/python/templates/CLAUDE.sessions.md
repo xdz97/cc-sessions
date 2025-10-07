@@ -48,28 +48,28 @@ You can use these commands via the Bash tool for session management:
 
 **State Management:**
 ```bash
-python -m sessions.api state              # Show full state information
-python -m sessions.api state task         # Show current task details
-python -m sessions.api state todos        # Show active and stashed todos
-python -m sessions.api state flags        # Show session flags
-python -m sessions.api status             # Human-readable status summary
-python -m sessions.api mode discussion    # Return to discussion mode (one-way safety)
-python -m sessions.api flags clear        # Clear all session flags
+sessions state              # Show full state information
+sessions state task         # Show current task details
+sessions state todos        # Show active and stashed todos
+sessions state flags        # Show session flags
+sessions status             # Human-readable status summary
+sessions mode discussion    # Return to discussion mode (one-way safety)
+sessions flags clear        # Clear all session flags
 ```
 
 **Configuration Management:**
 ```bash
-python -m sessions.api config                                      # Show current configuration
-python -m sessions.api config phrases list <category>              # List trigger phrases
-python -m sessions.api config phrases add <category> "<phrase>"    # Add trigger phrase
-python -m sessions.api config phrases remove <category> "<phrase>" # Remove trigger phrase
-python -m sessions.api config git show                             # Show git preferences
-python -m sessions.api config env show                             # Show environment settings
+sessions config                                      # Show current configuration
+sessions config phrases list <category>              # List trigger phrases
+sessions config phrases add <category> "<phrase>"    # Add trigger phrase
+sessions config phrases remove <category> "<phrase>" # Remove trigger phrase
+sessions config git show                             # Show git preferences
+sessions config env show                             # Show environment settings
 ```
 
 **Protocol Loading:**
 ```bash
-python -m sessions.api protocol startup-load <task-file>  # Load task and display content
+sessions protocol startup-load <task-file>  # Load task and display content
 ```
 
 Note: These commands respect DAIC mode restrictions. Some operations may be blocked in discussion mode.

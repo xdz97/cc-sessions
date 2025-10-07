@@ -78,6 +78,6 @@ Then follow their choice (yes/no for running the agent).
 
 **After task creation protocol completes:**
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will move to the next module.

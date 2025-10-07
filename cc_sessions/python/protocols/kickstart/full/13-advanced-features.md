@@ -13,7 +13,7 @@ Sometimes you need to temporarily disable DAIC enforcement. Like when you're pai
 /sessions state mode bypass
 ```
 
-Or directly: `python -m sessions.api state mode bypass`
+Or directly: `sessions state mode bypass`
 
 In bypass mode:
 - I can use Edit/Write tools in discussion mode without waiting for approval
@@ -179,6 +179,6 @@ If they have questions, answer them. When ready to continue:
 
 Ready to wrap up kickstart?
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will move to graduation.

@@ -74,7 +74,7 @@ When they're ready:
 
 Let me finalize your kickstart completion.
 
-Run: `python -m sessions.kickstart complete`
+Run: `sessions kickstart complete`
 
 [Wait for command to run]
 

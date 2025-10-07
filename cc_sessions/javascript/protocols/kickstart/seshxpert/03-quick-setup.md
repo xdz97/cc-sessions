@@ -27,7 +27,7 @@ Continue to manual config.
 
 ## Current Configuration
 
-Run: `node sessions/scripts/api/index.js config`
+Run: `sessions config`
 
 [Show full config]
 
@@ -41,31 +41,31 @@ Run: `node sessions/scripts/api/index.js config`
 
 ```bash
 # Trigger Phrases
-node sessions/scripts/api/index.js config triggers add <category> "<phrase>"
-node sessions/scripts/api/index.js config triggers remove <category> "<phrase>"
+sessions config triggers add <category> "<phrase>"
+sessions config triggers remove <category> "<phrase>"
 # Categories: go, no, create, start, complete, compact
 
 # Git Preferences
-node sessions/scripts/api/index.js config git set <setting> <value>
+sessions config git set <setting> <value>
 # Settings: default_branch, commit_style, auto_merge, auto_push, has_submodules
 
 # Environment Settings
-node sessions/scripts/api/index.js config env set <setting> <value>
+sessions config env set <setting> <value>
 # Settings: os, shell, developer_name
 
 # Feature Toggles
-node sessions/scripts/api/index.js config features toggle <key>
+sessions config features toggle <key>
 # Keys: branch_enforcement, task_detection, auto_ultrathink, context_warnings, extrasafe
 
 # Tool Blocking
-node sessions/scripts/api/index.js config tools block <ToolName>
-node sessions/scripts/api/index.js config tools unblock <ToolName>
+sessions config tools block <ToolName>
+sessions config tools unblock <ToolName>
 
 # Bash Patterns
-node sessions/scripts/api/index.js config read add "<pattern>"
-node sessions/scripts/api/index.js config read remove "<pattern>"
-node sessions/scripts/api/index.js config write add "<pattern>"
-node sessions/scripts/api/index.js config write remove "<pattern>"
+sessions config read add "<pattern>"
+sessions config read remove "<pattern>"
+sessions config write add "<pattern>"
+sessions config write remove "<pattern>"
 ```
 
 Work through their requested changes.
@@ -95,6 +95,6 @@ Brief tech stack discussion, update `.claude/agents/[agent-name].md`
 
 ## Complete
 
-Run: `node sessions/scripts/api/index.js kickstart complete`
+Run: `sessions kickstart complete`
 
 You're ready. Run `/clear` and start working.

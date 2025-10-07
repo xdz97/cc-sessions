@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-sessions"
-version = "0.2.7"
+version = "0.2.9"
 description = "Claude Code Sessions Framework - Enforced methodology for AI pair programming"
 readme = "README.md"
 license = {text = "MIT"}
@@ -48,6 +48,7 @@ Issues = "https://github.com/GWUDCAP/cc-sessions/issues"
 [project.scripts]
 cc-sessions = "cc_sessions.install:main"
 cc-sessions-install = "cc_sessions.install:main"
+sessions = "cc_sessions.python.api.__main__:main"
 
 [tool.setuptools]
 packages = ["cc_sessions"]

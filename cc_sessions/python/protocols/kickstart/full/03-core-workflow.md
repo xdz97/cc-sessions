@@ -52,15 +52,15 @@ Bad examples: "let's do it", "go", "ok" (too common in normal conversation)<<<
 
 [Wait for user's response, then:]
 
-Run: `python -m sessions.api config triggers add go <user's phrase>`
+Run: `sessions config triggers add go <user's phrase>`
 
-Example: `python -m sessions.api config triggers add go ship it now`
+Example: `sessions config triggers add go ship it now`
 
 Confirm it was added.
 
 ### Show them how to list phrases:
 
-Run: `python -m sessions.api config triggers list go`
+Run: `sessions config triggers list go`
 
 Show them the output so they can see their phrase alongside any defaults.
 
@@ -80,4 +80,4 @@ Then load these todos into state using TodoWrite:
 
 ### Finally:
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`

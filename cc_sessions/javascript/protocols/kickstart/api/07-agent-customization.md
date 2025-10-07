@@ -102,4 +102,4 @@ Ask: "Want to customize the other agents (logging, context-refinement, service-d
 [Wait for response]
 
 If yes: Briefly customize each one they choose
-If no: Run `node sessions/scripts/api/index.js kickstart next`
+If no: Run `sessions kickstart next`

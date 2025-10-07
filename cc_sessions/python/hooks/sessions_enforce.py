@@ -275,16 +275,16 @@ if is_ci_environment():
 # For Bash commands, check if it's a read-only operation
 if tool_name == "Bash" and STATE.mode is Mode.NO and not STATE.flags.bypass_mode:
     # Special case: Allow sessions.api commands in discussion mode
-    if command and ('python -m sessions.api' in command or 'python -m cc_sessions.scripts.api' in command):
+    if command and ('sessions ' in command or 'python -m cc_sessions.scripts.api' in command):
         # API commands are allowed in discussion mode for state inspection and safe config operations
         sys.exit(0)
 
     if not is_bash_read_only(command):
         print("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n"
               "Note: Both Claude and the user can configure allowed commands:\n"
-              "  - View allowed: python -m sessions.api config read list\n"
-              "  - Add command: python -m sessions.api config read add <command>\n"
-              "  - Remove command: python -m sessions.api config read remove <command>", file=sys.stderr); sys.exit(2)  # Block with feedback
+              "  - View allowed: sessions config read list\n"
+              "  - Add command: sessions config read add <command>\n"
+              "  - Remove command: sessions config read remove <command>", file=sys.stderr); sys.exit(2)  # Block with feedback
     else: sys.exit(0)
 #!<
 

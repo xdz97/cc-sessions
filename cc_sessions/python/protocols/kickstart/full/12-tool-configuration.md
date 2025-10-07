@@ -26,7 +26,7 @@ For each tool they mention, add it using:
 
 Example: `/sessions config tools block Task`
 
-If the user wants to add Bash, strongly advise against it. If they insist, skip the next section and call `python -m sessions.kickstart next`
+If the user wants to add Bash, strongly advise against it. If they insist, skip the next section and call `sessions kickstart next`
 
 ---
 
@@ -133,6 +133,6 @@ To toggle extrasafe:
 /sessions config features toggle extrasafe
 ```
 
-Then, run: `python -m sessions.kickstart next`
+Then, run: `sessions kickstart next`
 
 This will move to the next module.

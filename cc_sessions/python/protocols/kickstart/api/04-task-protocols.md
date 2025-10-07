@@ -71,10 +71,10 @@ Run: `/sessions config triggers add complete <your phrase>`
 
 ### Confirm Configuration
 
-Run: `python -m sessions.api config triggers list`
+Run: `sessions config triggers list`
 
 Shows all your configured phrases.
 
 ---
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`

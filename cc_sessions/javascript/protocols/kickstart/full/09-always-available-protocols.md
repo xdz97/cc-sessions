@@ -74,6 +74,6 @@ You'll enter the context compaction protocol. Follow it completely:
 
 Right before you announce "Ready to continue with fresh context window":
 
-Update the kickstart setup task file to include "Run `node sessions/scripts/api/index.js kickstart next` **immediately** after starting the new context window"
+Update the kickstart setup task file to include "Run `sessions kickstart next` **immediately** after starting the new context window"
 
 Then announce ready to clear and tell the user "Run the /clear default slash command, then say "lets continue" after we clear and we'll pick right back up.

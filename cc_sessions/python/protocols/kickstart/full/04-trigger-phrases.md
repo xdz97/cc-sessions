@@ -40,8 +40,8 @@ Mark the "Have user add the stop phrase using /sessions slash command" todo as c
 Then show them all their trigger phrases by running:
 
 ```
-python -m sessions.api config triggers list go
-python -m sessions.api config triggers list no
+sessions config triggers list go
+sessions config triggers list no
 ```
 
 Display both lists so they can see their implementation and discussion triggers together.
@@ -64,6 +64,6 @@ If it didn't work, say that's unexpected, show them how to check their configura
 
 **Once user puts you in discussion mode:**
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will load the next module.

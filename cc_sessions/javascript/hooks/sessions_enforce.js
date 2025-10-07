@@ -343,7 +343,7 @@ if (isCIEnvironment()) {
 // For Bash commands, check if it's a read-only operation
 if (toolName === "Bash" && STATE.mode === Mode.NO && !STATE.flags.bypass_mode) {
     // Special case: Allow sessions.api commands in discussion mode
-    if (command && (command.includes('python -m sessions.api') || command.includes('python -m cc_sessions.scripts.api'))) {
+    if (command && (command.includes('sessions ') || command.includes('python -m cc_sessions.scripts.api'))) {
         // API commands are allowed in discussion mode for state inspection and safe config operations
         process.exit(0);
     }
@@ -351,9 +351,9 @@ if (toolName === "Bash" && STATE.mode === Mode.NO && !STATE.flags.bypass_mode) {
     if (!isBashReadOnly(command)) {
         console.error("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n" +
                       "Note: Both Claude and the user can configure allowed commands:\n" +
-                      "  - View allowed: python -m sessions.api config read list\n" +
-                      "  - Add command: python -m sessions.api config read add <command>\n" +
-                      "  - Remove command: python -m sessions.api config read remove <command>");
+                      "  - View allowed: sessions config read list\n" +
+                      "  - Add command: sessions config read add <command>\n" +
+                      "  - Remove command: sessions config read remove <command>");
         process.exit(2);  // Block with feedback
     } else {
         process.exit(0);

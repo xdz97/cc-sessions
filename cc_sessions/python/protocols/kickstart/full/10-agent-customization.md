@@ -71,6 +71,6 @@ After gathering pattern info:
 
 **After context-gathering customization:**
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will move to code-review customization.

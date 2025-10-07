@@ -71,6 +71,6 @@ After gathering pattern info:
 
 **After context-gathering customization:**
 
-Run: `node sessions/scripts/api/index.js kickstart next`
+Run: `sessions kickstart next`
 
 This will move to code-review customization.

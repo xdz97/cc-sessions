@@ -73,7 +73,7 @@ Before archiving the task:
 
 After updating indexes:
 ```bash
-# Update task file status to 'completed'
+# Update task file 'status' to 'completed' (do not add any fields)
 # Move to done/ directory
 mv sessions/tasks/[priority]-[task-name].md sessions/tasks/done/
 # or for directories:

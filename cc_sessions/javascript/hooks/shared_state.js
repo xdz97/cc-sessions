@@ -715,7 +715,7 @@ function atomicWrite(filePath, obj) {
 
     const tempFile = `${filePath}.tmp.${process.pid}`;
     try {
-        fs.writeFileSync(tempFile, JSON.stringify(obj, null, 2));
+        fs.writeFileSync(tempFile, JSON.stringify(obj, null, 2), 'utf-8');
         // Force flush to disk
         const fd = fs.openSync(tempFile, 'r+');
         fs.fsyncSync(fd);
@@ -787,7 +787,7 @@ function acquireLock(timeout = 1.0, pollMs = 50, staleTimeout = 30.0) {
                 timestamp: Date.now() / 1000,
                 host: os.hostname()
             };
-            fs.writeFileSync(lockInfoFile, JSON.stringify(lockInfo));
+            fs.writeFileSync(lockInfoFile, JSON.stringify(lockInfo), 'utf-8');
             return true;
         } catch {
             if ((Date.now() / 1000) - start > timeout) {
@@ -804,7 +804,7 @@ function acquireLock(timeout = 1.0, pollMs = 50, staleTimeout = 30.0) {
                         timestamp: Date.now() / 1000,
                         host: os.hostname()
                     };
-                    fs.writeFileSync(lockInfoFile, JSON.stringify(lockInfo));
+                    fs.writeFileSync(lockInfoFile, JSON.stringify(lockInfo), 'utf-8');
                     return true;
                 } catch {
                     // Someone else grabbed it in the meantime

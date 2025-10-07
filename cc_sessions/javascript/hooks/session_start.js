@@ -374,7 +374,7 @@ async function main() {
                     lines[i] = 'status: in-progress';
                     taskUpdated = true;
                     // Write back the updated content
-                    fs.writeFileSync(taskFile, lines.join('\n'));
+                    fs.writeFileSync(taskFile, lines.join('\n'), 'utf-8');
                     taskContent = lines.join('\n');
                     break;
                 }

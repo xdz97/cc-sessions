@@ -30,7 +30,7 @@ transcript_path = input_data.get("transcript_path", "")
 if not transcript_path: sys.exit(0)
 
 # Get the transcript into memory
-with open(transcript_path, 'r') as f: transcript = [json.loads(line) for line in f]
+with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f: transcript = [json.loads(line) for line in f]
 transcript = deque(transcript)
 #-#
 

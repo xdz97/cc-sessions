@@ -90,7 +90,7 @@ transcript_path = data.get('transcript_path', None)
 
 if transcript_path:
     try:
-        with open(transcript_path, 'r') as f: lines = f.readlines()
+        with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f: lines = f.readlines()
         most_recent_usage = None
         most_recent_timestamp = None
 

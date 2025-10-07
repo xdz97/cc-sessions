@@ -18,8 +18,8 @@ The v0.3.5+ enhancement adds first-class support for directory-based tasks with 
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, SessionsTodos.to_dict() serialization method for complete todos structure, and UTF-8 encoding enforcement for all file operations (both Python and JavaScript implementations)
-- `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation (both Python and JavaScript implementations)
+- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, SessionsTodos.to_dict() serialization method for complete todos structure, EnabledFeatures.branch_enforcement configuration field (lines 299-314 Python, similar in JavaScript), and UTF-8 encoding enforcement for all file operations (both Python and JavaScript implementations)
+- `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation with CONFIG.features.branch_enforcement guard (lines 351-352 Python, line 444 JavaScript) enabling alternative VCS support (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration, dual-import pattern, and kickstart protocol detection via `STATE.flags.noob` (both Python and JavaScript implementations)
 - `cc_sessions/hooks/kickstart_session_start.py|.js` - Kickstart-only SessionStart hook that checks noob flag, handles reminder dates, loads entry/resume protocols, and short-circuits to let normal hooks run when noob=false (both Python and JavaScript implementations)
 - `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, improved task startup notices, and UTF-8 encoding fixes for protocol file loading and transcript reading (both Python and JavaScript implementations)
@@ -128,6 +128,7 @@ The framework includes persistent task management with git branch enforcement, c
 - Task-to-branch mapping: implement- → feature/, fix- → fix/, etc.
 - Blocks code edits if current branch doesn't match task requirements
 - Four failure modes: wrong branch, no branch, task missing, branch missing
+- **Configurable Toggle**: Users can disable branch enforcement via `CONFIG.features.branch_enforcement` for alternative VCS systems (Jujutsu, Mercurial, etc.)
 
 ### Context Preservation
 - Automatic context compaction at 75%/90% token usage
@@ -296,7 +297,7 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 - `has_submodules` - Repository has submodules (drives protocol templating)
 
 **Feature Toggles (`features`):**
-- `branch_enforcement` - Git branch validation
+- `branch_enforcement` - Git branch validation (default: true, can be disabled for alternative VCS systems like Jujutsu or Mercurial)
 - `task_detection` - Task-based workflow automation
 - `auto_ultrathink` - Enhanced AI reasoning
 - `context_warnings` - Token usage warnings at 85%/90%
@@ -388,6 +389,49 @@ Configuration in `.claude/settings.json`:
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
 ## Recent Enhancements
+
+### Branch Enforcement Configuration Toggle (v0.3.11+)
+
+Enhanced branch enforcement system with user-configurable toggle to support alternative version control systems beyond Git:
+
+**Problem Solved:**
+Users working with alternative VCS systems (Jujutsu, Mercurial, Fossil, etc.) experienced friction with Git-specific branch enforcement. The system assumed Git branches and would block operations when branch expectations didn't match, requiring manual workarounds like emptying task branch fields.
+
+**Implementation:**
+- Added `CONFIG.features.branch_enforcement` toggle with default value of `true` (preserves existing Git workflow safety)
+- Both Python and JavaScript enforcement hooks check feature flag before validating branches
+- Early exit with code 0 (allow) when branch_enforcement is disabled at shared_state.py:351-352 and shared_state.js:444
+- Configuration API provides `features toggle branch_enforcement` command for simple boolean flipping
+- Feature documented in kickstart onboarding protocols for discoverability
+
+**User Control:**
+- Toggle via Sessions API: `python -m sessions.api config features toggle branch_enforcement`
+- Toggle via slash command: `/sessions config features toggle branch_enforcement`
+- View current state: `python -m sessions.api config features show`
+- Compatible with configuration import/export during kickstart seshxpert mode
+
+**Integration Points:**
+- Enforcement hooks: `sessions_enforce.py:351-352` (Python), `sessions_enforce.js:444` (JavaScript)
+- Configuration system: `shared_state.py:299-314` (EnabledFeatures dataclass with branch_enforcement field)
+- API commands: `config_commands.py:619-631` (toggle operation), `config_commands.js` (JavaScript parity)
+- Kickstart protocols: `kickstart/api/06-configuration.md:57` and `kickstart/seshxpert/03-quick-setup.md:57` document toggle availability
+
+**Design Rationale:**
+- Opt-out rather than opt-in preserves Git workflow safety for majority of users
+- Simple boolean toggle avoids complex VCS abstraction layer
+- Configuration-based approach enables per-repository customization
+- Complete feature parity between Python and JavaScript implementations
+- Hooks continue to respect all other DAIC enforcement patterns when branch_enforcement is disabled
+
+**Use Cases:**
+- Jujutsu (JJ) users who prefer working without traditional branches
+- Mercurial repositories with different branch semantics
+- Fossil or other distributed VCS systems
+- Experimentation with alternative Git workflows
+- Teams using trunk-based development without feature branches
+
+**Related GitHub Issue:**
+- Issue #43: "What is the most elegant way to stop the branch checking when working" - Closed with this implementation
 
 ### CI Environment Detection for GitHub Actions (v0.3.10+)
 
@@ -758,6 +802,7 @@ Code organization improvements in todo serialization eliminate duplication and e
 ### Hook Architecture
 - **Unified State Management**: SessionsState class manages all runtime state in single JSON file with atomic operations
 - **Configuration-Driven Enforcement**: SessionsConfig system provides type-safe user customization of all behavioral patterns
+- **Branch Enforcement Toggle**: CONFIG.features.branch_enforcement enables users to disable Git branch validation for alternative VCS systems (Jujutsu, Mercurial, etc.) while preserving all other DAIC enforcement patterns
 - **CI Environment Detection**: All 12 hooks (6 Python + 6 JavaScript) automatically detect CI environments and bypass DAIC enforcement via `is_ci_environment()` function checking `GITHUB_ACTIONS`, `GITHUB_WORKFLOW`, `CI`, and `CONTINUOUS_INTEGRATION` environment variables, enabling Claude Code agents in GitHub Actions to complete automated tasks without discussion mode blocking
 - **Protocol State Management**: SessionsProtocol enum and active_protocol field enable protocol-driven automation
 - **Protocol Command Authorization**: APIPerms dataclass provides protocol-specific command permission validation
@@ -1030,7 +1075,7 @@ All slash commands use: `!python -m sessions.api <command> $ARGUMENTS --from-sla
 - `python -m sessions.api config phrases list [category] [--from-slash]` - View trigger phrases
 - `python -m sessions.api config phrases add <category> "<phrase>" [--from-slash]` - Add trigger phrase
 - `python -m sessions.api config phrases remove <category> "<phrase>" [--from-slash]` - Remove trigger phrase
-- `python -m sessions.api config features toggle <key> [--from-slash]` - Toggle feature boolean values
+- `python -m sessions.api config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, warn_85, warn_90)
 - `python -m sessions.api config git show [--from-slash]` - View git preferences
 - `python -m sessions.api config git set <setting> <value> [--from-slash]` - Update git preference
 - `python -m sessions.api config env show [--from-slash]` - View environment settings

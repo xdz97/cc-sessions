@@ -775,17 +775,13 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
 
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink'].includes(key)) {
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
                 // Safe features
                 config.features[key] = boolValue;
 
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 // Context warning features
                 config.features.context_warnings[key] = boolValue;
-
-            } else if (key === 'branch_enforcement') {
-                // Not exposed to prevent safety bypass
-                throw new Error("Cannot modify branch_enforcement via API");
 
             } else {
                 throw new Error(`Unknown feature: ${key}`);
@@ -807,12 +803,10 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         // Get current value
         const config = loadConfig();
         let currentValue;
-        if (['task_detection', 'auto_ultrathink'].includes(key)) {
+        if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
             currentValue = config.features[key];
         } else if (['warn_85', 'warn_90'].includes(key)) {
             currentValue = config.features.context_warnings[key];
-        } else if (key === 'branch_enforcement') {
-            throw new Error("Cannot modify branch_enforcement via API");
         } else {
             throw new Error(`Unknown feature: ${key}`);
         }
@@ -822,7 +816,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
 
         // Save the toggled value
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink'].includes(key)) {
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
                 config.features[key] = newValue;
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 config.features.context_warnings[key] = newValue;

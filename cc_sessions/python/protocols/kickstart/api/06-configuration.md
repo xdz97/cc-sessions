@@ -33,6 +33,26 @@ Options:
 
 Run: `/sessions config git set commit_style <style>`
 
+### Version Control System
+
+cc-sessions' branch enforcement works with Git's branching model.
+
+Are you using:
+- Git (standard)
+- Jujutsu (JJ)
+- Mercurial (Hg)
+- Another VCS
+
+[Wait for response]
+
+If using an alternative VCS (not Git):
+
+Branch enforcement prevents edits when your branch doesn't match your task. This doesn't work well with non-Git VCS branching models.
+
+Recommend: Disable branch enforcement
+
+Run: `/sessions config features toggle branch_enforcement`
+
 ## Feature Toggles
 
 Enable/disable system features.

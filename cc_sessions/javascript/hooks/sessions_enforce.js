@@ -440,6 +440,11 @@ if (!expectedBranch) {
     process.exit(0); // No branch/task info, allow to proceed
 }
 
+// Check if branch enforcement is enabled
+if (!CONFIG.features.branch_enforcement) {
+    process.exit(0); // Branch enforcement disabled, allow to proceed
+}
+
 const repoPath = findGitRepo(path.dirname(filePath));
 
 if (repoPath) {

@@ -347,6 +347,10 @@ if all([    tool_name in ["Write", "Edit", "MultiEdit", "NotebookEdit"],
 #!> Git branch/task submodules enforcement
 if not (expected_branch := STATE.current_task.branch): sys.exit(0) # No branch/task info, allow to proceed
 
+# Check if branch enforcement is enabled
+if not CONFIG.features.branch_enforcement:
+    sys.exit(0)  # Branch enforcement disabled, allow to proceed
+
 else:
     repo_path = find_git_repo(file_path.parent)
 

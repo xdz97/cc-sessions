@@ -42,4 +42,4 @@ Follow the task creation protocol completely:
 
 **After task creation protocol completes:**
 
-Run: `node sessions/scripts/api/index.js kickstart next`
+Run: `sessions kickstart next`

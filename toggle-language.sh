@@ -79,7 +79,7 @@ elif [ -f "$CLAUDE_DIR/settings.json.py" ]; then
     echo ""
     echo "🐍 Python implementation is now active"
     echo "Hooks will use: python"
-    echo "API will use: python -m sessions.api"
+    echo "API will use: sessions"
 
 else
     echo "Error: No alternate settings file found"

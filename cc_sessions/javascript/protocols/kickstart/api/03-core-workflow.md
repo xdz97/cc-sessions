@@ -28,9 +28,9 @@ Bad examples: "let's do it", "go", "ok" (too common)
 
 [Wait for response, then:]
 
-Run: `node sessions/scripts/api/index.js config triggers add go <their phrase>`
+Run: `sessions config triggers add go <their phrase>`
 
-Example: `node sessions/scripts/api/index.js config triggers add go ship it now`
+Example: `sessions config triggers add go ship it now`
 
 Confirm it was added.
 
@@ -43,15 +43,15 @@ Bad examples: "stop" (might say during normal conversation), "no" (too common)
 
 [Wait for response, then:]
 
-Run: `node sessions/scripts/api/index.js config triggers add no <their phrase>`
+Run: `sessions config triggers add no <their phrase>`
 
-Example: `node sessions/scripts/api/index.js config triggers add no halt`
+Example: `sessions config triggers add no halt`
 
 Confirm it was added.
 
 ### Show All Configured Phrases
 
-Run: `node sessions/scripts/api/index.js config triggers list`
+Run: `sessions config triggers list`
 
 Show them their configured phrases alongside the defaults.
 
@@ -65,4 +65,4 @@ When they use their stop phrase, confirm we're back in discussion mode.
 
 ### Move to Next Module
 
-Run: `node sessions/scripts/api/index.js kickstart next`
+Run: `sessions kickstart next`

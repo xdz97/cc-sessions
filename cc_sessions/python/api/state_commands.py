@@ -479,7 +479,7 @@ def handle_status_command(args: List[str], json_output: bool = False) -> Any:
     
     # Human-readable status summary
     lines = [   "╔══════════════════════════════════════╗",
-                "║      CC-Sessions Status Summary      ║",
+                "║      cc-sessions Status Summary      ║",
                 "╚══════════════════════════════════════╝",
                 "", f"Mode: {STATE.mode.value.upper()}", ]
     

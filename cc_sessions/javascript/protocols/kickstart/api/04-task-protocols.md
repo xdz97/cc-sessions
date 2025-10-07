@@ -71,10 +71,10 @@ Run: `/sessions config triggers add complete <your phrase>`
 
 ### Confirm Configuration
 
-Run: `node sessions/scripts/api/index.js config triggers list`
+Run: `sessions config triggers list`
 
 Shows all your configured phrases.
 
 ---
 
-Run: `node sessions/scripts/api/index.js kickstart next`
+Run: `sessions kickstart next`

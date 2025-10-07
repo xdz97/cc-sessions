@@ -71,6 +71,6 @@ Tell them to run it now.
 
 Confirm their phrase has been added.
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will guide them through actually creating a task.

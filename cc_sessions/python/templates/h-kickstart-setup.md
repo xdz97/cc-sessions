@@ -40,12 +40,12 @@ This is a kickstart configuration task. After context-gathering analyzes the rep
 ### 1. Repository Structure
 Present agent findings about submodules.
 Ask: "Does this look correct?"
-Update: `python -m sessions.api config git set has_submodules <true|false>`
+Update: `sessions config git set has_submodules <true|false>`
 
 ### 2. Default Branch
 Present agent findings about default branch.
 Ask: "Is <branch> your default branch?"
-Update: `python -m sessions.api config git set default_branch <branch>`
+Update: `sessions config git set default_branch <branch>`
 
 ### 3. Commit Style
 Explain options:
@@ -54,7 +54,7 @@ Explain options:
 - **detailed**: Multi-line with context (verbose)
 
 Ask preference.
-Update: `python -m sessions.api config git set commit_style <choice>`
+Update: `sessions config git set commit_style <choice>`
 
 ### 4. Auto Merge
 Explain: When task completes, automatically merge to default branch?
@@ -62,7 +62,7 @@ Explain: When task completes, automatically merge to default branch?
 - No: Manual merge, more control
 
 Ask preference.
-Update: `python -m sessions.api config git set auto_merge <true|false>`
+Update: `sessions config git set auto_merge <true|false>`
 
 ### 5. Auto Push
 Explain: Automatically push commits to remote?
@@ -70,7 +70,7 @@ Explain: Automatically push commits to remote?
 - No: Manual push, more control
 
 Ask preference.
-Update: `python -m sessions.api config git set auto_push <true|false>`
+Update: `sessions config git set auto_push <true|false>`
 
 ### 6. Auto Ultrathink
 Tell the user: 
@@ -88,7 +88,7 @@ If you want to disable auto-ultrathink, you can run `/sessions config features t
 ### 7. Continue with kickstart chunks
 The kickstart API will guide you through the remaining work for this task.
 
-Use: `python -m sessions.kickstart next`
+Use: `sessions kickstart next`
 
 ## Work Log
 <!-- Updated during kickstart -->

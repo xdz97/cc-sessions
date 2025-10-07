@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CC-Sessions installer module for pip/pipx installation.
+cc-sessions installer module for pip/pipx installation.
 This module is imported and executed when running `cc-sessions` command.
 """
 

@@ -139,4 +139,4 @@ Run: `/sessions config`
 
 ---
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`

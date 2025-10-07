@@ -57,7 +57,7 @@ The cc-sessions statusline shows:
 
 ### If they want the cc-sessions statusline:
 
-`node sessions/scripts/api/index.js state flags
+`sessions state flags
 
 Update their `.claude/settings.json`:
 
@@ -84,6 +84,6 @@ If no:
 
 ---
 
-Run: `node sessions/scripts/api/index.js kickstart next`
+Run: `sessions kickstart next`
 
 This will load the next module.

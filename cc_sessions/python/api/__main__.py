@@ -35,8 +35,8 @@ from api.router import route_command
 def main():
     """Main entry point for sessions.api commands."""
     parser = argparse.ArgumentParser(
-        description="CC-Sessions API for state and configuration management",
-        usage="python -m sessions.api <command> [<subcommand>] [args] [--json]"
+        description="cc-sessions API for state and configuration management",
+        usage="sessions <command> [<subcommand>] [args] [--json]"
     )
     
     parser.add_argument('command', help='Main command (state, config, mode, flags, status, version)')

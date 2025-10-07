@@ -42,4 +42,4 @@ Follow the task creation protocol completely:
 
 **After task creation protocol completes:**
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`

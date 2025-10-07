@@ -35,7 +35,7 @@ Want to adjust anything?
 
 **After they're satisfied:**
 
-Run: `python -m sessions.kickstart complete`
+Run: `sessions kickstart complete`
 
 [Wait for command]
 

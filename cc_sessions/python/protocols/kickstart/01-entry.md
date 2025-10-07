@@ -17,7 +17,7 @@ if its cool with you, I'm gonna help you get started using cc-sessions to finish
 **Instructions for handling responses:**
 
 ### If user says "Yes" or equivalent:
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`
 
 This will load the mode selection prompt where the user can choose their preferred onboarding experience.
 
@@ -30,13 +30,13 @@ Interpret their natural language response into `dd:hh` format:
 - "in 3 days" → 3:00 (3 days, 0 hours)
 - "in 6 hours" → 0:06 (0 days, 6 hours)
 
-Then run: `python -m sessions.kickstart remind <dd:hh>`
+Then run: `sessions kickstart remind <dd:hh>`
 
-Example: `python -m sessions.kickstart remind 1:00`
+Example: `sessions kickstart remind 1:00`
 
 The API will set a reminder date and the kickstart greeting will re-appear after that time has passed.
 
 ### If user says "Never" or equivalent:
-Run: `python -m sessions.kickstart complete`
+Run: `sessions kickstart complete`
 
 This clears the noob flag and exits kickstart. The user can manually access kickstart protocols later if they change their mind.

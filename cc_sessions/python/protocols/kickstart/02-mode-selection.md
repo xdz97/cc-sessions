@@ -37,12 +37,12 @@ Determine which mode the user chose based on their response (they might say "ful
 
 Normalize to one of: `full`, `api`, or `seshxpert`
 
-Then run: `python -m sessions.kickstart mode <selected-mode>`
+Then run: `sessions kickstart mode <selected-mode>`
 
 Examples:
-- `python -m sessions.kickstart mode full`
-- `python -m sessions.kickstart mode api`
-- `python -m sessions.kickstart mode seshxpert`
+- `sessions kickstart mode full`
+- `sessions kickstart mode api`
+- `sessions kickstart mode seshxpert`
 
 The API will:
 - Initialize kickstart_progress metadata with the selected mode

@@ -642,7 +642,7 @@ function handleStatusCommand(args, jsonOutput = false) {
     // Human-readable status summary
     const lines = [
         "╔══════════════════════════════════════╗",
-        "║      CC-Sessions Status Summary      ║",
+        "║      cc-sessions Status Summary      ║",
         "╚══════════════════════════════════════╝",
         "",
         `Mode: ${(STATE.mode.value || STATE.mode || '').toUpperCase()}`,

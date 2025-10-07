@@ -47,4 +47,4 @@ Confirm it was added.
 
 ---
 
-Run: `python -m sessions.kickstart next`
+Run: `sessions kickstart next`

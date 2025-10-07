@@ -252,9 +252,9 @@ protocols/
 - **No external dependencies** - removed tiktoken and yaml dependencies from both languages
 
 ### Provides
-- **Sessions API** - Programmatic access via `python -m sessions.api` (unified module path)
+- **Sessions API** - Programmatic access via `sessions` (unified module path)
 - **Consolidated Slash Commands** - `/sesh-config`, `/sesh-state`, `/sesh-tasks` with API delegation pattern and --from-slash contextual output
-- **Protocol Commands** - `python -m sessions.api protocol startup-load <task-file>` returns full task file content for task loading
+- **Protocol Commands** - `sessions protocol startup-load <task-file>` returns full task file content for task loading
 - **Enhanced Feature Management** - `config features toggle <key>` for simple boolean operations
 - `daic` - Manual mode switching command
 - Hook-based tool blocking with user-configurable patterns
@@ -405,9 +405,9 @@ Users working with alternative VCS systems (Jujutsu, Mercurial, Fossil, etc.) ex
 - Feature documented in kickstart onboarding protocols for discoverability
 
 **User Control:**
-- Toggle via Sessions API: `python -m sessions.api config features toggle branch_enforcement`
+- Toggle via Sessions API: `sessions config features toggle branch_enforcement`
 - Toggle via slash command: `/sessions config features toggle branch_enforcement`
-- View current state: `python -m sessions.api config features show`
+- View current state: `sessions config features show`
 - Compatible with configuration import/export during kickstart seshxpert mode
 
 **Integration Points:**
@@ -570,7 +570,7 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 - **Seshxpert Mode** (5 min): Single protocol chunk with import/auto-generate support for experienced users setting up new repos
 
 **Core Architecture:**
-- **API-Driven Flow**: Protocols call `python -m sessions.api kickstart` commands for state management and progression
+- **API-Driven Flow**: Protocols call `sessions kickstart` commands for state management and progression
 - **Numbered Protocol Chunks**: Discrete markdown files (01-14) per learning module, loaded sequentially via `next` command
 - **Mode-Specific Directories**: `kickstart/full/` (12 chunks), `kickstart/api/` (8 chunks), `kickstart/seshxpert/` (1 chunk) with variant implementations
 - **Interactive Learning**: Demonstrates concepts through practice with real commands and immediate feedback
@@ -618,10 +618,10 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 - Graduation cleanup: Clears `noob` flag and kickstart metadata while preserving all configuration changes and agent overrides
 
 **API Commands:**
-- `python -m sessions.api kickstart next` - Load next protocol chunk based on mode and current progress with config template injection
-- `python -m sessions.api kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode and set initial progress state
-- `python -m sessions.api kickstart remind <dd:hh>` - Set reminder for later onboarding (format: days:hours, e.g., "1:00" for tomorrow)
-- `python -m sessions.api kickstart complete` - Exit kickstart with hybrid cleanup: automated file deletion + manual router/config cleanup instructions
+- `sessions kickstart next` - Load next protocol chunk based on mode and current progress with config template injection
+- `sessions kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode and set initial progress state
+- `sessions kickstart remind <dd:hh>` - Set reminder for later onboarding (format: days:hours, e.g., "1:00" for tomorrow)
+- `sessions kickstart complete` - Exit kickstart with hybrid cleanup: automated file deletion + manual router/config cleanup instructions
 
 **Self-Cleanup System:**
 - Hybrid approach: Automated deletion of kickstart protocols, hooks, and setup task files
@@ -1040,7 +1040,7 @@ New comprehensive guide at `cc_sessions/kickstart/agent-customization-guide.md` 
 - `/sesh-tasks` - Task management operations (create, start, list, quick capture)
 
 #### API Delegation Pattern
-All slash commands use: `!python -m sessions.api <command> $ARGUMENTS --from-slash`
+All slash commands use: `!sessions <command> $ARGUMENTS --from-slash`
 
 **Enhanced Features:**
 - **Contextual Output**: `--from-slash` flag enables user-friendly responses optimized for slash command usage
@@ -1051,44 +1051,44 @@ All slash commands use: `!python -m sessions.api <command> $ARGUMENTS --from-sla
 ### Programmatic API
 
 **State Operations:**
-- `python -m sessions.api state [--json]` - Full state inspection including active protocol
-- `python -m sessions.api state <component> [--json]` - Specific component (mode/task/todos/flags/active_protocol/api)
-- `python -m sessions.api state active_protocol [--json]` - View currently active protocol
-- `python -m sessions.api state api [--json]` - View protocol-specific API permissions
-- `python -m sessions.api mode discussion` - One-way switch to discussion mode
-- `python -m sessions.api flags clear` - Reset behavioral flags
-- `python -m sessions.api status` - Human-readable state summary
-- `python -m sessions.api version` - Package version information
+- `sessions state [--json]` - Full state inspection including active protocol
+- `sessions state <component> [--json]` - Specific component (mode/task/todos/flags/active_protocol/api)
+- `sessions state active_protocol [--json]` - View currently active protocol
+- `sessions state api [--json]` - View protocol-specific API permissions
+- `sessions mode discussion` - One-way switch to discussion mode
+- `sessions flags clear` - Reset behavioral flags
+- `sessions status` - Human-readable state summary
+- `sessions version` - Package version information
 
 **Protocol Operations:**
-- `python -m sessions.api protocol startup-load <task-file>` - Load task and return full file content during startup protocol
+- `sessions protocol startup-load <task-file>` - Load task and return full file content during startup protocol
 - Permission-based access controlled by active_protocol and api.startup_load states
 
 **Kickstart Operations:**
-- `python -m sessions.api kickstart next` - Load next module chunk in onboarding sequence
-- `python -m sessions.api kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode
-- `python -m sessions.api kickstart remind <dd:hh>` - Schedule reminder for later onboarding (format: days:hours)
-- `python -m sessions.api kickstart complete` - Exit kickstart, clear noob flag and progress metadata
+- `sessions kickstart next` - Load next module chunk in onboarding sequence
+- `sessions kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode
+- `sessions kickstart remind <dd:hh>` - Schedule reminder for later onboarding (format: days:hours)
+- `sessions kickstart complete` - Exit kickstart, clear noob flag and progress metadata
 
 **Configuration Operations:**
-- `python -m sessions.api config [--json] [--from-slash]` - Full configuration inspection with optional contextual formatting
-- `python -m sessions.api config phrases list [category] [--from-slash]` - View trigger phrases
-- `python -m sessions.api config phrases add <category> "<phrase>" [--from-slash]` - Add trigger phrase
-- `python -m sessions.api config phrases remove <category> "<phrase>" [--from-slash]` - Remove trigger phrase
-- `python -m sessions.api config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, warn_85, warn_90)
-- `python -m sessions.api config git show [--from-slash]` - View git preferences
-- `python -m sessions.api config git set <setting> <value> [--from-slash]` - Update git preference
-- `python -m sessions.api config env show [--from-slash]` - View environment settings
-- `python -m sessions.api config env set <setting> <value> [--from-slash]` - Update environment setting
-- `python -m sessions.api config read list [--from-slash]` - List bash read patterns
-- `python -m sessions.api config read add <pattern> [--from-slash]` - Add bash read pattern
-- `python -m sessions.api config read remove <pattern> [--from-slash]` - Remove bash read pattern
-- `python -m sessions.api config write list [--from-slash]` - List bash write patterns
-- `python -m sessions.api config write add <pattern> [--from-slash]` - Add bash write pattern
-- `python -m sessions.api config write remove <pattern> [--from-slash]` - Remove bash write pattern
-- `python -m sessions.api config tools list [--from-slash]` - List implementation-only tools
-- `python -m sessions.api config tools block <ToolName> [--from-slash]` - Block tool in discussion mode
-- `python -m sessions.api config tools unblock <ToolName> [--from-slash]` - Unblock tool
+- `sessions config [--json] [--from-slash]` - Full configuration inspection with optional contextual formatting
+- `sessions config phrases list [category] [--from-slash]` - View trigger phrases
+- `sessions config phrases add <category> "<phrase>" [--from-slash]` - Add trigger phrase
+- `sessions config phrases remove <category> "<phrase>" [--from-slash]` - Remove trigger phrase
+- `sessions config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, warn_85, warn_90)
+- `sessions config git show [--from-slash]` - View git preferences
+- `sessions config git set <setting> <value> [--from-slash]` - Update git preference
+- `sessions config env show [--from-slash]` - View environment settings
+- `sessions config env set <setting> <value> [--from-slash]` - Update environment setting
+- `sessions config read list [--from-slash]` - List bash read patterns
+- `sessions config read add <pattern> [--from-slash]` - Add bash read pattern
+- `sessions config read remove <pattern> [--from-slash]` - Remove bash read pattern
+- `sessions config write list [--from-slash]` - List bash write patterns
+- `sessions config write add <pattern> [--from-slash]` - Add bash write pattern
+- `sessions config write remove <pattern> [--from-slash]` - Remove bash write pattern
+- `sessions config tools list [--from-slash]` - List implementation-only tools
+- `sessions config tools block <ToolName> [--from-slash]` - Block tool in discussion mode
+- `sessions config tools unblock <ToolName> [--from-slash]` - Unblock tool
 
 **Slash Command Integration:**
 - All API commands support `--from-slash` flag for enhanced error messages and user-friendly output formatting

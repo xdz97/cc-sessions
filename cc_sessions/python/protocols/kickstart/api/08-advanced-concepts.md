@@ -90,4 +90,4 @@ You can typo, use partial commands, forget arguments - it'll tell you what's val
 
 [Wait for response]
 
-If no questions: Run `python -m sessions.kickstart next`
+If no questions: Run `sessions kickstart next`

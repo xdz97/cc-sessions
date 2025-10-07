@@ -433,7 +433,7 @@ Users working with alternative VCS systems (Jujutsu, Mercurial, Fossil, etc.) ex
 **Related GitHub Issue:**
 - Issue #43: "What is the most elegant way to stop the branch checking when working" - Closed with this implementation
 
-### CI Environment Detection for GitHub Actions (v0.3.10+)
+### CI Environment Detection for GitHub Actions (v0.3.0+)
 
 All hooks now automatically detect CI environments and bypass DAIC enforcement to enable automated Claude Code agents in GitHub Actions:
 

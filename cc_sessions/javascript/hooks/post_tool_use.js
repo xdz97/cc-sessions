@@ -141,12 +141,9 @@ if (STATE.mode === Mode.GO && toolName === "TodoWrite" && STATE.todos.allComplet
 //!> Implementation mode + no Todos enforcement
 if (STATE.mode === Mode.GO && !STATE.flags.subagent && (!STATE.todos.active || STATE.todos.active.length === 0) && STATE.current_task.name) {
     // In implementation mode but no todos - show reminder only during task-based work
-    console.error(
-        "[Reminder] You're in implementation mode without approved todos. " +
+    console.error("[Reminder] You're in implementation mode without approved todos. " +
         "If you proposed todos that were approved, add them. " +
-        "If the user asked you to do something without todo proposal/approval that is **reasonably complex or multi-step**, translate *only the remaining work* to todos and add them (all 'pending'). " +
-        "In any case, return to discussion mode after completing approved implementation."
-    );
+        "If the user asked you to do something without todo proposal/approval that is **reasonably complex or multi-step**, translate *only the remaining work* to todos and add them (all 'pending'). ");
     mod = true;
 }
 //!<

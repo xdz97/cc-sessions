@@ -77,6 +77,9 @@ async function main() {
     // Add reference to CLAUDE.md
     configureCLAUDEmd();
 
+    // Configure .gitignore
+    configureGitignore();
+
     // Initialize state and config files
     initializeStateFiles();
 
@@ -344,6 +347,33 @@ ${reference}
 This file provides instructions for Claude Code when working with this codebase.
 `;
     fs.writeFileSync(claudePath, minimalCLAUDE);
+  }
+}
+
+function configureGitignore() {
+  console.log(color('Configuring .gitignore...', colors.cyan));
+
+  const gitignorePath = path.join(PROJECT_ROOT, '.gitignore');
+  const gitignoreEntries = [
+    '',
+    '# cc-sessions runtime files',
+    'sessions/sessions-state.json',
+    'sessions/transcripts/',
+    ''
+  ];
+
+  if (fs.existsSync(gitignorePath)) {
+    let content = fs.readFileSync(gitignorePath, 'utf-8');
+
+    // Only add if not already present
+    if (!content.includes('sessions/sessions-state.json')) {
+      // Append to end of file
+      content += gitignoreEntries.join('\n');
+      fs.writeFileSync(gitignorePath, content);
+    }
+  } else {
+    // Create new .gitignore with our entries
+    fs.writeFileSync(gitignorePath, gitignoreEntries.join('\n'));
   }
 }
 

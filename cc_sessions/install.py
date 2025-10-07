@@ -72,6 +72,9 @@ def main():
         # Add reference to CLAUDE.md
         configure_claude_md(PROJECT_ROOT)
 
+        # Configure .gitignore
+        configure_gitignore(PROJECT_ROOT)
+
         # Initialize state and config files
         initialize_state_files(PROJECT_ROOT)
 
@@ -317,6 +320,30 @@ def configure_claude_md(project_root):
 This file provides instructions for Claude Code when working with this codebase.
 """
         claude_path.write_text(minimal_claude, encoding='utf-8')
+
+def configure_gitignore(project_root):
+    print(color('Configuring .gitignore...', Colors.CYAN))
+
+    gitignore_path = project_root / '.gitignore'
+    gitignore_entries = [
+        '',
+        '# cc-sessions runtime files',
+        'sessions/sessions-state.json',
+        'sessions/transcripts/',
+        ''
+    ]
+
+    if gitignore_path.exists():
+        content = gitignore_path.read_text(encoding='utf-8')
+
+        # Only add if not already present
+        if 'sessions/sessions-state.json' not in content:
+            # Append to end of file
+            content += '\n'.join(gitignore_entries)
+            gitignore_path.write_text(content, encoding='utf-8')
+    else:
+        # Create new .gitignore with our entries
+        gitignore_path.write_text('\n'.join(gitignore_entries), encoding='utf-8')
 
 def initialize_state_files(project_root):
     print(color('Initializing state files...', Colors.CYAN))

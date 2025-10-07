@@ -40,8 +40,8 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
-- `cc_sessions/install.py` - Python-specific installer module with backup/restore functions: `create_backup()` creates timestamped backups, `restore_tasks()` restores task files after installation, content detection via task file counting, backup verification before proceeding
-- `install.js` - JavaScript-specific installer at package root with backup/restore functions: `createBackup()` creates timestamped backups, `restoreTasks()` restores task files after installation, content detection via recursive directory traversal, backup verification before proceeding
+- `cc_sessions/install.py` - Python-specific installer module with backup/restore functions: `create_backup()` creates timestamped backups, `restore_tasks()` restores task files after installation, content detection via task file counting, backup verification before proceeding, `configure_gitignore()` adds runtime file entries to project .gitignore (lines 324-346)
+- `install.js` - JavaScript-specific installer at package root with backup/restore functions: `createBackup()` creates timestamped backups, `restoreTasks()` restores task files after installation, content detection via recursive directory traversal, backup verification before proceeding, `configureGitignore()` adds runtime file entries to project .gitignore (lines 353-378)
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
 - `cc_sessions/protocols/kickstart/` - Kickstart onboarding protocol directory with mode-specific chunks
 - `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling
@@ -89,6 +89,7 @@ The framework includes persistent task management with git branch enforcement, c
 - Timestamped backups created in `.claude/.backup-YYYYMMDD-HHMMSS/` before installation
 - Task files and agent customizations restored after installation completes
 - State and config files regenerate fresh (not backed up)
+- Gitignore entries automatically added during first install to prevent tracking runtime files
 
 ## Core Features
 
@@ -309,10 +310,30 @@ Unified state in `sessions/sessions-state.json`:
 - `flags` - Context warnings, subagent status, session flags
 - `metadata` - Freeform runtime state
 
+### Gitignore Configuration
+Both Python and JavaScript installers automatically configure project `.gitignore` file:
+
+**Automatic Entries Added:**
+- `sessions/sessions-state.json` - Runtime session state (ephemeral, should never be tracked)
+- `sessions/transcripts/` - Agent transcript files (runtime-generated, project-specific)
+
+**Behavior:**
+- Function location: `cc_sessions/install.py:324-346` (Python), `install.js:353-378` (JavaScript)
+- Idempotent: Only adds entries if `sessions/sessions-state.json` not already present in file content
+- Creates new `.gitignore` file if one doesn't exist
+- Appends to existing `.gitignore` without overwriting
+- Follows same pattern as existing `configure_claude_md()` function
+
+**Rationale:**
+- Prevents accidental commits of ephemeral state files
+- Eliminates merge conflicts from runtime state changes
+- Keeps agent transcripts out of repository (project-specific, not portable)
+- Reduces repository clutter from runtime-generated files
+
 ### Development Setup Integration
 Configuration in `.claude/settings.json` supports both package and symlinked setups:
 - **Package Installation**: Hook commands reference `cc_sessions.hooks.*`
-- **Symlinked Development**: Hook commands reference `sessions/hooks/*` 
+- **Symlinked Development**: Hook commands reference `sessions/hooks/*`
 - **Dual-Context Import Pattern**: Code auto-detects CLAUDE_PROJECT_DIR for path resolution
 - **Real-Time Development**: Changes to cc-sessions package immediately available without reinstall
 
@@ -441,6 +462,13 @@ Complete separation of Python and JavaScript installation paths eliminates cross
 - npm/npx: `npx cc-sessions` or `npm install -g cc-sessions && cc-sessions` (Node.js only)
 - pip/pipx: `cc-sessions` command after install (Python only)
 - Both variants provide identical DAIC enforcement, task management, and protocol functionality
+
+**Automatic Gitignore Configuration:**
+- Both installers automatically add entries to project `.gitignore` file
+- Entries added: `sessions/sessions-state.json` (runtime state) and `sessions/transcripts/` (agent transcripts)
+- Idempotent behavior: Entries only added if not already present in existing `.gitignore`
+- Creates new `.gitignore` file if one doesn't exist
+- Follows same pattern as `configure_claude_md()` function
 
 **Benefits:**
 - Simplified installation process with no mixed-language complexity
@@ -786,6 +814,7 @@ The cc-sessions package provides separate language-specific installers with no c
 - **JavaScript Installer**: `install.js` at package root - only uses `cc_sessions/javascript/` files
 - **Python Installer**: `cc_sessions/install.py` as module entry point - only uses `cc_sessions/python/` files
 - **No Cross-Language Dependencies**: Each installer operates entirely within its language ecosystem
+- **Gitignore Configuration**: Both installers include `configure_gitignore()` / `configureGitignore()` functions that automatically add runtime file entries to project `.gitignore`
 
 **File Structure Organization:**
 - `cc_sessions/javascript/` - JavaScript-specific files (hooks, api, statusline, protocols, commands, templates)

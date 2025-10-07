@@ -90,7 +90,7 @@ def load_protocol_file(relative_path):
     """Load a protocol file or chunk from sessions/protocols/"""
     file_path = PROJECT_ROOT / 'sessions' / 'protocols' / relative_path
     if not file_path.exists(): return ""
-    with open(file_path, 'r') as f: return f.read()
+    with open(file_path, 'r', encoding='utf-8', errors='backslashreplace') as f: return f.read()
 
 def format_todos_for_protocol(todos):
     """Format a list of CCTodo objects for display in protocols."""
@@ -102,7 +102,7 @@ def format_todos_for_protocol(todos):
 def get_context_length_from_transcript(transcript_path):
     """Get current context length from the most recent main-chain message in transcript"""
     try:
-        with open(transcript_path, 'r') as f: lines = f.readlines()
+        with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f: lines = f.readlines()
 
         most_recent_usage = None
         most_recent_timestamp = None
@@ -178,7 +178,7 @@ if STATE.mode is Mode.GO and discussion_phrase_detected:  # Case sensitive
     # DEBUG: Log what triggered this
     import datetime
     debug_log_path = PROJECT_ROOT / "sessions" / "mode-revert-debug.log"
-    with open(debug_log_path, "a") as log:
+    with open(debug_log_path, "a", encoding='utf-8', errors='backslashreplace') as log:
         log.write(f"\n[{datetime.datetime.now().isoformat()}] EMERGENCY STOP TRIGGERED\n")
         log.write(f"  Prompt: {prompt[:200]}...\n")
         log.write(f"  discussion_phrase_detected: {discussion_phrase_detected}\n")

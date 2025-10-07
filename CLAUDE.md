@@ -18,13 +18,14 @@ The v0.3.5+ enhancement adds first-class support for directory-based tasks with 
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, and SessionsTodos.to_dict() serialization method for complete todos structure (both Python and JavaScript implementations)
+- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, SessionsTodos.to_dict() serialization method for complete todos structure, and UTF-8 encoding enforcement for all file operations (both Python and JavaScript implementations)
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration, dual-import pattern, and kickstart protocol detection via `STATE.flags.noob` (both Python and JavaScript implementations)
 - `cc_sessions/hooks/kickstart_session_start.py|.js` - Kickstart-only SessionStart hook that checks noob flag, handles reminder dates, loads entry/resume protocols, and short-circuits to let normal hooks run when noob=false (both Python and JavaScript implementations)
-- `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, and improved task startup notices (both Python and JavaScript implementations)
+- `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, improved task startup notices, and UTF-8 encoding fixes for protocol file loading and transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
-- `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling (both Python and JavaScript implementations)
+- `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling with UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
+- `cc_sessions/python/statusline.py` / `cc_sessions/javascript/statusline.js` - Claude Code statusline integration with UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output (Python)
 - `cc_sessions/scripts/api/index.js` - Sessions API entry point (JavaScript)
 - `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support, kickstart handler integration, and --from-slash flag handling (both Python and JavaScript implementations)
@@ -40,8 +41,8 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
-- `cc_sessions/install.py` - Python-specific installer module with backup/restore functions: `create_backup()` creates timestamped backups, `restore_tasks()` restores task files after installation, content detection via task file counting, backup verification before proceeding, `configure_gitignore()` adds runtime file entries to project .gitignore (lines 324-346)
-- `install.js` - JavaScript-specific installer at package root with backup/restore functions: `createBackup()` creates timestamped backups, `restoreTasks()` restores task files after installation, content detection via recursive directory traversal, backup verification before proceeding, `configureGitignore()` adds runtime file entries to project .gitignore (lines 353-378)
+- `cc_sessions/install.py` - Python-specific installer module with backup/restore functions: `create_backup()` creates timestamped backups, `restore_tasks()` restores task files after installation, content detection via task file counting, backup verification before proceeding, `configure_gitignore()` adds runtime file entries to project .gitignore (lines 324-346), automatic OS detection using platform.system() to configure sessions-config.json
+- `install.js` - JavaScript-specific installer at package root with backup/restore functions: `createBackup()` creates timestamped backups, `restoreTasks()` restores task files after installation, content detection via recursive directory traversal, backup verification before proceeding, `configureGitignore()` adds runtime file entries to project .gitignore (lines 353-378), automatic OS detection using os.platform() to configure sessions-config.json
 - `cc_sessions/kickstart/agent-customization-guide.md` - Complete guide for customizing agents during kickstart protocol
 - `cc_sessions/protocols/kickstart/` - Kickstart onboarding protocol directory with mode-specific chunks
 - `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling
@@ -735,6 +736,7 @@ Code organization improvements in todo serialization eliminate duplication and e
 - **Subagent Protection**: Automatic subagent context detection and flag management with cleanup
 - **Atomic File Operations**: File locking and atomic writes prevent state corruption across all operations with optimized 1-second timeout and aggressive lock cleanup
 - **Cross-platform Compatibility**: pathlib.Path throughout with Windows-specific handling
+- **UTF-8 Encoding Enforcement**: All file I/O operations explicitly specify UTF-8 encoding (Python: `encoding='utf-8', errors='backslashreplace'`, JavaScript: `'utf-8'`) to prevent platform-specific encoding issues on Windows (cp1252) and ensure consistent behavior across all platforms
 - **API Command Integration**: Sessions API commands whitelisted in DAIC enforcement and bypass ultrathink detection
 - **Dual-Context Import Pattern**: Supports both symlinked development and package installation through CLAUDE_PROJECT_DIR detection
 - **Reliable Lock Management**: Enhanced lock contention handling prevents intermittent failures in statusline and trigger phrase recognition
@@ -795,6 +797,8 @@ Code organization improvements in todo serialization eliminate duplication and e
 - Global command installation to `%USERPROFILE%\AppData\Local\cc-sessions\bin`
 - Hook commands use explicit `python` prefix and Windows environment variable format
 - Native Windows scripts: daic.cmd (Command Prompt) and daic.ps1 (PowerShell)
+- **UTF-8 Encoding Fix**: All file I/O operations explicitly specify UTF-8 encoding to prevent Windows cp1252 encoding issues (Python uses `encoding='utf-8', errors='backslashreplace'`, JavaScript uses `'utf-8'`)
+- **Automatic OS Detection**: Both Python and JavaScript installers detect operating system using platform.system()/os.platform() and configure sessions-config.json appropriately
 
 ## Package Structure
 

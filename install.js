@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execSync } = require('child_process');
 
 // Colors for terminal output
@@ -391,11 +392,24 @@ function initializeStateFiles() {
     process.exit(1);
   }
 
-  const { loadState, loadConfig } = require(sharedStatePath);
+  const { loadState, loadConfig, saveConfig } = require(sharedStatePath);
 
   // These functions create the files if they don't exist
   loadState();
-  loadConfig();
+  const config = loadConfig();
+
+  // Detect and set OS in configuration
+  const osType = os.platform();  // Returns 'win32', 'linux', or 'darwin'
+  const osMap = {
+    'win32': 'windows',
+    'linux': 'linux',
+    'darwin': 'macos'
+  };
+  const detectedOs = osMap[osType] || 'linux';  // Default to linux if unknown
+
+  // Update config with detected OS
+  config.environment.os = detectedOs;
+  saveConfig(config);
 
   // Verify files were created
   const stateFile = path.join(PROJECT_ROOT, 'sessions', 'sessions-state.json');

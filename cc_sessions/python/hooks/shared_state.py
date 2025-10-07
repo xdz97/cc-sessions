@@ -5,7 +5,7 @@
 ## ===== STDLIB ===== ##
 from __future__ import annotations
 
-from typing import Optional, List, Dict, Any, Iterator, Literal
+from typing import Optional, List, Dict, Any, Iterator, Literal, Union
 from importlib.metadata import version, PackageNotFoundError
 from dataclasses import dataclass, asdict, field
 from contextlib import contextmanager, suppress
@@ -201,7 +201,7 @@ class TriggerPhrases:
             if phrase in lst: return category
         return None
 
-    def list_phrases(self, category: Optional[TriggerCategory | Literal["discuss", "implement", "create", "start", "complete", "compact"]] = None) -> Dict[str, List[str]]:
+    def list_phrases(self, category: Optional[Union[TriggerCategory, Literal["discuss", "implement", "create", "start", "complete", "compact"]]] = None) -> Dict[str, List[str]]:
         """Return all phrases, or those in the specified category."""
         if category:
             if isinstance(category, str): category = self._coax_phrase_type(category)
@@ -249,7 +249,7 @@ class BlockingPatterns:
         try: return CCTools(tool)
         except ValueError: raise ValueError(f"Unknown tool: {tool}")
 
-    def is_tool_blocked(self, tool: CCTools | str) -> bool:
+    def is_tool_blocked(self, tool: Union[CCTools, str]) -> bool:
         """Return True if the tool is blocked in discussion mode."""
         if isinstance(tool, str): tool = self._coax_cc_tool(tool)
         return tool in self.implementation_only_tools

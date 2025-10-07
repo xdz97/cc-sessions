@@ -8,6 +8,7 @@ import sys
 import os
 import json
 import shutil
+import platform
 from pathlib import Path
 
 # Colors for terminal output
@@ -364,7 +365,16 @@ def initialize_state_files(project_root):
 
     # These functions create the files if they don't exist
     load_state()
-    load_config()
+    config = load_config()
+
+    # Detect and set OS in configuration
+    os_name = platform.system()  # Returns 'Windows', 'Linux', or 'Darwin'
+    os_map = {'Windows': 'windows', 'Linux': 'linux', 'Darwin': 'macos'}
+    detected_os = os_map.get(os_name, 'linux')  # Default to linux if unknown
+
+    # Update config with detected OS
+    config.environment.os = detected_os
+    save_config(config)
 
     # Verify files were created
     state_file = project_root / 'sessions' / 'sessions-state.json'

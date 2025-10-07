@@ -29,6 +29,20 @@ let context = `You are beginning a new context window with the developer, ${deve
 // Quick configuration checks
 let needsSetup = false;
 const quickChecks = [];
+
+/// ===== CI DETECTION ===== ///
+function isCIEnvironment() {
+    // Check if running in a CI environment (GitHub Actions)
+    const ciIndicators = [
+        'GITHUB_ACTIONS',         // GitHub Actions
+        'GITHUB_WORKFLOW',        // GitHub Actions workflow
+        'CI',                     // Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', // Generic CI (alternative)
+    ];
+    return ciIndicators.some(indicator => process.env[indicator]);
+}
+///-///
+
 //-//
 
 /*
@@ -326,6 +340,11 @@ function listOpenTasksGrouped() {
 // ===== EXECUTION ===== //
 
 async function main() {
+    // Skip session start hook in CI environments
+    if (isCIEnvironment()) {
+        process.exit(0);
+    }
+
     // Read stdin for hook input
     const hookInput = await readStdin();
 

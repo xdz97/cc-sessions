@@ -29,6 +29,23 @@ except ImportError:
 #-#
 
 # ===== GLOBALS ===== #
+
+## ===== CI DETECTION ===== ##
+def is_ci_environment():
+    """Check if running in a CI environment (GitHub Actions)."""
+    ci_indicators = [
+        'GITHUB_ACTIONS',         # GitHub Actions
+        'GITHUB_WORKFLOW',        # GitHub Actions workflow
+        'CI',                     # Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', # Generic CI (alternative)
+    ]
+    return any(os.getenv(indicator) for indicator in ci_indicators)
+
+# Skip user messages hook in CI environments
+if is_ci_environment():
+    sys.exit(0)
+##-##
+
 input_data = json.load(sys.stdin)
 prompt = input_data.get("prompt", "")
 transcript_path = input_data.get("transcript_path", "")
@@ -408,6 +425,7 @@ if not is_api_command and task_start_detected:
     context += "[Task Startup Notice]\n**If the user mentioned which task to start, *YOU MUST***:\n"
     context += "1. Return to project root directory\n"
     context += "2. Run: `python -m sessions.api protocol startup-load <task-file>`\n"
+    context += "You must do this *BEFORE* the task startup protocol.\n"
     context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n"
 
     # Build template variables for protocol

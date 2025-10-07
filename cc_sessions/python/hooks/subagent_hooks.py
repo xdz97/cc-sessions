@@ -3,7 +3,7 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-import json, sys, math, bisect
+import json, sys, math, bisect, os
 from collections import deque
 ##-##
 
@@ -17,6 +17,23 @@ from shared_state import edit_state, PROJECT_ROOT
 #-#
 
 # ===== GLOBALS ===== #
+
+## ===== CI DETECTION ===== ##
+def is_ci_environment():
+    """Check if running in a CI environment (GitHub Actions)."""
+    ci_indicators = [
+        'GITHUB_ACTIONS',         # GitHub Actions
+        'GITHUB_WORKFLOW',        # GitHub Actions workflow
+        'CI',                     # Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', # Generic CI (alternative)
+    ]
+    return any(os.getenv(indicator) for indicator in ci_indicators)
+
+# Skip subagent hooks in CI environments
+if is_ci_environment():
+    sys.exit(0)
+##-##
+
 # Load input from stdin
 try: input_data = json.load(sys.stdin)
 except json.JSONDecodeError as e: print(f"Error: Invalid JSON input: {e}", file=sys.stderr); sys.exit(1)

@@ -389,6 +389,44 @@ Configuration in `.claude/settings.json`:
 
 ## Recent Enhancements
 
+### CI Environment Detection for GitHub Actions (v0.3.10+)
+
+All hooks now automatically detect CI environments and bypass DAIC enforcement to enable automated Claude Code agents in GitHub Actions:
+
+**Problem Solved:**
+When running Claude Code agents in GitHub Actions (e.g., documentation maintenance bots, automated code review), DAIC mode enforcement would block the agent from making changes. The agent would get stuck in discussion mode and couldn't complete automated tasks.
+
+**Implementation:**
+- Added `is_ci_environment()` function to GLOBALS section of all 12 hooks (6 Python + 6 JavaScript)
+- Detection checks for environment variables: `GITHUB_ACTIONS`, `GITHUB_WORKFLOW`, `CI`, `CONTINUOUS_INTEGRATION`
+- Early exit with code 0 (bypass) when any CI indicator is detected
+- Prevents all DAIC enforcement in CI contexts while preserving full functionality in local development
+
+**Hook Coverage:**
+All hooks include CI detection with early exit pattern:
+- `sessions_enforce.py|.js` - Lines 115-126 (Python), bypasses DAIC mode enforcement at line 270-272
+- `session_start.py|.js` - Lines 35-45, skips session initialization messages at line 366-368
+- `user_messages.py|.js` - Lines 33-46, bypasses trigger phrase detection at line 44-46
+- `post_tool_use.py|.js` - Lines 33-46, skips todo completion checks at line 44-46
+- `subagent_hooks.py|.js` - Lines 21-34, bypasses subagent protection at line 32-34
+- `kickstart_session_start.py|.js` - Lines 27-40, skips onboarding prompts at line 38-40
+
+**Use Cases:**
+- Documentation maintenance bots that automatically update CLAUDE.md files
+- Automated code review agents that create pull requests
+- CI/CD workflows that need to make commits without user interaction
+- Any GitHub Actions workflow using Claude Code agents
+
+**Security Considerations:**
+- Environment variables are platform-controlled (GitHub Actions sets them automatically)
+- No user configuration required - works automatically in CI environments
+- Local development unaffected - all DAIC enforcement remains active
+- Focused on GitHub Actions (Claude Code's only CI integration) with generic CI fallback
+
+**Files Modified:**
+- Python hooks: `cc_sessions/python/hooks/sessions_enforce.py`, `session_start.py`, `user_messages.py`, `post_tool_use.py`, `subagent_hooks.py`, `kickstart_session_start.py`
+- JavaScript hooks: `cc_sessions/javascript/hooks/sessions_enforce.js`, `session_start.js`, `user_messages.js`, `post_tool_use.js`, `subagent_hooks.js`, `kickstart_session_start.js`
+
 ### Backup and Restore During Reinstall (v0.3.9+)
 
 Both Python and JavaScript installers now automatically preserve user content during updates and reinstalls:
@@ -720,6 +758,7 @@ Code organization improvements in todo serialization eliminate duplication and e
 ### Hook Architecture
 - **Unified State Management**: SessionsState class manages all runtime state in single JSON file with atomic operations
 - **Configuration-Driven Enforcement**: SessionsConfig system provides type-safe user customization of all behavioral patterns
+- **CI Environment Detection**: All 12 hooks (6 Python + 6 JavaScript) automatically detect CI environments and bypass DAIC enforcement via `is_ci_environment()` function checking `GITHUB_ACTIONS`, `GITHUB_WORKFLOW`, `CI`, and `CONTINUOUS_INTEGRATION` environment variables, enabling Claude Code agents in GitHub Actions to complete automated tasks without discussion mode blocking
 - **Protocol State Management**: SessionsProtocol enum and active_protocol field enable protocol-driven automation
 - **Protocol Command Authorization**: APIPerms dataclass provides protocol-specific command permission validation
 - **Enhanced Pre-tool-use Validation**: sessions_enforce.py uses comprehensive command categorization with intelligent argument analysis for accurate write operation detection

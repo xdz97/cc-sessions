@@ -3,7 +3,7 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-import subprocess, json, sys, re, shlex
+import subprocess, json, sys, re, shlex, os
 from typing import Optional
 from pathlib import Path
 ##-##
@@ -110,6 +110,18 @@ REDIR_PATTERNS = [
     r'(?:^|\s)&>',                           # Combined stdout/stderr redirect
 ]
 REDIR = re.compile('|'.join(REDIR_PATTERNS))
+##-##
+
+## ===== CI DETECTION ===== ##
+def is_ci_environment():
+    """Check if running in a CI environment (GitHub Actions)."""
+    ci_indicators = [
+        'GITHUB_ACTIONS',         # GitHub Actions
+        'GITHUB_WORKFLOW',        # GitHub Actions workflow
+        'CI',                     # Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', # Generic CI (alternative)
+    ]
+    return any(os.getenv(indicator) for indicator in ci_indicators)
 ##-##
 
 #-#
@@ -254,6 +266,10 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
 #-#
 
 # ===== EXECUTION ===== #
+
+# Skip DAIC enforcement in CI environments
+if is_ci_environment():
+    sys.exit(0)
 
 #!> Bash command handling
 # For Bash commands, check if it's a read-only operation

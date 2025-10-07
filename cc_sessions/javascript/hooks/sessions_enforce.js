@@ -141,6 +141,19 @@ const REDIR_PATTERNS = [
 const REDIR = new RegExp(REDIR_PATTERNS.map(p => p.source).join('|'));
 ///-///
 
+/// ===== CI DETECTION ===== ///
+function isCIEnvironment() {
+    // Check if running in a CI environment (GitHub Actions)
+    const ciIndicators = [
+        'GITHUB_ACTIONS',         // GitHub Actions
+        'GITHUB_WORKFLOW',        // GitHub Actions workflow
+        'CI',                     // Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', // Generic CI (alternative)
+    ];
+    return ciIndicators.some(indicator => process.env[indicator]);
+}
+///-///
+
 //-//
 
 /*
@@ -320,6 +333,11 @@ function isBashReadOnly(command, extrasafe = CONFIG.blocked_actions.extrasafe ||
 //-//
 
 // ===== EXECUTION ===== //
+
+// Skip DAIC enforcement in CI environments
+if (isCIEnvironment()) {
+    process.exit(0);
+}
 
 //!> Bash command handling
 // For Bash commands, check if it's a read-only operation

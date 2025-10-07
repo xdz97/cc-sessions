@@ -27,6 +27,25 @@ const {
 //-//
 
 // ===== GLOBALS ===== //
+
+/// ===== CI DETECTION ===== ///
+function isCIEnvironment() {
+    // Check if running in a CI environment (GitHub Actions)
+    const ciIndicators = [
+        'GITHUB_ACTIONS',         // GitHub Actions
+        'GITHUB_WORKFLOW',        // GitHub Actions workflow
+        'CI',                     // Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', // Generic CI (alternative)
+    ];
+    return ciIndicators.some(indicator => process.env[indicator]);
+}
+
+// Skip post tool use hook in CI environments
+if (isCIEnvironment()) {
+    process.exit(0);
+}
+///-///
+
 // Read stdin synchronously
 let inputData = {};
 try {

@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased - v0.3.0]
+
+### Added
+- **CI Environment Detection**: All hooks now automatically detect CI environments (GitHub Actions, etc.) and bypass DAIC enforcement to enable automated Claude Code agents
+  - Thanks to @oppianmatt (matt@oppian.com) for the implementation guidance (#14)
+
 ## [0.2.8] - 2025-09-04
 
 ### Changed

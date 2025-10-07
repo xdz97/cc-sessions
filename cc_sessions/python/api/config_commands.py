@@ -593,18 +593,14 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
         bool_value = value.lower() in ['true', '1', 'yes', 'on']
         
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
                 # Safe features
                 setattr(config.features, key, bool_value)
-            
+
             elif key in ['warn_85', 'warn_90']:
                 # Context warning features
                 setattr(config.features.context_warnings, key, bool_value)
-            
-            elif key == 'branch_enforcement':
-                # Not exposed to prevent safety bypass
-                raise ValueError("Cannot modify branch_enforcement via API")
-            
+
             else:
                 raise ValueError(f"Unknown feature: {key}")
         
@@ -620,12 +616,10 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Get current value
         config = load_config()
-        if key in ['task_detection', 'auto_ultrathink']:
+        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
             current_value = getattr(config.features, key)
         elif key in ['warn_85', 'warn_90']:
             current_value = getattr(config.features.context_warnings, key)
-        elif key == 'branch_enforcement':
-            raise ValueError("Cannot modify branch_enforcement via API")
         else:
             raise ValueError(f"Unknown feature: {key}")
 
@@ -634,7 +628,7 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Save the toggled value
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
                 setattr(config.features, key, new_value)
             elif key in ['warn_85', 'warn_90']:
                 setattr(config.features.context_warnings, key, new_value)

@@ -4,7 +4,7 @@
 
 ## ===== STDLIB ===== ##
 from importlib.metadata import version, PackageNotFoundError
-import requests, json, sys, shutil
+import requests, json, sys, shutil, os
 from typing import Dict, List, Optional, Tuple
 ##-##
 
@@ -31,6 +31,19 @@ context = f"You are beginning a new context window with the developer, {develope
 # Quick configuration checks
 needs_setup = False
 quick_checks = []
+
+## ===== CI DETECTION ===== ##
+def is_ci_environment():
+    """Check if running in a CI environment (GitHub Actions)."""
+    ci_indicators = [
+        'GITHUB_ACTIONS',         # GitHub Actions
+        'GITHUB_WORKFLOW',        # GitHub Actions workflow
+        'CI',                     # Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', # Generic CI (alternative)
+    ]
+    return any(os.getenv(indicator) for indicator in ci_indicators)
+##-##
+
 #-#
 
 # ===== FUNCTIONS ===== #
@@ -349,6 +362,10 @@ except requests.RequestException: pass
 #!<
 
 #-#
+
+# Skip session start hook in CI environments
+if is_ci_environment():
+    sys.exit(0)
 
 output = {
     "hookSpecificOutput": {

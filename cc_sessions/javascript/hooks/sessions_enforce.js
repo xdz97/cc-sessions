@@ -141,6 +141,19 @@ const REDIR_PATTERNS = [
 const REDIR = new RegExp(REDIR_PATTERNS.map(p => p.source).join('|'));
 ///-///
 
+/// ===== CI DETECTION ===== ///
+function isCIEnvironment() {
+    // Check if running in a CI environment (GitHub Actions)
+    const ciIndicators = [
+        'GITHUB_ACTIONS',         // GitHub Actions
+        'GITHUB_WORKFLOW',        // GitHub Actions workflow
+        'CI',                     // Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', // Generic CI (alternative)
+    ];
+    return ciIndicators.some(indicator => process.env[indicator]);
+}
+///-///
+
 //-//
 
 /*
@@ -321,6 +334,11 @@ function isBashReadOnly(command, extrasafe = CONFIG.blocked_actions.extrasafe ||
 
 // ===== EXECUTION ===== //
 
+// Skip DAIC enforcement in CI environments
+if (isCIEnvironment()) {
+    process.exit(0);
+}
+
 //!> Bash command handling
 // For Bash commands, check if it's a read-only operation
 if (toolName === "Bash" && STATE.mode === Mode.NO && !STATE.flags.bypass_mode) {
@@ -420,6 +438,11 @@ if (["Write", "Edit", "MultiEdit", "NotebookEdit"].includes(toolName) &&
 const expectedBranch = STATE.current_task?.branch;
 if (!expectedBranch) {
     process.exit(0); // No branch/task info, allow to proceed
+}
+
+// Check if branch enforcement is enabled
+if (!CONFIG.features.branch_enforcement) {
+    process.exit(0); // Branch enforcement disabled, allow to proceed
 }
 
 const repoPath = findGitRepo(path.dirname(filePath));

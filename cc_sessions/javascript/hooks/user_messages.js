@@ -26,6 +26,25 @@ const {
 //-//
 
 // ===== GLOBALS ===== //
+
+/// ===== CI DETECTION ===== ///
+function isCIEnvironment() {
+    // Check if running in a CI environment (GitHub Actions)
+    const ciIndicators = [
+        'GITHUB_ACTIONS',         // GitHub Actions
+        'GITHUB_WORKFLOW',        // GitHub Actions workflow
+        'CI',                     // Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', // Generic CI (alternative)
+    ];
+    return ciIndicators.some(indicator => process.env[indicator]);
+}
+
+// Skip user messages hook in CI environments
+if (isCIEnvironment()) {
+    process.exit(0);
+}
+///-///
+
 // Read stdin synchronously
 let inputData = {};
 try {
@@ -524,6 +543,7 @@ if (!isApiCommand && taskStartDetected) {
     context += "[Task Startup Notice]\n**If the user mentioned which task to start, *YOU MUST***:\n";
     context += "1. Return to project root directory\n";
     context += "2. Run: `python -m sessions.api protocol startup-load <task-file>`\n";
+    context += "You must do this *BEFORE* the task startup protocol.\n";
     context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n";
 
     // Build template variables for protocol

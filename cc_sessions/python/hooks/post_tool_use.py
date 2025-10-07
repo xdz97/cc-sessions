@@ -6,6 +6,7 @@
 import shutil
 import json
 import sys
+import os
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -28,6 +29,23 @@ from pathlib import Path
 #-#
 
 # ===== GLOBALS ===== #
+
+## ===== CI DETECTION ===== ##
+def is_ci_environment():
+    """Check if running in a CI environment (GitHub Actions)."""
+    ci_indicators = [
+        'GITHUB_ACTIONS',         # GitHub Actions
+        'GITHUB_WORKFLOW',        # GitHub Actions workflow
+        'CI',                     # Generic CI indicator (set by GitHub Actions)
+        'CONTINUOUS_INTEGRATION', # Generic CI (alternative)
+    ]
+    return any(os.getenv(indicator) for indicator in ci_indicators)
+
+# Skip post tool use hook in CI environments
+if is_ci_environment():
+    sys.exit(0)
+##-##
+
 input_data = json.load(sys.stdin)
 tool_name = input_data.get("tool_name", "")
 tool_input = input_data.get("tool_input", {})

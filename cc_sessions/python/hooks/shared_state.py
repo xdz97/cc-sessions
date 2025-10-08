@@ -300,6 +300,7 @@ class EnabledFeatures:
     branch_enforcement: bool = True
     task_detection: bool = True
     auto_ultrathink: bool = True
+    use_nerd_fonts: bool = True
     context_warnings: ContextWarnings = field(default_factory=ContextWarnings)
 
     @classmethod
@@ -311,6 +312,7 @@ class EnabledFeatures:
             branch_enforcement=d.get("branch_enforcement", True),
             task_detection=d.get("task_detection", True),
             auto_ultrathink=d.get("auto_ultrathink", True),
+            use_nerd_fonts=d.get("use_nerd_fonts", True),
             context_warnings=cw
         )
 #!<

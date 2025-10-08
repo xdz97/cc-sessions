@@ -616,7 +616,7 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Get current value
         config = load_config()
-        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
+        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
             current_value = getattr(config.features, key)
         elif key in ['warn_85', 'warn_90']:
             current_value = getattr(config.features.context_warnings, key)
@@ -628,7 +628,7 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Save the toggled value
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
                 setattr(config.features, key, new_value)
             elif key in ['warn_85', 'warn_90']:
                 setattr(config.features.context_warnings, key, new_value)

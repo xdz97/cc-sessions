@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { loadState, editState, Mode, Model, PROJECT_ROOT } = require('../hooks/shared_state.js');
+const { loadState, editState, loadConfig, Mode, Model, PROJECT_ROOT } = require('../hooks/shared_state.js');
 
 // Colors/styles
 const green = '\033[38;5;114m';
@@ -71,6 +71,10 @@ function main() {
             s.model = currModel;
         });
     }
+
+    // Load config for nerd fonts preference
+    const config = loadConfig();
+    const useNerdFonts = config?.features?.use_nerd_fonts !== false;
 
     // Pull context length from transcript
     let contextLength = null;
@@ -147,20 +151,40 @@ function main() {
     }
 
     // Build progress bar string
+    const contextIcon = useNerdFonts ? '󱃖 ' : '';
     const progressBar =
         barColor + '█'.repeat(filledBlocks) +
         gray + '░'.repeat(emptyBlocks) +
-        reset + ` ${lGray}${progressPct}% (${formattedTokens}/${formattedLimit})${reset}`;
+        reset + ` ${lGray}${contextIcon}${progressPct}% (${formattedTokens}/${formattedLimit})${reset}`;
+
+    // Find git repository path for use in multiple sections
+    const gitPath = cwd === PROJECT_ROOT ? path.join(PROJECT_ROOT, '.git') : findGitRepo(path.resolve(cwd));
+
+    // Git branch
+    let gitInfo = null;
+    if (gitPath && fs.existsSync(gitPath)) {
+        try {
+            const branch = execSync('git branch --show-current', { cwd, encoding: 'utf-8' }).trim();
+            if (branch) {
+                const branchIcon = useNerdFonts ? '󰘬 ' : '';
+                gitInfo = `${lGray}${branchIcon}${branch}${reset}`;
+            }
+        } catch {
+            gitInfo = null;
+        }
+    }
 
     // Current task
     const currTask = state?.current_task?.name || null;
 
     // Current mode
     const currMode = state?.mode === Mode.GO ? 'Implementation' : 'Discussion';
+    const modeIcon = useNerdFonts ?
+        (state?.mode === Mode.GO ? '󰷫 ' : '󰭹 ') :
+        (state?.mode === Mode.GO ? 'I: ' : 'D: ');
 
     // Count edited & uncommitted files
     let totalEdited = 0;
-    const gitPath = cwd === PROJECT_ROOT ? path.join(PROJECT_ROOT, '.git') : findGitRepo(path.resolve(cwd));
 
     if (gitPath && fs.existsSync(gitPath)) {
         try {
@@ -199,19 +223,25 @@ function main() {
     }
 
     // Final output
-    // Line 1
+    // Line 1 - Progress bar | Task
     const contextPart = progressBar || `${gray}No context usage data${reset}`;
+    const taskIcon = useNerdFonts ? '󰒓 ' : 'Task: ';
     const taskPart = currTask ?
-        `${cyan}Task: ${currTask}${reset}` :
-        `${cyan}Task: ${gray}None loaded${reset}`;
+        `${cyan}${taskIcon}${currTask}${reset}` :
+        `${cyan}${taskIcon}${gray}No Task${reset}`;
     console.log(contextPart + ' | ' + taskPart);
 
-    // Line 2
-    console.log(
-        `${purple}Mode: ${currMode}${reset}` + ' | ' +
-        `${orange}✎ ${totalEdited} files to commit${reset}` + ' | ' +
-        `${cyan}Open Tasks: ${openTaskCount + openTaskDirCount}${reset}`
-    );
+    // Line 2 - Mode | Edited & Uncommitted | Open Tasks | Git info
+    const tasksIcon = useNerdFonts ? '󰈙 ' : '';
+    const line2Parts = [
+        `${purple}${modeIcon}${currMode}${reset}`,
+        `${orange}✎ ${totalEdited} files${reset}`,
+        `${cyan}${tasksIcon}${openTaskCount + openTaskDirCount} open${reset}`
+    ];
+    if (gitInfo) {
+        line2Parts.push(gitInfo);
+    }
+    console.log(line2Parts.join(' | '));
 }
 
 if (require.main === module) {

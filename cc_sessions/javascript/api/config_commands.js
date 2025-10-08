@@ -803,7 +803,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         // Get current value
         const config = loadConfig();
         let currentValue;
-        if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
+        if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
             currentValue = config.features[key];
         } else if (['warn_85', 'warn_90'].includes(key)) {
             currentValue = config.features.context_warnings[key];
@@ -816,7 +816,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
 
         // Save the toggled value
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
                 config.features[key] = newValue;
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 config.features.context_warnings[key] = newValue;

@@ -58,6 +58,14 @@ else: curr_model = Model.UNKNOWN
 STATE = load_state()
 if not STATE or STATE.model != curr_model:
     with edit_state() as s: s.model = curr_model; STATE = s
+
+# Load config for nerd fonts preference
+if 'CLAUDE_PROJECT_DIR' in os.environ:
+    from sessions.hooks.shared_state import load_config
+else:
+    from cc_sessions.hooks.shared_state import load_config
+CONFIG = load_config()
+use_nerd_fonts = CONFIG.features.use_nerd_fonts if CONFIG else True
 #!<
 
 #-#
@@ -148,10 +156,31 @@ else: bar_color = red
 progress_bar = []
 progress_bar.append(bar_color + ("█" * filled_blocks))
 progress_bar.append(gray + ("░" * empty_blocks))
-progress_bar.append(reset + f" {l_gray}{progress_pct}% ({formatted_tokens}/{formatted_limit}){reset}")
+context_icon = "󱃖 " if use_nerd_fonts else ""
+progress_bar.append(reset + f" {l_gray}{context_icon}{progress_pct}% ({formatted_tokens}/{formatted_limit}){reset}")
 
 progress_bar_str = "".join(progress_bar)
 #!<
+##-##
+
+## ===== GIT REPOSITORY ===== ##
+# Find git repository path for use in multiple sections
+if cwd == str(PROJECT_ROOT): git_path = PROJECT_ROOT / ".git"
+else: git_path = find_git_repo(Path(cwd))
+##-##
+
+## ===== GIT BRANCH ===== ##
+git_info = None
+if git_path and git_path.exists():
+    try:
+        # Get current branch
+        branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=cwd).decode().strip()
+
+        if branch:
+            branch_icon = "󰘬 " if use_nerd_fonts else ""
+            git_info = f"{l_gray}{branch_icon}{branch}{reset}"
+    except Exception as e:
+        git_info = None
 ##-##
 
 ## ===== CURRENT TASK ===== ##
@@ -160,12 +189,14 @@ curr_task = STATE.current_task.name if STATE else None
 
 ## ===== CURRENT MODE ===== ##
 curr_mode = "Implementation" if STATE.mode == Mode.GO else "Discussion"
+if use_nerd_fonts:
+    mode_icon = "󰷫 " if STATE.mode == Mode.GO else "󰭹 "
+else:
+    mode_icon = "I: " if STATE.mode == Mode.GO else "D: "
 ##-##
 
 ## ===== COUNT EDITED & UNCOMMITTED ===== ##
 # Use subprocess to count edited and uncommitted files (unstaged or staged)
-if cwd == str(PROJECT_ROOT): git_path = PROJECT_ROOT / ".git"
-else: git_path = find_git_repo(Path(cwd))
 total_edited = 0
 if git_path and git_path.exists():
     try:
@@ -194,13 +225,22 @@ if task_dir.exists() and task_dir.is_dir():
 ##-##
 
 ## ===== FINAL OUTPUT ===== ##
-# Line 1
+# Line 1 - Progress bar | Task
 context_part = progress_bar_str if progress_bar_str else f"{gray}No context usage data{reset}"
-task_part = f"{cyan}Task: {curr_task}{reset}" if curr_task else f"{cyan}Task: {gray}None loaded{reset}"
-print(context_part + " | " + task_part)
+task_icon = "󰒓 " if use_nerd_fonts else "Task: "
+task_part = f"{cyan}{task_icon}{curr_task}{reset}" if curr_task else f"{cyan}{task_icon}{gray}No Task{reset}"
+print(f"{context_part} | {task_part}")
 
-# Line 2 - Mode | Edited & Uncommitted (trunc) | Open Tasks
-print(f"{purple}Mode: {curr_mode}{reset}" + " | " + f"{orange}✎ {total_edited} files to commit{reset}" + " | " + f"{cyan}Open Tasks: {open_task_count + open_task_dir_count}{reset}")
+# Line 2 - Mode | Edited & Uncommitted | Open Tasks | Git info
+tasks_icon = "󰈙 " if use_nerd_fonts else ""
+line2_parts = [
+    f"{purple}{mode_icon}{curr_mode}{reset}",
+    f"{orange}✎ {total_edited} files{reset}",
+    f"{cyan}{tasks_icon}{open_task_count + open_task_dir_count} open{reset}"
+]
+if git_info:
+    line2_parts.append(git_info)
+print(" | ".join(line2_parts))
 ##-##
 
 #-#

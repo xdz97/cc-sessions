@@ -20,10 +20,10 @@ if 'CLAUDE_PROJECT_DIR' in os.environ:
 
 try:
     # Try direct import (works with sessions in path or package install)
-    from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task
+    from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task, is_subtask, is_parent_task
 except ImportError:
     # Fallback to package import
-    from cc_sessions.hooks.shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task
+    from cc_sessions.hooks.shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task, is_subtask, is_parent_task
 ##-##
 
 #-#
@@ -324,16 +324,21 @@ if not is_api_command and task_completion_detected:
     if CONFIG.git_preferences.has_submodules: commit_instructions_content = load_protocol_file('task-completion/commit-superrepo.md')
     else: commit_instructions_content = load_protocol_file('task-completion/commit-standard.md')
 
-    # Directory task completion check
+    # Directory task completion check - simplified to just control merge behavior
+    directory_completion_check = ''
     if STATE.current_task.file and is_directory_task(STATE.current_task.file):
-        directory_completion_check = load_protocol_file('task-completion/directory-task-completion.md')
-        directory_completion_check = directory_completion_check.format(default_branch=CONFIG.git_preferences.default_branch)
-    else:
-        directory_completion_check = ''
+        if is_parent_task(STATE.current_task.file):
+            # Completing parent README.md - normal merge behavior
+            directory_completion_check = load_protocol_file('task-completion/directory-task-completion.md')
+            directory_completion_check = directory_completion_check.format(default_branch=CONFIG.git_preferences.default_branch)
+        elif is_subtask(STATE.current_task.file):
+            # Completing a subtask - commit but don't merge
+            directory_completion_check = load_protocol_file('task-completion/subtask-completion.md')
+            directory_completion_check = directory_completion_check.format(default_branch=CONFIG.git_preferences.default_branch)
 
-    # Build merge and push instructions based on auto preferences (but override for directory tasks)
-    if STATE.current_task.file and is_directory_task(STATE.current_task.file):
-        merge_instruction = 'Do not merge yet - directory task requires all subtasks to complete first'
+    # Build merge and push instructions based on auto preferences (but override for subtasks)
+    if STATE.current_task.file and is_subtask(STATE.current_task.file):
+        merge_instruction = 'Do not merge yet - subtask in directory task'
     elif CONFIG.git_preferences.auto_merge:
         merge_instruction = f'Merge into {CONFIG.git_preferences.default_branch}'
     else:
@@ -396,10 +401,14 @@ if not is_api_command and task_start_detected:
         resume_notes = load_protocol_file('task-startup/resume-notes-standard.md')
 
     # Check if this is a directory task and load appropriate guidance
+    directory_guidance = ""
     if STATE.current_task.file and is_directory_task(STATE.current_task.file):
-        directory_guidance = load_protocol_file('task-startup/directory-task-startup.md')
-    else:
-        directory_guidance = ""
+        if is_parent_task(STATE.current_task.file):
+            # Starting parent README.md - create task branch
+            directory_guidance = load_protocol_file('task-startup/directory-task-startup.md')
+        elif is_subtask(STATE.current_task.file):
+            # Starting a subtask - ensure on parent task branch
+            directory_guidance = load_protocol_file('task-startup/subtask-startup.md')
 
     # Set todos based on config
     todo_branch_content = 'Create/checkout task branch and matching submodule branches' if CONFIG.git_preferences.has_submodules else 'Create/checkout task branch'

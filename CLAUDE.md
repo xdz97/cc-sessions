@@ -18,11 +18,11 @@ The v0.3.5+ enhancement adds first-class support for directory-based tasks with 
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
-- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()` and `get_task_file_path()`, simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, SessionsTodos.to_dict() serialization method for complete todos structure, EnabledFeatures.branch_enforcement configuration field (lines 299-314 Python, similar in JavaScript), and UTF-8 encoding enforcement for all file operations (both Python and JavaScript implementations)
+- `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()`, `get_task_file_path()`, subtask detection helpers `is_subtask()`, `is_parent_task()`, and path normalization `_normalize_task_path()` (lines 607-678 Python, 927-1023 JavaScript), simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, SessionsTodos.to_dict() serialization method for complete todos structure, EnabledFeatures.branch_enforcement configuration field (lines 299-314 Python, similar in JavaScript), and UTF-8 encoding enforcement for all file operations (both Python and JavaScript implementations)
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation with CONFIG.features.branch_enforcement guard (lines 351-352 Python, line 444 JavaScript) enabling alternative VCS support (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration, dual-import pattern, and kickstart protocol detection via `STATE.flags.noob` (both Python and JavaScript implementations)
 - `cc_sessions/hooks/kickstart_session_start.py|.js` - Kickstart-only SessionStart hook that checks noob flag, handles reminder dates, loads entry/resume protocols, and short-circuits to let normal hooks run when noob=false (both Python and JavaScript implementations)
-- `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, improved task startup notices, and UTF-8 encoding fixes for protocol file loading and transcript reading (both Python and JavaScript implementations)
+- `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task and subtask detection for context-aware protocol loading (lines 327-348 Python, 415-437 JavaScript), merge prevention for subtasks during completion, improved task startup notices, and UTF-8 encoding fixes for protocol file loading and transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
 - `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling with UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/python/statusline.py` / `cc_sessions/javascript/statusline.js` - Claude Code statusline integration with Nerd Fonts icon support, git branch display with upstream tracking indicators (↑/↓), detached HEAD detection, and UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
@@ -62,8 +62,10 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/agents/context-refinement.md` - Context refinement with streamlined transcript reading
 - `cc_sessions/protocols/task-creation/task-creation.md:37-74` - Main templated task creation protocol with directory task structure decision and user confirmation
 - `cc_sessions/protocols/task-startup/task-startup.md` - Main templated task startup protocol with conditional sections
-- `cc_sessions/protocols/task-startup/directory-task-startup.md` - Planning guidance for directory tasks emphasizing comprehensive subtask specification, comprehensive planning, and iterative same-branch workflow
+- `cc_sessions/protocols/task-startup/directory-task-startup.md` - Planning guidance for parent README.md startup emphasizing comprehensive subtask specification, comprehensive planning, and task branch creation
+- `cc_sessions/protocols/task-startup/subtask-startup.md` - Branch checkout guidance for subtask startup ensuring work continues on parent task branch
 - `cc_sessions/protocols/task-completion/task-completion.md` - Main templated task completion protocol with directory task detection and auto-merge prevention
+- `cc_sessions/protocols/task-completion/subtask-completion.md` - Subtask-specific completion guidance preventing individual subtask merges
 - `cc_sessions/protocols/task-completion/commit-style-*.md` - Commit style templates (conventional, simple, detailed)
 - `pyproject.toml` - Package configuration with console script entry points
 
@@ -118,11 +120,15 @@ The framework includes persistent task management with git branch enforcement, c
 
 ### Directory Task Support
 - **Helper Functions**: `is_directory_task()` detects directory tasks by checking for '/' in task path, `get_task_file_path()` resolves to README.md for directories or direct .md for files
+- **Subtask Detection**: `is_subtask()` identifies individual subtask files (excludes README.md), `is_parent_task()` identifies parent README.md files within directory tasks
+- **Path Normalization**: `_normalize_task_path()` handles absolute paths and strips sessions/tasks/ prefix for consistent detection across all code
 - **Task Creation Integration**: Protocol explicitly asks users to confirm directory structure with clear explanation of workflow implications
-- **Planning-Focused Startup**: Conditionally loads directory-task-startup.md guidance emphasizing comprehensive subtask specification before implementation
-- **Merge Prevention**: Task completion protocol automatically detects directory tasks and prevents auto-merge until all subtasks complete, overriding user's auto_merge preference
+- **Context-Aware Startup**: Protocols distinguish between parent task startup (planning guidance) and subtask startup (branch checkout guidance)
+- **Parent Task Startup**: Loads directory-task-startup.md for README.md, emphasizes planning and subtask creation, creates task branch
+- **Subtask Startup**: Loads subtask-startup.md for subtask files, checks for existing branch, focuses on subtask-specific implementation
+- **Merge Prevention**: Task completion protocol automatically prevents merge for subtasks, only parent task completion merges to main branch
 - **Iterative Workflow**: All subtasks work on the same feature branch without merging until the entire multi-phase effort is done
-- **Consistent Detection**: Helper functions used throughout hooks and API commands for reliable directory task identification
+- **Consistent Detection**: Helper functions used throughout hooks and API commands for reliable directory task and subtask identification
 
 ### Branch Enforcement
 - Task-to-branch mapping: implement- → feature/, fix- → fix/, etc.

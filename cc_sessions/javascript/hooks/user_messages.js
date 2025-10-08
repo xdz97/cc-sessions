@@ -19,7 +19,9 @@ const {
     CCTodo,
     loadConfig,
     SessionsProtocol,
-    isDirectoryTask
+    isDirectoryTask,
+    isSubtask,
+    isParentTask
 } = require('./shared_state.js');
 ///-///
 
@@ -410,16 +412,24 @@ if (!isApiCommand && taskCompletionDetected) {
         ? loadProtocolFile('task-completion/commit-superrepo.md')
         : loadProtocolFile('task-completion/commit-standard.md');
 
-    // Directory task completion check
+    // Directory task completion check - simplified to just control merge behavior
     let directoryCompletionCheck = '';
     if (STATE.current_task.file && isDirectoryTask(STATE.current_task.file)) {
-        directoryCompletionCheck = loadProtocolFile('task-completion/directory-task-completion.md');
+        if (isParentTask(STATE.current_task.file)) {
+            // Completing parent README.md - normal merge behavior
+            directoryCompletionCheck = loadProtocolFile('task-completion/directory-task-completion.md');
+            directoryCompletionCheck = directoryCompletionCheck.replace('{default_branch}', CONFIG.git_preferences.default_branch);
+        } else if (isSubtask(STATE.current_task.file)) {
+            // Completing a subtask - commit but don't merge
+            directoryCompletionCheck = loadProtocolFile('task-completion/subtask-completion.md');
+            directoryCompletionCheck = directoryCompletionCheck.replace('{default_branch}', CONFIG.git_preferences.default_branch);
+        }
     }
 
-    // Build merge and push instructions based on auto preferences (but override for directory tasks)
+    // Build merge and push instructions based on auto preferences (but override for subtasks)
     let mergeInstruction;
-    if (STATE.current_task.file && isDirectoryTask(STATE.current_task.file)) {
-        mergeInstruction = 'Do not merge yet - directory task requires all subtasks to complete first';
+    if (STATE.current_task.file && isSubtask(STATE.current_task.file)) {
+        mergeInstruction = 'Do not merge yet - subtask in directory task';
     } else if (CONFIG.git_preferences.auto_merge) {
         mergeInstruction = `Merge into ${CONFIG.git_preferences.default_branch}`;
     } else {
@@ -508,7 +518,13 @@ if (!isApiCommand && taskStartDetected) {
     // Check if this is a directory task and load appropriate guidance
     let directoryGuidance = '';
     if (STATE.current_task.file && isDirectoryTask(STATE.current_task.file)) {
-        directoryGuidance = loadProtocolFile('task-startup/directory-task-startup.md');
+        if (isParentTask(STATE.current_task.file)) {
+            // Starting parent README.md - create task branch
+            directoryGuidance = loadProtocolFile('task-startup/directory-task-startup.md');
+        } else if (isSubtask(STATE.current_task.file)) {
+            // Starting a subtask - ensure on parent task branch
+            directoryGuidance = loadProtocolFile('task-startup/subtask-startup.md');
+        }
     }
 
     // Set todos based on config

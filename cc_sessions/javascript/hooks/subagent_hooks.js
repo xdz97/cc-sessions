@@ -16,6 +16,93 @@ const { editState, PROJECT_ROOT, loadState } = require('./shared_state.js');
 
 //-//
 
+// ===== FUNCTIONS ===== //
+
+function findCurrentTranscript(transcriptPath, sessionId, staleThreshold = 30) {
+    /**
+     * Detect stale transcripts and find the current one by session ID.
+     *
+     * @param {string} transcriptPath - Path to the transcript file we received
+     * @param {string} sessionId - Current session ID to match
+     * @param {number} staleThreshold - Seconds threshold for considering transcript stale
+     * @returns {string} Path to the current transcript (may be same as input if not stale)
+     */
+    if (!transcriptPath || !fs.existsSync(transcriptPath)) {
+        return transcriptPath;
+    }
+
+    try {
+        // Read last line of transcript to get last message timestamp
+        const lines = fs.readFileSync(transcriptPath, 'utf-8').split('\n').filter(line => line.trim());
+        if (!lines.length) {
+            return transcriptPath;
+        }
+
+        const lastLine = lines[lines.length - 1];
+        const lastMsg = JSON.parse(lastLine);
+        const lastTimestamp = lastMsg.timestamp;
+
+        if (!lastTimestamp) {
+            return transcriptPath;
+        }
+
+        // Parse ISO timestamp and compare to current time
+        const lastTime = new Date(lastTimestamp);
+        const currentTime = new Date();
+        const ageSeconds = (currentTime - lastTime) / 1000;
+
+        // If transcript is fresh, return it
+        if (ageSeconds <= staleThreshold) {
+            return transcriptPath;
+        }
+
+        // Transcript is stale - search for current one
+        const transcriptDir = path.dirname(transcriptPath);
+        const allFiles = fs.readdirSync(transcriptDir)
+            .filter(f => f.endsWith('.jsonl'))
+            .map(f => path.join(transcriptDir, f))
+            .sort((a, b) => fs.statSync(b).mtime - fs.statSync(a).mtime)
+            .slice(0, 5);  // Top 5 most recent
+
+        // Check each transcript for matching session ID
+        for (const candidate of allFiles) {
+            try {
+                const candidateLines = fs.readFileSync(candidate, 'utf-8').split('\n').filter(line => line.trim());
+                if (!candidateLines.length) {
+                    continue;
+                }
+
+                // Check last line for session ID
+                const candidateLast = JSON.parse(candidateLines[candidateLines.length - 1]);
+                const candidateSessionId = candidateLast.sessionId;
+
+                if (candidateSessionId === sessionId) {
+                    // Verify this transcript is fresh
+                    const candidateTimestamp = candidateLast.timestamp;
+                    if (candidateTimestamp) {
+                        const candidateTime = new Date(candidateTimestamp);
+                        const candidateAge = (currentTime - candidateTime) / 1000;
+
+                        if (candidateAge <= staleThreshold) {
+                            return candidate;
+                        }
+                    }
+                }
+            } catch {
+                continue;
+            }
+        }
+
+        // No fresh transcript found, return original
+        return transcriptPath;
+    } catch {
+        // Any error, return original path
+        return transcriptPath;
+    }
+}
+
+//-//
+
 // ===== GLOBALS ===== //
 
 /// ===== CI DETECTION ===== ///
@@ -52,10 +139,16 @@ if (toolName !== "Task") {
     process.exit(0);
 }
 
-// Get the transcript path from the input data
-const transcriptPath = inputData.transcript_path || "";
+// Get the transcript path and session ID from the input data
+let transcriptPath = inputData.transcript_path || "";
+const sessionId = inputData.session_id || "";
 if (!transcriptPath) {
     process.exit(0);
+}
+
+// Detect and recover from stale transcript
+if (transcriptPath) {
+    transcriptPath = findCurrentTranscript(transcriptPath, sessionId);
 }
 
 // Get the transcript into memory

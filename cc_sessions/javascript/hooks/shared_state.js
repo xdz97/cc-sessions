@@ -924,28 +924,92 @@ function saveConfig(config) {
     atomicWrite(CONFIG_FILE, config.toDict());
 }
 
+function _normalizeTaskPath(taskPath) {
+    /**
+     * Normalize task path to relative string from sessions/tasks/.
+     * Strips absolute path prefix if present.
+     */
+    let pathStr = String(taskPath);
+    const tasksRoot = path.join(PROJECT_ROOT, 'sessions', 'tasks');
+
+    // If path is absolute, make it relative to tasks root
+    if (pathStr.startsWith(tasksRoot)) {
+        try {
+            pathStr = path.relative(tasksRoot, pathStr);
+        } catch (e) {
+            // Keep original if error
+        }
+    }
+    // Also handle paths starting with 'sessions/tasks/'
+    if (pathStr.startsWith('sessions/tasks/')) {
+        pathStr = pathStr.slice('sessions/tasks/'.length);
+    }
+    // Normalize path separators to forward slashes for consistency
+    return pathStr.replace(/\\/g, '/');
+}
+
 function isDirectoryTask(taskPath) {
     /**
      * Check if a task is part of a directory task (contains a /).
-     * If path has a slash, it's definitely a directory task or subtask.
+     *
+     * @param {string} taskPath - Relative path from sessions/tasks/
+     *
+     * @example
+     * 'h-task/01-subtask.md' → true (subtask)
+     * 'h-task/README.md' → true (parent)
+     * 'h-task' → true (directory reference)
+     * 'simple-task.md' → false (regular file task)
      */
-    // If the path contains a slash, it's a directory task or subtask within one
-    if (taskPath.includes('/')) {
+    const pathStr = _normalizeTaskPath(taskPath);
+    // If the string contains a slash, it's a directory task or subtask
+    if (pathStr.includes('/')) {
         return true;
     }
     // Otherwise check if it's a directory with README.md
+    const tasksRoot = path.join(PROJECT_ROOT, 'sessions', 'tasks');
+    const taskDir = path.join(tasksRoot, pathStr);
     try {
-        const stat = fs.statSync(taskPath);
+        const stat = fs.statSync(taskDir);
         if (stat.isDirectory()) {
-            const readmePath = path.join(taskPath, 'README.md');
+            const readmePath = path.join(taskDir, 'README.md');
             return fs.existsSync(readmePath);
         }
     } catch (e) {
-        // Path doesn't exist or permission error - not a directory task
-        // (This is expected for relative task names like "h-task/01-subtask.md")
         return false;
     }
     return false;
+}
+
+function isSubtask(taskPath) {
+    /**
+     * Check if a task path points to a subtask file (not the parent README.md).
+     *
+     * @param {string} taskPath - Relative path from sessions/tasks/
+     *
+     * @example
+     * 'h-task/01-subtask.md' → true
+     * 'h-task/README.md' → false
+     * 'h-task' → false
+     * 'h-task/' → false
+     * 'simple-task.md' → false
+     */
+    const pathStr = _normalizeTaskPath(taskPath);
+    if (!pathStr.includes('/')) {
+        return false;
+    }
+    // It's a subtask if it has a slash but isn't the README.md
+    return !pathStr.endsWith('README.md') && !pathStr.endsWith('/');
+}
+
+function isParentTask(taskPath) {
+    /**
+     * Check if a task path points to a directory task's parent README.md.
+     *
+     * @param {string} taskPath - Relative path from sessions/tasks/
+     *
+     * @returns {boolean} True if it's a directory task but NOT a subtask
+     */
+    return isDirectoryTask(taskPath) && !isSubtask(taskPath);
 }
 
 function getTaskFilePath(taskPath) {

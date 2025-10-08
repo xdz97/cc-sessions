@@ -604,17 +604,72 @@ def find_git_repo(dir_path: Path) -> Optional[Path]:
         current = current.parent
     return None
 
+def _normalize_task_path(task_path: Union[str, Path]) -> str:
+    """Normalize task path to relative string from sessions/tasks/.
+    Strips absolute path prefix if present."""
+    path_str = str(task_path) if isinstance(task_path, Path) else task_path
+    # If path is absolute, make it relative to tasks root
+    tasks_root = PROJECT_ROOT / 'sessions' / 'tasks'
+    if path_str.startswith(str(tasks_root)):
+        path_obj = Path(path_str)
+        try:
+            path_str = str(path_obj.relative_to(tasks_root))
+        except ValueError:
+            pass  # Keep original if not under tasks_root
+    # Also handle paths starting with 'sessions/tasks/'
+    if path_str.startswith('sessions/tasks/'):
+        path_str = path_str[len('sessions/tasks/'):]
+    return path_str
+
 def is_directory_task(task_path: Union[str, Path]) -> bool:
     """Check if a task is part of a directory task (contains a /).
-    If path has a slash, it's definitely a directory task or subtask."""
-    # Normalize to string first for consistent '/' detection
-    path_str = str(task_path) if isinstance(task_path, Path) else task_path
+
+    Args:
+        task_path: Relative path from sessions/tasks/ (e.g., 'h-task/01-subtask.md')
+
+    Examples:
+        'h-task/01-subtask.md' → True (subtask)
+        'h-task/README.md' → True (parent)
+        'h-task' → True (directory reference)
+        'simple-task.md' → False (regular file task)
+    """
+    path_str = _normalize_task_path(task_path)
     # If the string contains a slash, it's a directory task or subtask
     if '/' in path_str: return True
     # Otherwise check if it's a directory with README.md
-    task_path = task_path if isinstance(task_path, Path) else Path(task_path)
-    if task_path.is_dir() and (task_path / 'README.md').exists(): return True
+    tasks_root = PROJECT_ROOT / 'sessions' / 'tasks'
+    task_dir = tasks_root / path_str
+    if task_dir.is_dir() and (task_dir / 'README.md').exists(): return True
     return False
+
+def is_subtask(task_path: Union[str, Path]) -> bool:
+    """Check if a task path points to a subtask file (not the parent README.md).
+
+    Args:
+        task_path: Relative path from sessions/tasks/
+
+    Examples:
+        'h-task/01-subtask.md' → True
+        'h-task/README.md' → False
+        'h-task' → False
+        'h-task/' → False
+        'simple-task.md' → False
+    """
+    path_str = _normalize_task_path(task_path)
+    if '/' not in path_str: return False
+    # It's a subtask if it has a slash but isn't the README.md
+    return not path_str.endswith('README.md') and not path_str.endswith('/')
+
+def is_parent_task(task_path: Union[str, Path]) -> bool:
+    """Check if a task path points to a directory task's parent README.md.
+
+    Args:
+        task_path: Relative path from sessions/tasks/
+
+    Returns:
+        True if it's a directory task but NOT a subtask
+    """
+    return is_directory_task(task_path) and not is_subtask(task_path)
 
 def get_task_file_path(task_path: Union[str, Path]) -> Path:
     """Get the actual .md file path for a task (handles both directory and file tasks)."""

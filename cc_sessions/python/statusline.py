@@ -3,6 +3,7 @@
 ## ===== STDLIB ===== ##
 import json, sys, subprocess, os
 from pathlib import Path
+from datetime import datetime, timezone
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -18,6 +19,90 @@ else:
     # Use installed cc-sessions package in production
     from cc_sessions.hooks.shared_state import edit_state, Model, Mode, find_git_repo, load_state
 ##-##
+
+#-#
+
+# ===== FUNCTIONS ===== #
+
+def find_current_transcript(transcript_path, session_id, stale_threshold=30):
+    """
+    Detect stale transcripts and find the current one by session ID.
+
+    Args:
+        transcript_path: Path to the transcript file we received
+        session_id: Current session ID to match
+        stale_threshold: Seconds threshold for considering transcript stale
+
+    Returns:
+        Path to the current transcript (may be same as input if not stale)
+    """
+    if not transcript_path or not os.path.exists(transcript_path):
+        return transcript_path
+
+    try:
+        # Read last line of transcript to get last message timestamp
+        with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f:
+            lines = f.readlines()
+            if not lines:
+                return transcript_path
+
+            last_line = lines[-1].strip()
+            if not last_line:
+                return transcript_path
+
+            last_msg = json.loads(last_line)
+            last_timestamp = last_msg.get('timestamp')
+
+            if not last_timestamp:
+                return transcript_path
+
+            # Parse ISO timestamp and compare to current time
+            last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
+            current_time = datetime.now(timezone.utc)
+            age_seconds = (current_time - last_time).total_seconds()
+
+            # If transcript is fresh, return it
+            if age_seconds <= stale_threshold:
+                return transcript_path
+
+            # Transcript is stale - search for current one
+            transcript_dir = Path(transcript_path).parent
+            all_transcripts = sorted(
+                transcript_dir.glob('*.jsonl'),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )[:5]  # Top 5 most recent
+
+            # Check each transcript for matching session ID
+            for candidate in all_transcripts:
+                try:
+                    with open(candidate, 'r', encoding='utf-8', errors='backslashreplace') as cf:
+                        candidate_lines = cf.readlines()
+                        if not candidate_lines:
+                            continue
+
+                        # Check last line for session ID
+                        candidate_last = json.loads(candidate_lines[-1].strip())
+                        candidate_session_id = candidate_last.get('sessionId')
+
+                        if candidate_session_id == session_id:
+                            # Verify this transcript is fresh
+                            candidate_timestamp = candidate_last.get('timestamp')
+                            if candidate_timestamp:
+                                candidate_time = datetime.fromisoformat(candidate_timestamp.replace('Z', '+00:00'))
+                                candidate_age = (current_time - candidate_time).total_seconds()
+
+                                if candidate_age <= stale_threshold:
+                                    return str(candidate)
+                except:
+                    continue
+
+            # No fresh transcript found, return original
+            return transcript_path
+
+    except:
+        # Any error, return original path
+        return transcript_path
 
 #-#
 
@@ -96,6 +181,10 @@ Shows:
 context_length = None
 transcript_path = data.get('transcript_path', None)
 
+# Detect and recover from stale transcript
+if transcript_path:
+    transcript_path = find_current_transcript(transcript_path, session_id)
+
 if transcript_path:
     try:
         with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f: lines = f.readlines()
@@ -154,10 +243,11 @@ else: bar_color = red
 #!> Construct progress bar string
 # Build progress bar string
 progress_bar = []
+context_icon = "󱃖 " if use_nerd_fonts else ""
+progress_bar.append(f"{reset}{l_gray}{context_icon} ")
 progress_bar.append(bar_color + ("█" * filled_blocks))
 progress_bar.append(gray + ("░" * empty_blocks))
-context_icon = "󱃖 " if use_nerd_fonts else ""
-progress_bar.append(reset + f" {l_gray}{context_icon}{progress_pct}% ({formatted_tokens}/{formatted_limit}){reset}")
+progress_bar.append(reset + f" {l_gray}{progress_pct}% ({formatted_tokens}/{formatted_limit}){reset}")
 
 progress_bar_str = "".join(progress_bar)
 #!<
@@ -179,7 +269,7 @@ if git_path:
 
         if branch:
             branch_icon = "󰘬 " if use_nerd_fonts else ""
-            git_branch_info = f"{l_gray}{branch_icon}{branch}{reset}"
+            git_branch_info = f"{l_gray}{branch_icon} {branch}{reset}"
 
             # Get upstream tracking status
             try:
@@ -191,9 +281,9 @@ if git_path:
 
                 upstream_parts = []
                 if ahead > 0:
-                    upstream_parts.append(f"↑{ahead}")
+                    upstream_parts.append(f"↑ {ahead}")
                 if behind > 0:
-                    upstream_parts.append(f"↓{behind}")
+                    upstream_parts.append(f"↓ {behind}")
                 if upstream_parts:
                     upstream_info = f"{orange}{''.join(upstream_parts)}{reset}"
             except:
@@ -218,11 +308,11 @@ curr_task = STATE.current_task.name if STATE else None
 ##-##
 
 ## ===== CURRENT MODE ===== ##
-curr_mode = "Implementation" if STATE.mode == Mode.GO else "Discussion"
+curr_mode = "Implement" if STATE.mode == Mode.GO else "Discuss"
 if use_nerd_fonts:
     mode_icon = "󰷫 " if STATE.mode == Mode.GO else "󰭹 "
 else:
-    mode_icon = "I: " if STATE.mode == Mode.GO else "D: "
+    mode_icon = "🛠️: " if STATE.mode == Mode.GO else "💬:"
 ##-##
 
 ## ===== COUNT EDITED & UNCOMMITTED ===== ##
@@ -258,7 +348,7 @@ if task_dir.exists() and task_dir.is_dir():
 # Line 1 - Progress bar | Task
 context_part = progress_bar_str if progress_bar_str else f"{gray}No context usage data{reset}"
 task_icon = "󰒓 " if use_nerd_fonts else "Task: "
-task_part = f"{cyan}{task_icon}{curr_task}{reset}" if curr_task else f"{cyan}{task_icon}{gray}No Task{reset}"
+task_part = f"{cyan}{task_icon} {curr_task}{reset}" if curr_task else f"{cyan}{task_icon} {gray}No Task{reset}"
 print(f"{context_part} | {task_part}")
 
 # Line 2 - Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch
@@ -270,9 +360,9 @@ if upstream_info:
 uncommitted_str = " ".join(uncommitted_parts)
 
 line2_parts = [
-    f"{purple}{mode_icon}{curr_mode}{reset}",
+    f"{purple}{mode_icon} {curr_mode}{reset}",
     uncommitted_str,
-    f"{cyan}{tasks_icon}{open_task_count + open_task_dir_count} open{reset}"
+    f"{cyan}{tasks_icon} {open_task_count + open_task_dir_count} open{reset}"
 ]
 if git_branch_info:
     line2_parts.append(git_branch_info)

@@ -5,6 +5,8 @@
 ## ===== STDLIB ===== ##
 import json, sys, math, bisect, os
 from collections import deque
+from pathlib import Path
+from datetime import datetime, timezone
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -13,6 +15,90 @@ from collections import deque
 ## ===== LOCAL ===== ##
 from shared_state import edit_state, PROJECT_ROOT
 ##-##
+
+#-#
+
+# ===== FUNCTIONS ===== #
+
+def find_current_transcript(transcript_path, session_id, stale_threshold=30):
+    """
+    Detect stale transcripts and find the current one by session ID.
+
+    Args:
+        transcript_path: Path to the transcript file we received
+        session_id: Current session ID to match
+        stale_threshold: Seconds threshold for considering transcript stale
+
+    Returns:
+        Path to the current transcript (may be same as input if not stale)
+    """
+    if not transcript_path or not os.path.exists(transcript_path):
+        return transcript_path
+
+    try:
+        # Read last line of transcript to get last message timestamp
+        with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f:
+            lines = f.readlines()
+            if not lines:
+                return transcript_path
+
+            last_line = lines[-1].strip()
+            if not last_line:
+                return transcript_path
+
+            last_msg = json.loads(last_line)
+            last_timestamp = last_msg.get('timestamp')
+
+            if not last_timestamp:
+                return transcript_path
+
+            # Parse ISO timestamp and compare to current time
+            last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
+            current_time = datetime.now(timezone.utc)
+            age_seconds = (current_time - last_time).total_seconds()
+
+            # If transcript is fresh, return it
+            if age_seconds <= stale_threshold:
+                return transcript_path
+
+            # Transcript is stale - search for current one
+            transcript_dir = Path(transcript_path).parent
+            all_transcripts = sorted(
+                transcript_dir.glob('*.jsonl'),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )[:5]  # Top 5 most recent
+
+            # Check each transcript for matching session ID
+            for candidate in all_transcripts:
+                try:
+                    with open(candidate, 'r', encoding='utf-8', errors='backslashreplace') as cf:
+                        candidate_lines = cf.readlines()
+                        if not candidate_lines:
+                            continue
+
+                        # Check last line for session ID
+                        candidate_last = json.loads(candidate_lines[-1].strip())
+                        candidate_session_id = candidate_last.get('sessionId')
+
+                        if candidate_session_id == session_id:
+                            # Verify this transcript is fresh
+                            candidate_timestamp = candidate_last.get('timestamp')
+                            if candidate_timestamp:
+                                candidate_time = datetime.fromisoformat(candidate_timestamp.replace('Z', '+00:00'))
+                                candidate_age = (current_time - candidate_time).total_seconds()
+
+                                if candidate_age <= stale_threshold:
+                                    return str(candidate)
+                except:
+                    continue
+
+            # No fresh transcript found, return original
+            return transcript_path
+
+    except:
+        # Any error, return original path
+        return transcript_path
 
 #-#
 
@@ -42,9 +128,14 @@ except json.JSONDecodeError as e: print(f"Error: Invalid JSON input: {e}", file=
 tool_name = input_data.get("tool_name", "")
 if tool_name != "Task": sys.exit(0)
 
-# Get the transcript path from the input data
+# Get the transcript path and session ID from the input data
 transcript_path = input_data.get("transcript_path", "")
+session_id = input_data.get("session_id", "")
 if not transcript_path: sys.exit(0)
+
+# Detect and recover from stale transcript
+if transcript_path:
+    transcript_path = find_current_transcript(transcript_path, session_id)
 
 # Get the transcript into memory
 with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f: transcript = [json.loads(line) for line in f]

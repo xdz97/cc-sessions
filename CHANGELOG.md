@@ -5,6 +5,13 @@
 ### Added
 - **CI Environment Detection**: All hooks now automatically detect CI environments (GitHub Actions, etc.) and bypass DAIC enforcement to enable automated Claude Code agents
   - Thanks to @oppianmatt (matt@oppian.com) for the implementation guidance (#14)
+- **Nerd Fonts Icons and Git Branch Display**: Enhanced statusline with Nerd Fonts icons and git branch information
+  - Nerd Fonts icons for context, task, mode, open tasks, and git branch
+  - Git branch display at end of line 2
+  - Configurable toggle with ASCII fallback for users without Nerd Fonts
+  - Thanks to @dnviti (dnviti@gmail.com) for the ideas (#21)
+- **Safe Uninstaller**: Interactive uninstaller with automatic backups, dry-run mode, and user data preservation
+  - Thanks to @gabelul for the uninstaller concept (#45)
 
 ## [0.2.8] - 2025-09-04
 

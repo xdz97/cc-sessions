@@ -157,20 +157,52 @@ function main() {
         gray + '░'.repeat(emptyBlocks) +
         reset + ` ${lGray}${contextIcon}${progressPct}% (${formattedTokens}/${formattedLimit})${reset}`;
 
-    // Find git repository path for use in multiple sections
-    const gitPath = cwd === PROJECT_ROOT ? path.join(PROJECT_ROOT, '.git') : findGitRepo(path.resolve(cwd));
+    // Find git repository path
+    const gitPath = findGitRepo(path.resolve(cwd));
 
-    // Git branch
-    let gitInfo = null;
-    if (gitPath && fs.existsSync(gitPath)) {
+    // Git branch and upstream tracking
+    let gitBranchInfo = null;
+    let upstreamInfo = null;
+    if (gitPath) {
         try {
-            const branch = execSync('git branch --show-current', { cwd, encoding: 'utf-8' }).trim();
+            const branch = execSync(`git -C "${cwd}" branch --show-current`,
+                                   { encoding: 'utf-8' }).trim();
             if (branch) {
                 const branchIcon = useNerdFonts ? '󰘬 ' : '';
-                gitInfo = `${lGray}${branchIcon}${branch}${reset}`;
+                gitBranchInfo = `${lGray}${branchIcon}${branch}${reset}`;
+
+                // Get upstream tracking status
+                try {
+                    const ahead = parseInt(execSync(`git -C "${cwd}" rev-list --count @{u}..HEAD`,
+                                                    { encoding: 'utf-8' }).trim());
+                    const behind = parseInt(execSync(`git -C "${cwd}" rev-list --count HEAD..@{u}`,
+                                                     { encoding: 'utf-8' }).trim());
+
+                    const upstreamParts = [];
+                    if (ahead > 0) upstreamParts.push(`↑${ahead}`);
+                    if (behind > 0) upstreamParts.push(`↓${behind}`);
+                    if (upstreamParts.length > 0) {
+                        upstreamInfo = `${orange}${upstreamParts.join('')}${reset}`;
+                    }
+                } catch {
+                    // No upstream or error getting upstream status
+                    upstreamInfo = null;
+                }
+            } else {
+                // Detached HEAD - show commit hash with detached indicator
+                const commit = execSync(`git -C "${cwd}" rev-parse --short HEAD`,
+                                       { encoding: 'utf-8' }).trim();
+                if (commit) {
+                    if (useNerdFonts) {
+                        // Broken link icon to indicate detached
+                        gitBranchInfo = `${lGray}󰌺 @${commit}${reset}`;
+                    } else {
+                        gitBranchInfo = `${lGray}@${commit} [detached]${reset}`;
+                    }
+                }
             }
         } catch {
-            gitInfo = null;
+            gitBranchInfo = null;
         }
     }
 
@@ -186,15 +218,15 @@ function main() {
     // Count edited & uncommitted files
     let totalEdited = 0;
 
-    if (gitPath && fs.existsSync(gitPath)) {
+    if (gitPath) {
         try {
             // Count unstaged changes
-            const unstaged = execSync(`git --git-dir "${gitPath}" --work-tree "${cwd}" diff --name-only`,
+            const unstaged = execSync(`git -C "${cwd}" diff --name-only`,
                                      { encoding: 'utf-8' }).trim();
             const unstagedCount = unstaged ? unstaged.split('\n').length : 0;
 
             // Count staged changes
-            const staged = execSync(`git --git-dir "${gitPath}" --work-tree "${cwd}" diff --cached --name-only`,
+            const staged = execSync(`git -C "${cwd}" diff --cached --name-only`,
                                    { encoding: 'utf-8' }).trim();
             const stagedCount = staged ? staged.split('\n').length : 0;
 
@@ -231,15 +263,22 @@ function main() {
         `${cyan}${taskIcon}${gray}No Task${reset}`;
     console.log(contextPart + ' | ' + taskPart);
 
-    // Line 2 - Mode | Edited & Uncommitted | Open Tasks | Git info
+    // Line 2 - Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch
     const tasksIcon = useNerdFonts ? '󰈙 ' : '';
+    // Build uncommitted section with optional upstream indicators
+    const uncommittedParts = [`${orange}✎ ${totalEdited}${reset}`];
+    if (upstreamInfo) {
+        uncommittedParts.push(upstreamInfo);
+    }
+    const uncommittedStr = uncommittedParts.join(' ');
+
     const line2Parts = [
         `${purple}${modeIcon}${currMode}${reset}`,
-        `${orange}✎ ${totalEdited} files${reset}`,
+        uncommittedStr,
         `${cyan}${tasksIcon}${openTaskCount + openTaskDirCount} open${reset}`
     ];
-    if (gitInfo) {
-        line2Parts.push(gitInfo);
+    if (gitBranchInfo) {
+        line2Parts.push(gitBranchInfo);
     }
     console.log(line2Parts.join(' | '));
 }

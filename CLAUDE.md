@@ -25,7 +25,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task detection for merge prevention, improved task startup notices, and UTF-8 encoding fixes for protocol file loading and transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
 - `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling with UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
-- `cc_sessions/python/statusline.py` / `cc_sessions/javascript/statusline.js` - Claude Code statusline integration with UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
+- `cc_sessions/python/statusline.py` / `cc_sessions/javascript/statusline.js` - Claude Code statusline integration with Nerd Fonts icon support, git branch display with upstream tracking indicators (↑/↓), detached HEAD detection, and UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output (Python)
 - `cc_sessions/scripts/api/index.js` - Sessions API entry point (JavaScript)
 - `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support, kickstart handler integration, and --from-slash flag handling (both Python and JavaScript implementations)
@@ -300,6 +300,7 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 - `branch_enforcement` - Git branch validation (default: true, can be disabled for alternative VCS systems like Jujutsu or Mercurial)
 - `task_detection` - Task-based workflow automation
 - `auto_ultrathink` - Enhanced AI reasoning
+- `use_nerd_fonts` - Nerd Fonts icon display in statusline (default: true, shows icons when enabled, ASCII fallback when disabled)
 - `context_warnings` - Token usage warnings at 85%/90%
 
 ### State Management
@@ -389,6 +390,58 @@ Configuration in `.claude/settings.json`:
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
 ## Recent Enhancements
+
+### Statusline Nerd Fonts and Git Branch Display (v0.3.12+)
+
+Enhanced Claude Code statusline with visual improvements and git branch information:
+
+**Nerd Fonts Icon Support:**
+- Context icon (󱃖) for context usage display
+- Task icon (󰒓) for current task display
+- Mode icons (󰭹 for Discussion, 󰷫 for Implementation)
+- Tasks icon (󰈙) for open task count
+- Git branch icon (󰘬) for branch display
+- Detached HEAD icon (󰌺) for detached state
+- ASCII fallback when use_nerd_fonts disabled
+
+**Git Branch Display:**
+- Branch name appears at end of line 2 with automatic `-C` command pattern
+- Uses `git branch --show-current` for reliable branch detection
+- Detached HEAD detection shows commit hash with broken link icon (󰌺 @abc1234)
+- ASCII fallback shows `@abc1234 [detached]` when Nerd Fonts disabled
+
+**Upstream Tracking Indicators:**
+- Shows commits ahead of remote with ↑N (e.g., ↑3)
+- Shows commits behind remote with ↓N (e.g., ↓2)
+- Combined display when both ahead and behind (e.g., ↑3↓2)
+- Appears in uncommitted section between edited files and open tasks
+- Uses `git rev-list --count @{u}..HEAD` and `HEAD..@{u}` for tracking status
+- Gracefully handles missing upstream with silent failure
+
+**Configuration Toggle:**
+- Feature flag: `CONFIG.features.use_nerd_fonts` (default: true)
+- Toggle via API: `sessions config features toggle use_nerd_fonts`
+- Toggle via slash command: `/sessions config features toggle use_nerd_fonts`
+- View current state: `sessions config features show`
+
+**Implementation:**
+- Python: Lines 62-68, 159-213, 222-225, 260, 265, 277-278 in statusline.py
+- JavaScript: Lines 76-77, 154, 164-207, 214-216, 260, 267, 280-281 in statusline.js
+- Configuration: Lines 303, 315 in shared_state.py (EnabledFeatures dataclass)
+- API toggle: Lines 619-631 in config_commands.py
+
+**Space Optimization:**
+- Removed "files" text from uncommitted section to accommodate upstream indicators
+- Now shows `✎ 5 ↑3` instead of `✎ 5 files`
+- Line 2 format: `Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch`
+
+**Files Modified:**
+- statusline.py: Lines 62-68, 159-213, 222-225, 260-278
+- statusline.js: Lines 76-77, 154-207, 214-216, 260-283
+- shared_state.py: Lines 303, 315 (EnabledFeatures)
+- shared_state.js: Mirror implementation
+- config_commands.py: Lines 619-631 (toggle support)
+- config_commands.js: Mirror implementation
 
 ### Branch Enforcement Configuration Toggle (v0.3.11+)
 
@@ -1075,7 +1128,7 @@ All slash commands use: `!sessions <command> $ARGUMENTS --from-slash`
 - `sessions config phrases list [category] [--from-slash]` - View trigger phrases
 - `sessions config phrases add <category> "<phrase>" [--from-slash]` - Add trigger phrase
 - `sessions config phrases remove <category> "<phrase>" [--from-slash]` - Remove trigger phrase
-- `sessions config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, warn_85, warn_90)
+- `sessions config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, warn_85, warn_90)
 - `sessions config git show [--from-slash]` - View git preferences
 - `sessions config git set <setting> <value> [--from-slash]` - Update git preference
 - `sessions config env show [--from-slash]` - View environment settings

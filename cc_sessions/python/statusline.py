@@ -165,22 +165,52 @@ progress_bar_str = "".join(progress_bar)
 
 ## ===== GIT REPOSITORY ===== ##
 # Find git repository path for use in multiple sections
-if cwd == str(PROJECT_ROOT): git_path = PROJECT_ROOT / ".git"
-else: git_path = find_git_repo(Path(cwd))
+git_path = find_git_repo(Path(cwd))
 ##-##
 
-## ===== GIT BRANCH ===== ##
-git_info = None
-if git_path and git_path.exists():
+## ===== GIT BRANCH & UPSTREAM TRACKING ===== ##
+git_branch_info = None
+upstream_info = None
+if git_path:
     try:
         # Get current branch
-        branch = subprocess.check_output(["git", "branch", "--show-current"], cwd=cwd).decode().strip()
+        branch_cmd = ["git", "-C", str(Path(cwd)), "branch", "--show-current"]
+        branch = subprocess.check_output(branch_cmd, stderr=subprocess.PIPE).decode().strip()
 
         if branch:
             branch_icon = "󰘬 " if use_nerd_fonts else ""
-            git_info = f"{l_gray}{branch_icon}{branch}{reset}"
-    except Exception as e:
-        git_info = None
+            git_branch_info = f"{l_gray}{branch_icon}{branch}{reset}"
+
+            # Get upstream tracking status
+            try:
+                ahead_cmd = ["git", "-C", str(Path(cwd)), "rev-list", "--count", "@{u}..HEAD"]
+                ahead = int(subprocess.check_output(ahead_cmd, stderr=subprocess.PIPE).decode().strip())
+
+                behind_cmd = ["git", "-C", str(Path(cwd)), "rev-list", "--count", "HEAD..@{u}"]
+                behind = int(subprocess.check_output(behind_cmd, stderr=subprocess.PIPE).decode().strip())
+
+                upstream_parts = []
+                if ahead > 0:
+                    upstream_parts.append(f"↑{ahead}")
+                if behind > 0:
+                    upstream_parts.append(f"↓{behind}")
+                if upstream_parts:
+                    upstream_info = f"{orange}{''.join(upstream_parts)}{reset}"
+            except:
+                # No upstream or error getting upstream status
+                upstream_info = None
+        else:
+            # Detached HEAD - show commit hash with detached indicator
+            commit_cmd = ["git", "-C", str(Path(cwd)), "rev-parse", "--short", "HEAD"]
+            commit = subprocess.check_output(commit_cmd, stderr=subprocess.PIPE).decode().strip()
+            if commit:
+                if use_nerd_fonts:
+                    # Broken link icon to indicate detached
+                    git_branch_info = f"{l_gray}󰌺 @{commit}{reset}"
+                else:
+                    git_branch_info = f"{l_gray}@{commit} [detached]{reset}"
+    except:
+        git_branch_info = None
 ##-##
 
 ## ===== CURRENT TASK ===== ##
@@ -198,16 +228,16 @@ else:
 ## ===== COUNT EDITED & UNCOMMITTED ===== ##
 # Use subprocess to count edited and uncommitted files (unstaged or staged)
 total_edited = 0
-if git_path and git_path.exists():
+if git_path:
     try:
         # Count unstaged changes
-        unstaged_cmd = ["git", "--git-dir", str(git_path), "--work-tree", str(cwd), "diff", "--name-only"]
-        unstaged_files = subprocess.check_output(unstaged_cmd).decode().strip().split('\n')
+        unstaged_cmd = ["git", "-C", str(Path(cwd)), "diff", "--name-only"]
+        unstaged_files = subprocess.check_output(unstaged_cmd, stderr=subprocess.PIPE).decode().strip().split('\n')
         unstaged_count = len([f for f in unstaged_files if f])  # Filter out empty strings
 
         # Count staged changes
-        staged_cmd = ["git", "--git-dir", str(git_path), "--work-tree", str(cwd), "diff", "--cached", "--name-only"]
-        staged_files = subprocess.check_output(staged_cmd).decode().strip().split('\n')
+        staged_cmd = ["git", "-C", str(Path(cwd)), "diff", "--cached", "--name-only"]
+        staged_files = subprocess.check_output(staged_cmd, stderr=subprocess.PIPE).decode().strip().split('\n')
         staged_count = len([f for f in staged_files if f])  # Filter out empty strings
 
         total_edited = unstaged_count + staged_count
@@ -231,15 +261,21 @@ task_icon = "󰒓 " if use_nerd_fonts else "Task: "
 task_part = f"{cyan}{task_icon}{curr_task}{reset}" if curr_task else f"{cyan}{task_icon}{gray}No Task{reset}"
 print(f"{context_part} | {task_part}")
 
-# Line 2 - Mode | Edited & Uncommitted | Open Tasks | Git info
+# Line 2 - Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch
 tasks_icon = "󰈙 " if use_nerd_fonts else ""
+# Build uncommitted section with optional upstream indicators
+uncommitted_parts = [f"{orange}✎ {total_edited}{reset}"]
+if upstream_info:
+    uncommitted_parts.append(upstream_info)
+uncommitted_str = " ".join(uncommitted_parts)
+
 line2_parts = [
     f"{purple}{mode_icon}{curr_mode}{reset}",
-    f"{orange}✎ {total_edited} files{reset}",
+    uncommitted_str,
     f"{cyan}{tasks_icon}{open_task_count + open_task_dir_count} open{reset}"
 ]
-if git_info:
-    line2_parts.append(git_info)
+if git_branch_info:
+    line2_parts.append(git_branch_info)
 print(" | ".join(line2_parts))
 ##-##
 

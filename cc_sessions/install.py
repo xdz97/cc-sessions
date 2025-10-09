@@ -10,6 +10,8 @@ import json
 import shutil
 import platform
 from pathlib import Path
+import inquirer
+from inquirer import themes
 
 # Colors for terminal output
 class Colors:
@@ -79,6 +81,9 @@ def main():
         # Initialize state and config files
         initialize_state_files(PROJECT_ROOT)
 
+        # Run installer decision flow (first-time detection, config, kickstart)
+        kickstart_mode = installer_decision_flow(PROJECT_ROOT)
+
         # Restore tasks if this was an update
         if backup_dir:
             restore_tasks(PROJECT_ROOT, backup_dir)
@@ -88,11 +93,18 @@ def main():
         print(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN))
         print(color('Next steps:', Colors.BOLD))
         print('  1. Restart your Claude Code session (or run /clear)')
-        if backup_dir:
-            print('  2. Reconfigure settings (or use kickstart onboarding)')
-            print('  3. Check backup/ for any custom agents you want to restore\n')
-        else:
+
+        if kickstart_mode == 'full':
             print('  2. The kickstart onboarding will guide you through setup\n')
+        elif kickstart_mode == 'subagents':
+            print('  2. Kickstart will guide you through subagent customization\n')
+        else:  # skip
+            print('  2. You can start using cc-sessions right away!')
+            print('     - Try "mek: my first task" to create a task')
+            print('     - Type "help" to see available commands\n')
+
+        if backup_dir:
+            print(color('Note: Check backup/ for any custom agents you want to restore\n', Colors.CYAN))
 
     except Exception as error:
         print(color(f'\n❌ Installation failed: {error}', Colors.RED), file=sys.stderr)
@@ -346,6 +358,504 @@ def configure_gitignore(project_root):
         # Create new .gitignore with our entries
         gitignore_path.write_text('\n'.join(gitignore_entries), encoding='utf-8')
 
+def get_readonly_commands_list():
+    """Get the list of read-only commands from sessions_enforce.py for display."""
+    # This is a subset for display purposes - the full list is in sessions_enforce.py
+    return [
+        'cat', 'ls', 'pwd', 'cd', 'echo', 'grep', 'find', 'git status', 'git log',
+        'git diff', 'docker ps', 'kubectl get', 'npm list', 'pip show', 'head', 'tail',
+        'less', 'more', 'file', 'stat', 'du', 'df', 'ps', 'top', 'htop', 'who', 'w',
+        '...(70+ commands total)'
+    ]
+
+def get_write_commands_list():
+    """Get the list of write-like commands from sessions_enforce.py for display."""
+    return [
+        'rm', 'mv', 'cp', 'chmod', 'chown', 'mkdir', 'rmdir', 'systemctl', 'service',
+        'apt', 'yum', 'npm install', 'pip install', 'make', 'cmake', 'sudo', 'kill',
+        '...(and more)'
+    ]
+
+def interactive_configuration(project_root):
+    """
+    Interactive configuration wizard for cc-sessions.
+    Returns a dict with all user configuration choices.
+    """
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Configuration Setup', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    config = {
+        'git_preferences': {},
+        'environment': {},
+        'blocked_actions': {
+            'implementation_only_tools': [],
+            'bash_read_patterns': [],
+            'bash_write_patterns': []
+        },
+        'trigger_phrases': {},
+        'features': {}
+    }
+
+    # Git Preferences Section
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Git Preferences', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    # Default branch
+    print("Default branch name (e.g. 'main', 'master', 'develop', etc.):")
+    print(color("*This is the branch you will merge to when completing tasks*", Colors.YELLOW))
+    default_branch = input(color("[main] ", Colors.CYAN)) or 'main'
+    config['git_preferences']['default_branch'] = default_branch
+
+    # Submodules
+    has_submodules = inquirer.list_input(
+        message="Does this repository use git submodules?",
+        choices=['Yes', 'No'],
+        default='Yes'
+    )
+    config['git_preferences']['has_submodules'] = (has_submodules == 'Yes')
+
+    # Staging pattern
+    add_pattern = inquirer.list_input(
+        message="When committing, how should files be staged?",
+        choices=[
+            'Ask me each time',
+            'Stage all modified files automatically'
+        ]
+    )
+    config['git_preferences']['add_pattern'] = 'ask' if 'Ask' in add_pattern else 'all'
+
+    # Commit style
+    commit_style = inquirer.list_input(
+        message="Commit message style:",
+        choices=[
+            'Detailed (multi-line with description)',
+            'Conventional (type: subject format)',
+            'Simple (single line)'
+        ]
+    )
+    if 'Detailed' in commit_style:
+        config['git_preferences']['commit_style'] = 'detailed'
+    elif 'Conventional' in commit_style:
+        config['git_preferences']['commit_style'] = 'conventional'
+    else:
+        config['git_preferences']['commit_style'] = 'simple'
+
+    # Auto-merge
+    auto_merge = inquirer.list_input(
+        message="After task completion:",
+        choices=[
+            'Ask me first',
+            f'Auto-merge to {default_branch}'
+        ]
+    )
+    config['git_preferences']['auto_merge'] = ('Auto-merge' in auto_merge)
+
+    # Auto-push
+    auto_push = inquirer.list_input(
+        message="After committing/merging:",
+        choices=[
+            'Ask me first',
+            'Auto-push to remote'
+        ]
+    )
+    config['git_preferences']['auto_push'] = ('Auto-push' in auto_push)
+
+    # Environment Section
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Environment Settings', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    developer_name = input(color("What should Claude call you? [developer] ", Colors.CYAN)) or 'developer'
+    config['environment']['developer_name'] = developer_name
+
+    # Detect OS
+    os_name = platform.system()
+    os_map = {'Windows': 'windows', 'Linux': 'linux', 'Darwin': 'macos'}
+    detected_os = os_map.get(os_name, 'linux')
+
+    os_choice = inquirer.list_input(
+        message=f"Detected OS: {detected_os.capitalize()}",
+        choices=[
+            f'{detected_os.capitalize()} is correct',
+            'Switch to Windows' if detected_os != 'windows' else None,
+            'Switch to macOS' if detected_os != 'macos' else None,
+            'Switch to Linux' if detected_os != 'linux' else None
+        ],
+        default=f'{detected_os.capitalize()} is correct'
+    )
+    if 'Windows' in os_choice:
+        config['environment']['os'] = 'windows'
+    elif 'macOS' in os_choice:
+        config['environment']['os'] = 'macos'
+    elif 'Linux' in os_choice:
+        config['environment']['os'] = 'linux'
+    else:
+        config['environment']['os'] = detected_os
+
+    # Detect shell
+    detected_shell = os.environ.get('SHELL', 'bash').split('/')[-1]
+
+    shell_choice = inquirer.list_input(
+        message=f"Detected shell: {detected_shell}",
+        choices=[
+            f'{detected_shell} is correct',
+            'Switch to bash' if detected_shell != 'bash' else None,
+            'Switch to zsh' if detected_shell != 'zsh' else None,
+            'Switch to fish' if detected_shell != 'fish' else None,
+            'Switch to powershell' if detected_shell != 'powershell' else None,
+            'Switch to cmd' if detected_shell != 'cmd' else None
+        ],
+        default=f'{detected_shell} is correct'
+    )
+
+    if 'bash' in shell_choice:
+        config['environment']['shell'] = 'bash'
+    elif 'zsh' in shell_choice:
+        config['environment']['shell'] = 'zsh'
+    elif 'fish' in shell_choice:
+        config['environment']['shell'] = 'fish'
+    elif 'powershell' in shell_choice:
+        config['environment']['shell'] = 'powershell'
+    elif 'cmd' in shell_choice:
+        config['environment']['shell'] = 'cmd'
+    else:
+        config['environment']['shell'] = detected_shell
+
+    # Blocked Actions Section
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Tool Blocking Configuration', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    print("Which tools should be blocked in discussion mode?")
+    print(color("*Use Space to toggle, Enter to submit*\n", Colors.YELLOW))
+
+    # Default blocked tools
+    default_blocked = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
+    all_tools = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Bash', 'Read', 'Glob', 'Grep', 'Task', 'TodoWrite']
+
+    blocked_tools = inquirer.checkbox(
+        message="Select tools to BLOCK in discussion mode",
+        choices=all_tools,
+        default=default_blocked
+    )
+    config['blocked_actions']['implementation_only_tools'] = blocked_tools
+
+    # Bash patterns
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Read-Only Bash Commands', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    print("In Discussion mode, Claude can only use read-like tools (including commands in")
+    print("the Bash tool).\n")
+    print("To do this, we parse Claude's Bash tool input in Discussion mode to check for")
+    print("write-like and read-only bash commands from a known list.\n")
+    print("You might have some CLI commands that you want to mark as \"safe\" to use in")
+    print("Discussion mode. For reference, here are the commands we already auto-approve")
+    print("in Discussion mode:\n")
+    print(color(f"  {', '.join(get_readonly_commands_list())}\n", Colors.YELLOW))
+    print("Type any additional command you would like to auto-allow in Discussion mode and")
+    print("hit \"enter\" to add it. You may add as many as you like. When you're done, hit")
+    print("enter again to move to the next configuration option:\n")
+
+    custom_read = []
+    while True:
+        cmd = input(color("> ", Colors.CYAN)).strip()
+        if not cmd:
+            break
+        custom_read.append(cmd)
+        print(color(f"✓ Added '{cmd}' to read-only commands", Colors.GREEN))
+
+    config['blocked_actions']['bash_read_patterns'] = custom_read
+
+    # Write patterns
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Write-Like Bash Commands', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    print("Similar to the read-only bash commands, we also check for write-like bash")
+    print("commands during Discussion mode and block them.\n")
+    print("You might have some CLI commands that you want to mark as \"blocked\" in")
+    print("Discussion mode. For reference, here are the commands we already block in")
+    print("Discussion mode:\n")
+    print(color(f"  {', '.join(get_write_commands_list())}\n", Colors.YELLOW))
+    print("Type any additional command you would like blocked in Discussion mode and hit")
+    print("\"enter\" to add it. You may add as many as you like. When you're done, hit")
+    print("\"enter\" again to move to the next configuration option:\n")
+
+    custom_write = []
+    while True:
+        cmd = input(color("> ", Colors.CYAN)).strip()
+        if not cmd:
+            break
+        custom_write.append(cmd)
+        print(color(f"✓ Added '{cmd}' to write-like commands", Colors.GREEN))
+
+    config['blocked_actions']['bash_write_patterns'] = custom_write
+
+    # Extrasafe mode
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Extrasafe Mode', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    extrasafe = inquirer.list_input(
+        message="What if Claude uses a bash command in discussion mode that's not in our\nread-only *or* our write-like list?",
+        choices=[
+            'Extrasafe OFF (allows unrecognized commands)',
+            'Extrasafe ON (blocks unrecognized commands)'
+        ]
+    )
+    config['blocked_actions']['extrasafe'] = ('ON' in extrasafe)
+
+    # Trigger Phrases Section
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Trigger Phrases', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    print("While you can drive cc-sessions using our slash command API, the preferred way")
+    print("is with (somewhat) natural language. To achieve this, we use unique trigger")
+    print("phrases that automatically activate the 4 protocols and 2 driving modes in")
+    print("cc-sessions:\n")
+    print("  • Switch to implementation mode (default: \"yert\")")
+    print("  • Switch to discussion mode (default: \"SILENCE\")")
+    print("  • Create a new task/task file (default: \"mek:\")")
+    print("  • Start a task/task file (default: \"start^:\")")
+    print("  • Complete/archive the current task (default: \"finito\")")
+    print("  • Compact context with active task (default: \"squish\")\n")
+
+    customize_triggers = inquirer.list_input(
+        message="Would you like to add any of your own custom trigger phrases?",
+        choices=['Use defaults', 'Customize']
+    )
+
+    # Set defaults first
+    config['trigger_phrases'] = {
+        'implementation_mode': ['yert'],
+        'discussion_mode': ['SILENCE'],
+        'task_creation': ['mek:'],
+        'task_startup': ['start^:'],
+        'task_completion': ['finito'],
+        'context_compaction': ['squish']
+    }
+
+    if customize_triggers == 'Customize':
+        # Implementation mode
+        print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+        print(color('  Implementation Mode Trigger', Colors.BOLD))
+        print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+        print("The implementation mode trigger is used when Claude proposes todos for")
+        print("implementation that you agree with. Once used, the user_messages hook will")
+        print("automatically switch the mode to Implementation, notify Claude, and lock in the")
+        print("proposed todo list to ensure Claude doesn't go rogue.\n")
+        print("To add your own custom trigger phrase, think of something that is:")
+        print("  • Easy to remember and type")
+        print("  • Won't ever come up in regular operation\n")
+        print("We recommend using symbols or uppercase for trigger phrases that may otherwise")
+        print("be used naturally in conversation (ex. instead of \"stop\", you might use \"STOP\"")
+        print("or \"st0p\" or \"--stop\").\n")
+        print(f"Current phrase: \"yert\"\n")
+        print("Type a trigger phrase to add and press \"enter\". When you're done, press \"enter\"")
+        print("again to move on to the next step:\n")
+
+        while True:
+            phrase = input(color("> ", Colors.CYAN)).strip()
+            if not phrase:
+                break
+            config['trigger_phrases']['implementation_mode'].append(phrase)
+            print(color(f"✓ Added '{phrase}'", Colors.GREEN))
+
+        # Discussion mode
+        print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+        print(color('  Discussion Mode Trigger', Colors.BOLD))
+        print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+        print("The discussion mode trigger is an emergency stop that immediately switches")
+        print("Claude back to discussion mode. Once used, the user_messages hook will set the")
+        print("mode to discussion and inform Claude that they need to re-align.\n")
+        print(f"Current phrase: \"SILENCE\"\n")
+
+        while True:
+            phrase = input(color("> ", Colors.CYAN)).strip()
+            if not phrase:
+                break
+            config['trigger_phrases']['discussion_mode'].append(phrase)
+            print(color(f"✓ Added '{phrase}'", Colors.GREEN))
+
+        # Task creation
+        print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+        print(color('  Task Creation Trigger', Colors.BOLD))
+        print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+        print("The task creation trigger activates the task creation protocol. Once used, the")
+        print("user_messages hook will load the task creation protocol which guides Claude")
+        print("through creating a properly structured task file with priority, success")
+        print("criteria, and context manifest.\n")
+        print(f"Current phrase: \"mek:\"\n")
+
+        while True:
+            phrase = input(color("> ", Colors.CYAN)).strip()
+            if not phrase:
+                break
+            config['trigger_phrases']['task_creation'].append(phrase)
+            print(color(f"✓ Added '{phrase}'", Colors.GREEN))
+
+        # Task startup
+        print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+        print(color('  Task Startup Trigger', Colors.BOLD))
+        print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+        print("The task startup trigger activates the task startup protocol. Once used, the")
+        print("user_messages hook will load the task startup protocol which guides Claude")
+        print("through checking git status, creating branches, gathering context, and")
+        print("proposing implementation todos.\n")
+        print(f"Current phrase: \"start^:\"\n")
+
+        while True:
+            phrase = input(color("> ", Colors.CYAN)).strip()
+            if not phrase:
+                break
+            config['trigger_phrases']['task_startup'].append(phrase)
+            print(color(f"✓ Added '{phrase}'", Colors.GREEN))
+
+        # Task completion
+        print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+        print(color('  Task Completion Trigger', Colors.BOLD))
+        print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+        print("The task completion trigger activates the task completion protocol. Once used,")
+        print("the user_messages hook will load the task completion protocol which guides")
+        print("Claude through running pre-completion checks, committing changes, merging to")
+        print("main, and archiving the completed task.\n")
+        print(f"Current phrase: \"finito\"\n")
+
+        while True:
+            phrase = input(color("> ", Colors.CYAN)).strip()
+            if not phrase:
+                break
+            config['trigger_phrases']['task_completion'].append(phrase)
+            print(color(f"✓ Added '{phrase}'", Colors.GREEN))
+
+        # Context compaction
+        print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+        print(color('  Context Compaction Trigger', Colors.BOLD))
+        print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+        print("The context compaction trigger activates the context compaction protocol. Once")
+        print("used, the user_messages hook will load the context compaction protocol which")
+        print("guides Claude through running logging and context-refinement agents to preserve")
+        print("task state before the context window fills up.\n")
+        print(f"Current phrase: \"squish\"\n")
+
+        while True:
+            phrase = input(color("> ", Colors.CYAN)).strip()
+            if not phrase:
+                break
+            config['trigger_phrases']['context_compaction'].append(phrase)
+            print(color(f"✓ Added '{phrase}'", Colors.GREEN))
+
+    # Feature Toggles Section
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Feature Toggles', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    print("Configure optional features and behaviors:\n")
+
+    # Branch enforcement
+    print("When working on a task, branch enforcement blocks edits to files unless they")
+    print("are in a repo that is on the task branch. If in a submodule, the submodule")
+    print("also has to be listed in the task file under the \"submodules\" field.\n")
+    print("This prevents Claude from doing silly things with files outside the scope of")
+    print("what you're working on, which can happen frighteningly often. But, it may not")
+    print("be as flexible as you want. *It also doesn't work well with non-Git VCS*.\n")
+
+    branch_enforcement = inquirer.list_input(
+        message="Branch enforcement:",
+        choices=[
+            'Enabled (recommended for git workflows)',
+            'Disabled (for alternative VCS like Jujutsu)'
+        ]
+    )
+    config['features']['branch_enforcement'] = ('Enabled' in branch_enforcement)
+
+    # Auto-ultrathink
+    print("\nAuto-ultrathink adds \"[[ ultrathink ]]\" to *every message* you submit to")
+    print("Claude Code. This is the most robust way to force maximum thinking for every")
+    print("message.\n")
+    print("If you are not a Claude Max x20 subscriber and/or you are budget-conscious,")
+    print("it's recommended that you disable auto-ultrathink and manually trigger thinking")
+    print("as needed.\n")
+
+    auto_ultrathink = inquirer.list_input(
+        message="Auto-ultrathink:",
+        choices=[
+            'Enabled',
+            'Disabled (recommended for budget-conscious users)'
+        ]
+    )
+    config['features']['auto_ultrathink'] = ('Enabled' == auto_ultrathink)
+
+    # Nerd Fonts
+    nerd_fonts = inquirer.list_input(
+        message="Nerd Fonts display icons in the statusline for a visual interface:",
+        choices=[
+            'Enabled',
+            'Disabled (ASCII fallback)'
+        ]
+    )
+    config['features']['use_nerd_fonts'] = ('Enabled' == nerd_fonts)
+
+    # Context warnings
+    context_warnings = inquirer.list_input(
+        message="Context warnings notify you when approaching token limits (85% and 90%):",
+        choices=[
+            'Both warnings enabled',
+            'Only 90% warning',
+            'Disabled'
+        ]
+    )
+    if 'Both' in context_warnings:
+        config['features']['context_warnings'] = {'warn_85': True, 'warn_90': True}
+    elif 'Only' in context_warnings:
+        config['features']['context_warnings'] = {'warn_85': False, 'warn_90': True}
+    else:
+        config['features']['context_warnings'] = {'warn_85': False, 'warn_90': False}
+
+    # Statusline configuration
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Statusline Configuration', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    statusline_choice = inquirer.list_input(
+        message="cc-sessions includes a statusline that shows context usage, current task, mode, and git branch. Would you like to use it?",
+        choices=[
+            'Yes, use cc-sessions statusline',
+            'No, I have my own statusline'
+        ]
+    )
+
+    if 'Yes' in statusline_choice:
+        # Configure statusline in .claude/settings.json
+        settings_file = project_root / '.claude' / 'settings.json'
+
+        if settings_file.exists():
+            with open(settings_file, 'r') as f:
+                settings = json.load(f)
+        else:
+            settings = {}
+
+        # Set statusline command
+        settings['statusLine'] = {
+            'type': 'command',
+            'command': f'python $CLAUDE_PROJECT_DIR/sessions/statusline.py'
+        }
+
+        with open(settings_file, 'w') as f:
+            json.dump(settings, f, indent=2)
+
+        print(color('✓ Statusline configured in .claude/settings.json', Colors.GREEN))
+    else:
+        print(color('\nYou can add the cc-sessions statusline later by adding this to .claude/settings.json:', Colors.YELLOW))
+        print(color('{\n  "statusLine": {\n    "type": "command",\n    "command": "python $CLAUDE_PROJECT_DIR/sessions/statusline.py"\n  }\n}', Colors.YELLOW))
+
+    print(color('\n✓ Configuration complete!\n', Colors.GREEN))
+    return config
+
 def initialize_state_files(project_root):
     print(color('Initializing state files...', Colors.CYAN))
 
@@ -383,6 +893,183 @@ def initialize_state_files(project_root):
     if not state_file.exists() or not config_file.exists():
         print(color('⚠️  State files were not created properly', Colors.YELLOW))
         print(color('You may need to initialize them manually on first run', Colors.YELLOW))
+
+def kickstart_cleanup(project_root):
+    """
+    Delete kickstart files when user skips onboarding.
+    Returns manual cleanup instructions for router/settings that require careful editing.
+    """
+    print(color('\n🧹 Removing kickstart files...', Colors.CYAN))
+
+    sessions_dir = project_root / 'sessions'
+
+    # 1. Delete kickstart hook (check both language variants)
+    py_hook = sessions_dir / 'hooks' / 'kickstart_session_start.py'
+    js_hook = sessions_dir / 'hooks' / 'kickstart_session_start.js'
+
+    if py_hook.exists():
+        py_hook.unlink()
+        is_python = True
+        print(color('   ✓ Deleted kickstart_session_start.py', Colors.GREEN))
+    elif js_hook.exists():
+        js_hook.unlink()
+        is_python = False
+        print(color('   ✓ Deleted kickstart_session_start.js', Colors.GREEN))
+    else:
+        is_python = True  # default fallback
+
+    # 2. Delete kickstart protocols directory
+    protocols_dir = sessions_dir / 'protocols' / 'kickstart'
+    if protocols_dir.exists():
+        shutil.rmtree(protocols_dir)
+        print(color('   ✓ Deleted protocols/kickstart/', Colors.GREEN))
+
+    # 3. Delete kickstart setup task
+    task_file = sessions_dir / 'tasks' / 'h-kickstart-setup.md'
+    if task_file.exists():
+        task_file.unlink()
+        print(color('   ✓ Deleted h-kickstart-setup.md', Colors.GREEN))
+
+    # Generate language-specific cleanup instructions
+    if is_python:
+        instructions = """
+Manual cleanup required (edit these files carefully):
+
+1. sessions/api/router.py
+   - Remove: from .kickstart_commands import handle_kickstart_command
+   - Remove: 'kickstart': handle_kickstart_command from COMMAND_HANDLERS
+
+2. .claude/settings.json
+   - Remove the kickstart SessionStart hook entry
+
+3. sessions/api/kickstart_commands.py
+   - Delete this entire file
+"""
+    else:  # JavaScript
+        instructions = """
+Manual cleanup required (edit these files carefully):
+
+1. sessions/api/router.js
+   - Remove: const { handleKickstartCommand } = require('./kickstart_commands');
+   - Remove: 'kickstart': handleKickstartCommand from COMMAND_HANDLERS
+
+2. .claude/settings.json
+   - Remove the kickstart SessionStart hook entry
+
+3. sessions/api/kickstart_commands.js
+   - Delete this entire file
+"""
+
+    print(color(instructions, Colors.YELLOW))
+    return instructions
+
+def installer_decision_flow(project_root):
+    """
+    Interactive decision flow for installer configuration and kickstart setup.
+    Handles first-time detection, config import, interactive configuration, and kickstart choice.
+    """
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Welcome to cc-sessions!', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    # First-time user detection
+    first_time = inquirer.list_input(
+        message="Is this your first time using cc-sessions?",
+        choices=['Yes', 'No']
+    )
+
+    did_import = False
+
+    if first_time == 'No':
+        # Version detection for existing users
+        version_check = inquirer.list_input(
+            message="Have you used cc-sessions v0.3.0 or later (released October 2025)?",
+            choices=['Yes', 'No']
+        )
+
+        if version_check == 'Yes':
+            # Config/agent import workflow
+            import_choice = inquirer.list_input(
+                message="Would you like to import your configuration and agents?",
+                choices=['Yes', 'No']
+            )
+
+            if import_choice == 'Yes':
+                import_source = inquirer.list_input(
+                    message="Where is your cc-sessions configuration?",
+                    choices=['Local directory', 'Git repository URL', 'Skip import']
+                )
+
+                if import_source != 'Skip import':
+                    source_path = input(color("Path or URL: ", Colors.CYAN)).strip()
+
+                    # [PLACEHOLDER] Import config and agents, then present for interactive modification
+                    # TODO: Implement config import with interactive modification feature
+                    print(color('\n⚠️  Config import not yet implemented. Continuing with interactive configuration...', Colors.YELLOW))
+                else:
+                    print(color('\nSkipping import. Continuing with interactive configuration...', Colors.CYAN))
+            else:
+                print(color('\nContinuing with interactive configuration...', Colors.CYAN))
+        else:
+            # Treat as first-time user
+            print(color('\nTreating as first-time user. Continuing with setup...', Colors.CYAN))
+
+    # Run interactive configuration if we didn't import
+    if not did_import:
+        config = interactive_configuration(project_root)
+
+    # Kickstart decision
+    print(color('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', Colors.CYAN))
+    print(color('  Learn cc-sessions with Kickstart', Colors.BOLD))
+    print(color('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n', Colors.CYAN))
+
+    print("cc-sessions is an opinionated interactive workflow. You can learn how to use")
+    print("it *with* Claude Code - we built a custom \"session\" called kickstart.\n")
+    print("Kickstart will:")
+    print("  • Teach you the features of cc-sessions")
+    print("  • Help you set up your first task")
+    print("  • Show you the 4 core protocols you can run")
+    print("  • Help you customize cc-sessions subagents for your codebase\n")
+    print("Time: 15-30 minutes\n")
+
+    kickstart_choice = inquirer.list_input(
+        message="Would you like to run kickstart on your first session?",
+        choices=[
+            'Yes (auto-start full kickstart tutorial)',
+            'Just subagents (customize subagents but skip tutorial)',
+            'No (skip tutorial, remove kickstart files)'
+        ]
+    )
+
+    # Import edit_state from shared_state
+    sys.path.insert(0, str(project_root / 'sessions' / 'hooks'))
+    from shared_state import edit_state
+
+    if 'Yes' in kickstart_choice:
+        # Set metadata for full kickstart mode
+        with edit_state() as s:
+            s.metadata['kickstart'] = {'mode': 'full'}
+        print(color('\n✓ Kickstart will auto-start on your first session', Colors.GREEN))
+
+    elif 'Just subagents' in kickstart_choice:
+        # Set metadata for subagents-only mode
+        with edit_state() as s:
+            s.metadata['kickstart'] = {'mode': 'subagents'}
+        print(color('\n✓ Kickstart will guide you through subagent customization only', Colors.GREEN))
+
+    else:  # No - skip kickstart
+        # Don't set any metadata, run cleanup immediately
+        print(color('\n⏭️  Skipping kickstart onboarding...', Colors.CYAN))
+        kickstart_cleanup(project_root)
+        print(color('\n✓ Kickstart files removed', Colors.GREEN))
+
+    # Return kickstart choice for success message
+    if 'Yes' in kickstart_choice:
+        return 'full'
+    elif 'Just subagents' in kickstart_choice:
+        return 'subagents'
+    else:
+        return 'skip'
 
 # Utility functions
 

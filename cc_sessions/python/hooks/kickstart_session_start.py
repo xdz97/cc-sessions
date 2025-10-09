@@ -40,6 +40,26 @@ if is_ci_environment():
     sys.exit(0)
 ##-##
 
+## ===== MODULE SEQUENCES ===== ##
+FULL_MODE_SEQUENCE = [
+    '01-discussion.md',
+    '02-implementation.md',
+    '03-tasks-overview.md',
+    '04-task-creation.md',
+    '05-task-startup.md',
+    '06-task-completion.md',
+    '07-compaction.md',
+    '08-agents.md',
+    '09-api.md',
+    '10-advanced.md',
+    '11-graduation.md'
+]
+
+SUBAGENTS_MODE_SEQUENCE = [
+    '01-agents-only.md'
+]
+##-##
+
 #-#
 
 # ===== FUNCTIONS ===== #
@@ -56,51 +76,83 @@ def load_protocol_file(relative_path: str) -> str:
 """
 Kickstart SessionStart Hook
 
-Handles onboarding flow for new users (noob flag = true):
-- Checks noob flag and exits immediately if false (lets normal hooks run)
-- Respects reminder dates for "later" option
-- Loads entry protocol on first run
-- Resumes kickstart progress from where user left off
+Handles onboarding flow for users who chose kickstart in installer:
+- Checks for kickstart metadata (should ALWAYS exist if this hook is running)
+- Loads first module on first run, resumes from current_index on subsequent runs
+- Sequences determined by mode (full or subagents)
 """
 
 # ===== EXECUTION ===== #
 
-#!> 1. Load state and check noob flag
+#!> 1. Load state and check kickstart metadata
 STATE = load_state()
 
-# Not a noob? Exit immediately and let normal hooks run
-if not STATE.flags.noob:
-    sys.exit(0)
+# Get kickstart metadata (should ALWAYS exist if this hook is running)
+kickstart_meta = STATE.metadata.get('kickstart')
+if not kickstart_meta:
+    # This is a BUG - fail loudly
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": "ERROR: kickstart_session_start hook fired but no kickstart metadata found. This is an installer bug."
+        }
+    }))
+    sys.exit(1)
+
+mode = kickstart_meta.get('mode')  # 'full' or 'subagents'
+if not mode:
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": "ERROR: kickstart metadata exists but no mode specified. This is an installer bug."
+        }
+    }))
+    sys.exit(1)
 #!<
 
-#!> 2. Check reminder date
-reminder_date = STATE.metadata.get('kickstart_reminder_date')
-if reminder_date:
-    if datetime.now().isoformat() < reminder_date:
-        # Still in reminder period, use normal flow
-        sys.exit(0)
-#!<
-
-#!> 3. Build context based on kickstart progress
-kickstart_progress = STATE.metadata.get('kickstart_progress')
-
-if not kickstart_progress:
-    # First run - load entry protocol
-    context = load_protocol_file('kickstart/01-entry.md')
+#!> 2. Initialize or load sequence
+# Determine sequence based on mode
+if mode == 'full':
+    sequence = FULL_MODE_SEQUENCE
+elif mode == 'subagents':
+    sequence = SUBAGENTS_MODE_SEQUENCE
 else:
-    # Resume from where we left off
-    mode = kickstart_progress.get('mode', 'full')
-    current_module = kickstart_progress.get('current_module')
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": f"ERROR: Invalid kickstart mode '{mode}'. Expected 'full' or 'subagents'."
+        }
+    }))
+    sys.exit(1)
 
-    context = f"[Resuming Kickstart: {mode} mode]\n\n"
-    context += load_protocol_file(f'kickstart/{mode}/{current_module}.md')
+# Initialize sequence on first run
+if 'sequence' not in kickstart_meta:
+    from shared_state import edit_state
+    with edit_state() as s:
+        s.metadata['kickstart']['sequence'] = sequence
+        s.metadata['kickstart']['current_index'] = 0
+        s.metadata['kickstart']['completed'] = []
+
+    protocol_content = load_protocol_file(f'kickstart/{sequence[0]}')
+else:
+    # Load current protocol from sequence
+    current_index = kickstart_meta.get('current_index', 0)
+    protocol_content = load_protocol_file(f'kickstart/{sequence[current_index]}')
 #!<
 
-#!> 4. Output context and exit
+#!> 3. Append user instructions and output
+protocol_content += """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+USER INSTRUCTIONS:
+Just say 'kickstart' and press enter to begin
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+
 print(json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "SessionStart",
-        "additionalContext": context
+        "additionalContext": protocol_content
     }
 }))
 sys.exit(0)

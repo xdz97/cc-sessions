@@ -17,37 +17,6 @@ const { loadState, editState, loadConfig, PROJECT_ROOT, Mode } = require('../../
 const CONFIG = loadConfig();
 const STATE = loadState();
 
-const FULL_MODE_SEQUENCE = [
-    '03-core-workflow',
-    '04-trigger-phrases',
-    '05-orphaned-todos',
-    '06-tasks-and-branches',
-    '07-task-startup-and-config',
-    '08-create-first-task',
-    '09-always-available-protocols',
-    '10-agent-customization',
-    '11-code-review-customization',
-    '12-tool-configuration',
-    '13-advanced-features',
-    '14-graduation'
-];
-
-const API_MODE_SEQUENCE = [
-    '03-core-workflow',
-    '04-task-protocols',
-    '05-context-management',
-    '06-configuration',
-    '07-agent-customization',
-    '08-advanced-concepts',
-    '09-create-first-task',
-    '10-graduation'
-];
-
-const SESHXPERT_SEQUENCE = [
-    '03-quick-setup',
-    '05-graduation'
-];
-
 //-#
 
 // ===== FUNCTIONS ===== #
@@ -83,28 +52,13 @@ function loadProtocolFile(relativePath) {
     return fs.readFileSync(protocolPath, 'utf8');
 }
 
-function getModeSequence(mode) {
-    /**Get the module sequence for a given mode.*/
-    if (mode === 'full') {
-        return FULL_MODE_SEQUENCE;
-    } else if (mode === 'api') {
-        return API_MODE_SEQUENCE;
-    } else if (mode === 'seshxpert') {
-        return SESHXPERT_SEQUENCE;
-    } else {
-        return [];
-    }
-}
-
 function handleKickstartCommand(args, jsonOutput = false, fromSlash = false) {
     /**
      * Handle kickstart-specific commands for onboarding flow.
      *
      * Usage:
-     *     kickstart next                  - Load next module chunk
-     *     kickstart mode <mode>           - Initialize kickstart with selected mode
-     *     kickstart remind <dd:hh>        - Set reminder date for "later" option
-     *     kickstart complete              - Exit kickstart mode
+     *     kickstart next      - Load next module chunk
+     *     kickstart complete  - Exit kickstart mode
      */
     if (!args || args.length === 0) {
         return formatKickstartHelp(jsonOutput);
@@ -115,24 +69,6 @@ function handleKickstartCommand(args, jsonOutput = false, fromSlash = false) {
 
     if (command === 'next') {
         return loadNextModule(jsonOutput);
-    } else if (command === 'mode') {
-        if (commandArgs.length === 0) {
-            const errorMsg = 'Error: mode requires argument (full|api|seshxpert)';
-            if (jsonOutput) {
-                return { error: errorMsg };
-            }
-            return errorMsg;
-        }
-        return setKickstartMode(commandArgs[0], jsonOutput);
-    } else if (command === 'remind') {
-        if (commandArgs.length === 0) {
-            const errorMsg = 'Error: remind requires dd:hh format (e.g., 1:00 for tomorrow)';
-            if (jsonOutput) {
-                return { error: errorMsg };
-            }
-            return errorMsg;
-        }
-        return setReminder(commandArgs[0], jsonOutput);
     } else if (command === 'complete') {
         return completeKickstart(jsonOutput);
     } else {
@@ -148,9 +84,7 @@ function formatKickstartHelp(jsonOutput) {
     /**Format help for kickstart commands.*/
     const commands = {
         'next': 'Load next module chunk based on current progress',
-        'mode <mode>': 'Initialize kickstart with selected mode (full|api|seshxpert)',
-        'remind <dd:hh>': "Set reminder date for 'later' option (e.g., 1:00 for tomorrow)",
-        'complete': 'Exit kickstart mode and clear noob flag'
+        'complete': 'Exit kickstart mode and clean up files'
     };
 
     if (jsonOutput) {
@@ -166,168 +100,61 @@ function formatKickstartHelp(jsonOutput) {
 
 function loadNextModule(jsonOutput = false) {
     /**Load next module chunk based on current progress.*/
-    const progress = STATE.metadata?.kickstart_progress || {};
+    const kickstartMeta = STATE.metadata?.kickstart;
 
-    if (!progress || Object.keys(progress).length === 0) {
-        const errorMsg = "Error: No kickstart progress found. Start with 'mode' command first.";
+    if (!kickstartMeta) {
+        const errorMsg = 'Error: No kickstart metadata found. This is a bug.';
         if (jsonOutput) {
             return { error: errorMsg };
         }
         return errorMsg;
     }
 
-    const mode = progress.mode || 'full';
-    const current = progress.current_module;
+    const sequence = kickstartMeta.sequence;
+    const currentIndex = kickstartMeta.current_index;
+    const completed = kickstartMeta.completed || [];
 
-    // Get sequence for current mode
-    const sequence = getModeSequence(mode);
-
-    if (sequence.length === 0) {
-        const errorMsg = `Error: Invalid mode '${mode}'`;
+    if (!sequence) {
+        const errorMsg = 'Error: No kickstart sequence found. This is a bug.';
         if (jsonOutput) {
             return { error: errorMsg };
         }
         return errorMsg;
     }
 
-    // Find next module
-    const currentIdx = sequence.indexOf(current);
+    // Mark current as completed
+    const currentFile = sequence[currentIndex];
 
-    if (currentIdx === -1) {
-        const errorMsg = `Error: Current module '${current}' not found in sequence`;
-        if (jsonOutput) {
-            return { error: errorMsg };
-        }
-        return errorMsg;
-    }
+    // Move to next
+    const nextIndex = currentIndex + 1;
 
-    if (currentIdx >= sequence.length - 1) {
-        // Reached end of sequence
+    // Check if we've reached the end
+    if (nextIndex >= sequence.length) {
         return completeKickstart(jsonOutput);
     }
 
-    const nextModule = sequence[currentIdx + 1];
+    const nextFile = sequence[nextIndex];
 
-    // Update progress
+    // Update state
     editState(s => {
-        s.metadata.kickstart_progress.current_module = nextModule;
-        if (!s.metadata.kickstart_progress.completed_modules) {
-            s.metadata.kickstart_progress.completed_modules = [];
-        }
-        s.metadata.kickstart_progress.completed_modules.push(current);
-        s.metadata.kickstart_progress.last_active = new Date().toISOString();
+        s.metadata.kickstart.current_index = nextIndex;
+        s.metadata.kickstart.completed.push(currentFile);
+        s.metadata.kickstart.last_active = new Date().toISOString();
+        return s;
     });
 
-    // Load protocol content
-    let protocolContent = loadProtocolFile(`kickstart/${mode}/${nextModule}.md`);
-
-    // Format with config if needed
-    if (protocolContent.includes('{config}')) {
-        const configDisplay = formatConfigForDisplay(CONFIG);
-        protocolContent = protocolContent.replace('{config}', configDisplay);
-    }
+    // Load next protocol
+    const protocolContent = loadProtocolFile(`kickstart/${nextFile}`);
 
     if (jsonOutput) {
         return {
             success: true,
-            mode: mode,
-            next_module: nextModule,
+            next_file: nextFile,
             protocol: protocolContent
         };
     }
 
     return protocolContent;
-}
-
-function setKickstartMode(modeStr, jsonOutput = false) {
-    /**Initialize kickstart with selected mode.*/
-    modeStr = modeStr.toLowerCase();
-
-    if (!['full', 'api', 'seshxpert'].includes(modeStr)) {
-        const errorMsg = `Error: Invalid mode '${modeStr}'. Use: full, api, or seshxpert`;
-        if (jsonOutput) {
-            return { error: errorMsg };
-        }
-        return errorMsg;
-    }
-
-    const sequence = getModeSequence(modeStr);
-    const firstModule = sequence[0];
-
-    editState(s => {
-        s.metadata.kickstart_progress = {
-            mode: modeStr,
-            started: new Date().toISOString(),
-            last_active: new Date().toISOString(),
-            current_module: firstModule,
-            completed_modules: [],
-            agent_progress: {}
-        };
-    });
-
-    // Load first module for selected mode
-    let protocolContent = loadProtocolFile(`kickstart/${modeStr}/${firstModule}.md`);
-
-    // Format with config if needed
-    if (protocolContent.includes('{config}')) {
-        const configDisplay = formatConfigForDisplay(CONFIG);
-        protocolContent = protocolContent.replace('{config}', configDisplay);
-    }
-
-    if (jsonOutput) {
-        return {
-            success: true,
-            mode: modeStr,
-            first_module: firstModule,
-            protocol: protocolContent
-        };
-    }
-
-    return protocolContent;
-}
-
-function setReminder(dateStr, jsonOutput = false) {
-    /**Set reminder date for 'later' option.*/
-    // Parse dd:hh format
-    const parts = dateStr.split(':');
-    if (parts.length !== 2) {
-        const errorMsg = `Error: Invalid format '${dateStr}'. Use dd:hh (e.g., 1:00 for tomorrow)`;
-        if (jsonOutput) {
-            return { error: errorMsg };
-        }
-        return errorMsg;
-    }
-
-    const days = parseInt(parts[0], 10);
-    const hours = parseInt(parts[1], 10);
-
-    if (isNaN(days) || isNaN(hours)) {
-        const errorMsg = `Error: Invalid format '${dateStr}'. Use dd:hh (e.g., 1:00 for tomorrow)`;
-        if (jsonOutput) {
-            return { error: errorMsg };
-        }
-        return errorMsg;
-    }
-
-    const reminderTime = new Date();
-    reminderTime.setDate(reminderTime.getDate() + days);
-    reminderTime.setHours(reminderTime.getHours() + hours);
-
-    editState(s => {
-        s.metadata.kickstart_reminder_date = reminderTime.toISOString();
-    });
-
-    const formattedTime = reminderTime.toISOString().slice(0, 16).replace('T', ' ');
-
-    if (jsonOutput) {
-        return {
-            success: true,
-            reminder_date: reminderTime.toISOString(),
-            formatted: formattedTime
-        };
-    }
-
-    return `Reminder set for ${formattedTime}. I'll ask about kickstart again then.`;
 }
 
 function completeKickstart(jsonOutput = false) {
@@ -371,35 +198,34 @@ function completeKickstart(jsonOutput = false) {
         fs.unlinkSync(taskFile);
     }
 
-    // 4. Clear noob flag and kickstart metadata
+    // 4. Clear kickstart metadata
     editState(s => {
-        s.flags.noob = false;
-        delete s.metadata.kickstart_progress;
-        delete s.metadata.kickstart_reminder_date;
+        delete s.metadata.kickstart;
+        return s;
     });
 
     // Generate language-specific cleanup instructions based on which hook was found
     let instructions;
     if (isPython) {
-        instructions = `Kickstart complete! The noob flag has been cleared.
+        instructions = `Kickstart complete!
 
 I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
 
-□ Remove kickstart import from sessions/scripts/api/router.py
+□ Remove kickstart import from sessions/api/router.py
 □ Remove 'kickstart': handle_kickstart_command from COMMAND_HANDLERS in router.py
 □ Remove kickstart SessionStart hook entry from .claude/settings.json
-□ Delete sessions/scripts/api/kickstart_commands.py
+□ Delete sessions/api/kickstart_commands.py
 
 After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install.`;
     } else { // JavaScript
-        instructions = `Kickstart complete! The noob flag has been cleared.
+        instructions = `Kickstart complete!
 
 I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
 
-□ Remove kickstart import from sessions/scripts/api/router.js
+□ Remove kickstart import from sessions/api/router.js
 □ Remove 'kickstart': handleKickstartCommand from COMMAND_HANDLERS in router.js
 □ Remove kickstart SessionStart hook entry from .claude/settings.json
-□ Delete sessions/scripts/api/kickstart_commands.js
+□ Delete sessions/api/kickstart_commands.js
 
 After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install.`;
     }

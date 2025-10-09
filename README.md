@@ -1,15 +1,7 @@
-<div align="center">
-<p>███████╗███████╗███████╗███████╗██╗ ██████╗ ███╗   ██╗███████╗</p>
-<p>██╔════╝██╔════╝██╔════╝██╔════╝██║██╔═══██╗████╗  ██║██╔════╝</p>
-<p>███████╗█████╗  ███████╗███████╗██║██║   ██║██╔██╗ ██║███████╗</p>
-╚════██║██╔══╝  ╚════██║╚════██║██║██║   ██║██║╚██╗██║╚════██║
-███████║███████╗███████║███████║██║╚██████╔╝██║ ╚████║███████║
-╚══════╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝
-</p>
-</div>
+<p align="center"><img src="sessions.png" alt="cc-sessions"></p>
 <div align="center">An opinionated approach to productive development with Claude Code</div>
-<br>
 <div align="center"><sub>_A public good brought to you by GWUDCAP and Three AIrrows Capital_</sub></div>
+<br>
 <br>
 <div align="center">
 

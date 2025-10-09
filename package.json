@@ -48,5 +48,8 @@
     "cc_sessions/knowledge/",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "dependencies": {
+    "inquirer": "^8.2.5"
+  }
 }

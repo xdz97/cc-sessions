@@ -37,7 +37,7 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 requires-python = ">=3.8"
-dependencies = []
+dependencies = ["inquirer>=3.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/GWUDCAP/cc-sessions"

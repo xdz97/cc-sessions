@@ -21,7 +21,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/hooks/shared_state.py|.js` - Core state and configuration management with unified SessionsConfig system, enhanced lock timeout behavior (1-second timeout with force-removal), fixed EnabledFeatures.from_dict() dataclass serialization, directory task helper functions `is_directory_task()`, `get_task_file_path()`, subtask detection helpers `is_subtask()`, `is_parent_task()`, and path normalization `_normalize_task_path()` (lines 607-678 Python, 927-1023 JavaScript), simplified `find_git_repo()`/`findGitRepo()` functions that assume directory input, SessionsTodos.to_dict() serialization method for complete todos structure, EnabledFeatures.branch_enforcement configuration field (lines 299-314 Python, similar in JavaScript), and UTF-8 encoding enforcement for all file operations (both Python and JavaScript implementations)
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Enhanced DAIC enforcement with comprehensive command categorization and argument analysis for write operation detection, calls `find_git_repo(file_path.parent)` for branch validation with CONFIG.features.branch_enforcement guard (lines 351-352 Python, line 444 JavaScript) enabling alternative VCS support (both Python and JavaScript implementations)
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization with configuration integration, dual-import pattern, and kickstart protocol detection via `STATE.flags.noob` (both Python and JavaScript implementations)
-- `cc_sessions/hooks/kickstart_session_start.py|.js` - Kickstart-only SessionStart hook that checks noob flag, handles reminder dates, loads entry/resume protocols, and short-circuits to let normal hooks run when noob=false (both Python and JavaScript implementations)
+- `cc_sessions/hooks/kickstart_session_start.py|.js` - Kickstart-only SessionStart hook that loads protocols based on sequence index in STATE.metadata['kickstart'], initializes sequence on first run, and displays current protocol with user instructions (both Python and JavaScript implementations)
 - `cc_sessions/hooks/user_messages.py|.js` - Protocol auto-loading with `load_protocol_file()` helper, centralized todo formatting, directory task and subtask detection for context-aware protocol loading (lines 327-348 Python, 415-437 JavaScript), merge prevention for subtasks during completion, improved task startup notices, and UTF-8 encoding fixes for protocol file loading and transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and automated mode transitions (both Python and JavaScript implementations)
 - `cc_sessions/hooks/subagent_hooks.py|.js` - Subagent context management and flag handling with UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
@@ -30,12 +30,9 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/scripts/api/index.js` - Sessions API entry point (JavaScript)
 - `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support, kickstart handler integration, and --from-slash flag handling (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/protocol_commands.py|.js` - Protocol-specific API commands with startup-load returning full task content (both Python and JavaScript implementations)
-- `cc_sessions/scripts/api/kickstart_commands.py|.js` - Kickstart-specific API commands for onboarding flow state management (next, mode, remind, complete) with hybrid self-cleanup system (both Python and JavaScript implementations)
-- `cc_sessions/protocols/kickstart/01-entry.md` - Entry prompt with yes/later/never handling and natural language date parsing
-- `cc_sessions/protocols/kickstart/02-mode-selection.md` - Mode selection protocol presenting full/api/seshxpert options
-- `cc_sessions/protocols/kickstart/full/` - 12 protocol chunks for Full mode (30-45 min walkthrough)
-- `cc_sessions/protocols/kickstart/api/` - 8 protocol chunks for API mode (10-15 min condensed version)
-- `cc_sessions/protocols/kickstart/seshxpert/` - 1 protocol chunk for Seshxpert mode (5 min import/auto-generate)
+- `cc_sessions/scripts/api/kickstart_commands.py|.js` - Kickstart-specific API commands for onboarding flow state management (next, complete) with hybrid self-cleanup system (both Python and JavaScript implementations)
+- `cc_sessions/python/protocols/kickstart/01-discussion.md` through `11-graduation.md` - Full mode protocol sequence (11 protocols total)
+- `cc_sessions/python/protocols/kickstart/01-agents-only.md` - Subagents-only mode protocol
 - `cc_sessions/templates/h-kickstart-setup.md` - Dummy task template used for onboarding practice
 - `cc_sessions/scripts/api/state_commands.py|.js` - State inspection and limited write operations, uses SessionsTodos.to_dict() for simplified todo serialization in state component access and SessionsTodos.to_list('active') for todos command (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
@@ -154,12 +151,11 @@ The framework includes persistent task management with git branch enforcement, c
 
 ### Kickstart Onboarding Protocol
 - **kickstart**: Interactive first-run onboarding system for new installations
-- Three mode variants: Full (30-45 min), API (10-15 min), Seshxpert (5 min)
-- Triggered automatically when `STATE.flags.noob` is `True`
-- API-driven workflow with numbered protocol chunks per mode
-- Configuration import support for experienced users setting up new repos
-- Teaches DAIC workflow, trigger phrases, task management, agent customization
-- Protocols located in `cc_sessions/protocols/kickstart/`
+- Two mode variants: Full (11 protocols, 15-30 min), Subagents-only (1 protocol, 5 min)
+- Triggered automatically when `STATE.metadata['kickstart']` exists from installer choice
+- Index-based progression system with sequence management in state
+- Teaches DAIC enforcement, task management workflows, three core protocols, agents, and advanced features
+- Protocols located in `cc_sessions/python/protocols/kickstart/` and `cc_sessions/javascript/protocols/kickstart/`
 - Self-cleaning system: Deletes own files and returns manual cleanup instructions on completion
 
 ### Specialized Agents
@@ -217,33 +213,19 @@ protocols/
 │   ├── staging-ask.md                      # "Ask user" staging instructions
 │   └── git-add-warning.md                  # Warning for "add all" pattern
 ├── context-compaction.md                   # Simple protocol (no templating)
-└── kickstart/                              # First-run onboarding protocols (v0.3.6+)
-    ├── 01-entry.md                         # Welcome prompt with yes/later/never
-    ├── 02-mode-selection.md                # Three mode variants
-    ├── full/                               # Full mode protocol chunks (30-45 min)
-    │   ├── 03-core-workflow.md             # DAIC explanation with interactive demo
-    │   ├── 04-trigger-phrases.md           # Trigger phrase configuration
-    │   ├── 05-orphaned-todos.md            # State system and todo cleanup
-    │   ├── 06-tasks-and-branches.md        # Task/branch workflows
-    │   ├── 07-task-startup-and-config.md   # Task startup with dummy task practice
-    │   ├── 08-create-first-task.md         # Create first real task
-    │   ├── 09-always-available-protocols.md # Completion, compaction, helper protocols
-    │   ├── 10-agent-customization.md       # Agent overview and customization intro
-    │   ├── 11-code-review-customization.md # Code-review agent tech stack setup
-    │   ├── 12-tool-configuration.md        # Custom readonly commands
-    │   ├── 13-advanced-features.md         # Directory tasks, bypass mode, indexes
-    │   └── 14-graduation.md                # Cleanup, summary, next steps
-    ├── api/                                # API mode protocol chunks (10-15 min)
-    │   ├── 03-core-workflow.md             # Condensed DAIC demo
-    │   ├── 04-task-protocols.md            # Task workflows condensed
-    │   ├── 05-context-management.md        # State system essentials
-    │   ├── 06-configuration.md             # Quick config setup
-    │   ├── 07-agent-customization.md       # Minimal agent setup
-    │   ├── 08-advanced-concepts.md         # Brief advanced features
-    │   ├── 09-create-first-task.md         # First real task
-    │   └── 10-graduation.md                # Quick summary and next steps
-    └── seshxpert/                          # Seshxpert mode protocol chunks (5 min)
-        └── 03-quick-setup.md               # Import/auto-generate workflow
+└── kickstart/                              # First-run onboarding protocols
+    ├── 01-discussion.md                    # DAIC introduction with interactive demo
+    ├── 02-implementation.md                # Implementation mode mechanics with TodoWrite
+    ├── 03-tasks-overview.md                # Task management concepts and naming conventions
+    ├── 04-task-creation.md                 # Task creation protocol with practice
+    ├── 05-task-startup.md                  # Task startup protocol with practice
+    ├── 06-task-completion.md               # Task completion protocol with practice
+    ├── 07-compaction.md                    # Context compaction protocol
+    ├── 08-agents.md                        # Five specialized agents overview
+    ├── 09-api.md                           # Sessions API and slash commands
+    ├── 10-advanced.md                      # Task indexes, iterloop, stashed todos
+    ├── 11-graduation.md                    # Cleanup, summary, next steps
+    └── 01-agents-only.md                   # Subagents-only mode (agent customization focus)
 ```
 
 ## Integration Points
@@ -619,67 +601,52 @@ Complete separation of Python and JavaScript installation paths eliminates cross
 - No Node.js dependency handling in Python installer
 - Cleaner separation of concerns for future maintenance
 
-### Kickstart Onboarding Protocol System (v0.3.6+)
+### Kickstart Onboarding Protocol System
 
 Comprehensive first-run onboarding system providing interactive guided setup and configuration for new cc-sessions installations:
 
-**Three Mode Variants:**
-- **Full Mode** (30-45 min): Complete walkthrough with 12 protocol chunks covering DAIC enforcement, trigger phrases, state management, task workflows, agent customization, tool configuration, and advanced features with interactive exercises and validation
-- **API Mode** (10-15 min): Condensed 8 protocol chunks with same functionality but concise presentation for token budget consciousness
-- **Seshxpert Mode** (5 min): Single protocol chunk with import/auto-generate support for experienced users setting up new repos
+**Two Mode Variants:**
+- **Full Mode** (15-30 min): Complete walkthrough with 11 protocol chunks covering DAIC enforcement, task workflows (creation, startup, completion), compaction, agents, API, and advanced features with interactive exercises and validation
+- **Subagents Mode** (5 min): Single protocol chunk focused on agent customization for experienced users
 
 **Core Architecture:**
-- **API-Driven Flow**: Protocols call `sessions kickstart` commands for state management and progression
-- **Numbered Protocol Chunks**: Discrete markdown files (01-14) per learning module, loaded sequentially via `next` command
-- **Mode-Specific Directories**: `kickstart/full/` (12 chunks), `kickstart/api/` (8 chunks), `kickstart/seshxpert/` (1 chunk) with variant implementations
+- **Index-Based Progression**: Protocols loaded sequentially from `FULL_MODE_SEQUENCE` or `SUBAGENTS_MODE_SEQUENCE` arrays
+- **State-Driven Flow**: Progress tracked in `STATE.metadata['kickstart']` with sequence, current_index, and completed array
+- **Installer Integration**: Automatically triggered when `STATE.metadata['kickstart']` exists from installer choice
 - **Interactive Learning**: Demonstrates concepts through practice with real commands and immediate feedback
 - **Dummy Task Integration**: Uses `h-kickstart-setup.md` template as practice task throughout onboarding
 
 **Session Start Integration:**
-- Dedicated `kickstart_session_start.py|.js` hooks registered in settings.json for first-run detection
-- Automatically triggered when `STATE.flags.noob` is `True` during session initialization
-- Short-circuits immediately when noob=false to let normal session_start hooks run
-- Loads `kickstart/01-entry.md` with yes/later/never options and natural language date parsing
-- Resume support for multi-session onboarding with progress preserved in `STATE.metadata.kickstart_progress`
-- Reminder system checks `kickstart_reminder_date` and re-presents entry prompt when time expires
-- Config injection: Protocol chunks with `{config}` template variable receive formatted current configuration
+- Dedicated `kickstart_session_start.py|.js` hooks registered in settings.json for onboarding detection
+- Automatically triggered when `STATE.metadata['kickstart']` exists during session initialization
+- Initializes sequence on first run, resumes from current_index on subsequent runs
+- Loads protocol content from `sessions/protocols/kickstart/{protocol-file}` based on mode sequence
+- Displays user instructions: "Just say 'kickstart' and press enter to begin"
 
-**Full Mode Protocol Sequence:**
-1. Core workflow and DAIC enforcement (03) - Interactive demonstration with trigger phrase practice
-2. Trigger phrase customization (04) - Configuration of all six trigger categories
-3. Orphaned todos management (05) - State system overview with practical examples
-4. Task and branch workflows (06) - Task types, priorities, branch mapping, and enforcement
-5. Task startup protocol (07) - Practice with dummy task and configuration of startup preferences
-6. Create first task (08) - Guided creation of real task for current project work
-7. Always-available protocols (09) - Completion, compaction, and helper protocols
-8. Agent customization (10-11) - Context-gathering and code-review agent setup with tech stack assessment
-9. Tool configuration (12) - Custom readonly commands and bash pattern management
-10. Advanced features (13) - Directory tasks, bypass mode, task indexes, stashed todos
-11. Graduation (14) - Cleanup, summary, quick reference card, and next steps
+**Full Mode Protocol Sequence (11 protocols):**
+1. Discussion mode (01-discussion.md) - DAIC introduction with interactive blocking demo
+2. Implementation mode (02-implementation.md) - TodoWrite mechanics and mode switching
+3. Tasks overview (03-tasks-overview.md) - Task management concepts and naming conventions
+4. Task creation (04-task-creation.md) - Task creation protocol with hands-on practice
+5. Task startup (05-task-startup.md) - Task startup protocol with dummy task
+6. Task completion (06-task-completion.md) - Task completion protocol with git workflow
+7. Context compaction (07-compaction.md) - Compaction protocol for mid-task context management
+8. Agents (08-agents.md) - Five specialized agents overview and capabilities
+9. Sessions API (09-api.md) - Sessions API commands and slash command integration
+10. Advanced features (10-advanced.md) - Task indexes, iterloop pattern, stashed todos with concrete examples
+11. Graduation (11-graduation.md) - Cleanup, summary, philosophy, next steps
 
-**API Mode Compression:**
-- Same functionality as Full mode with condensed language and fewer examples
-- Skips advanced features module (13) to reduce time investment
-- Focus on essential configuration with minimal explanations
-- 8 protocol chunks total covering core workflows through agent customization
-
-**Seshxpert Mode Fast Path:**
-- Single protocol chunk (03-quick-setup.md) with import/auto-generate workflow
-- Copy sessions-config.json from existing repo (local or GitHub URL)
-- Copy agent overrides from `.claude/agents/` directory
-- Auto-generate configuration from repository detection
-- Skip all explanatory content and move directly to graduation
+**Subagents Mode Sequence (1 protocol):**
+1. Agents-only (01-agents-only.md) - Fast-track agent customization without tutorial
 
 **State Management:**
-- Progress tracking in `STATE.metadata.kickstart_progress` with mode, started timestamp, last_active timestamp, current_module, completed_modules array
-- Agent-specific progress tracking for customization workflow in kickstart_progress.agent_progress
-- Reminder date storage in `STATE.metadata.kickstart_reminder_date` for "later" responses with dd:hh format parsing
-- Graduation cleanup: Clears `noob` flag and kickstart metadata while preserving all configuration changes and agent overrides
+- Progress tracking in `STATE.metadata['kickstart']` with mode, sequence, current_index, completed array, last_active timestamp
+- Sequence initialization on first run sets sequence array and current_index to 0
+- Resume support preserves progress across session restarts
+- Graduation cleanup: Removes entire `metadata['kickstart']` entry while preserving all configuration changes
 
 **API Commands:**
-- `sessions kickstart next` - Load next protocol chunk based on mode and current progress with config template injection
-- `sessions kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode and set initial progress state
-- `sessions kickstart remind <dd:hh>` - Set reminder for later onboarding (format: days:hours, e.g., "1:00" for tomorrow)
+- `sessions kickstart next` - Load next protocol chunk, auto-increments current_index, marks previous as completed
 - `sessions kickstart complete` - Exit kickstart with hybrid cleanup: automated file deletion + manual router/config cleanup instructions
 
 **Self-Cleanup System:**
@@ -690,21 +657,17 @@ Comprehensive first-run onboarding system providing interactive guided setup and
 - Switches to implementation mode automatically before file deletion to bypass DAIC enforcement
 - Returns formatted todo list for manual cleanup steps that can't be automated
 
-**Protocol Files:**
-- Base entry and mode selection: `cc_sessions/protocols/kickstart/01-entry.md`, `02-mode-selection.md`
-- Full mode chunks (12): `cc_sessions/protocols/kickstart/full/03-core-workflow.md` through `14-graduation.md`
-- API mode chunks (8): `cc_sessions/protocols/kickstart/api/03-core-workflow.md` through `10-graduation.md`
-- Seshxpert mode chunk (1): `cc_sessions/protocols/kickstart/seshxpert/03-quick-setup.md`
-- Dummy task template: `cc_sessions/templates/h-kickstart-setup.md` for onboarding practice
+**Protocol Content Highlights:**
+- **Concrete Examples**: Iterloop demonstrates user-provided lists vs Claude-identified lists (10-advanced.md:46-70)
+- **Practical Scenarios**: Stashed todos example shows debugging workflow with task discovery (10-advanced.md:84-92)
+- **Index Usage**: Real-world index examples for feature work, performance tasks, refactoring (10-advanced.md:15-24)
+- **Interactive Demonstrations**: Discussion mode shows blocking behavior with actual tool attempts (01-discussion.md:56-78)
 
 **Supporting Infrastructure:**
-- Kickstart API module: `cc_sessions/scripts/api/kickstart_commands.py|.js` with next, mode, remind, complete commands
-- Kickstart SessionStart hooks: `cc_sessions/hooks/kickstart_session_start.py|.js` with noob flag detection and reminder handling
-- Module sequences: FULL_MODE_SEQUENCE (12 modules), API_MODE_SEQUENCE (8 modules), SESHXPERT_SEQUENCE (2 modules)
-- Config formatting: `format_config_for_display()` helper generates readable markdown of current configuration
-- Sessions API enhancements for bash pattern management: config read/write commands
-- Agent customization guide: `cc_sessions/kickstart/agent-customization-guide.md` for tech stack-specific customization
-- KICKSTART_APPROACH.md: Documents API-driven protocol pattern and implementation philosophy
+- Kickstart API module: `cc_sessions/scripts/api/kickstart_commands.py|.js` with next, complete commands
+- Kickstart SessionStart hooks: `cc_sessions/hooks/kickstart_session_start.py|.js` with metadata detection and sequence initialization
+- Module sequences: FULL_MODE_SEQUENCE (11 protocols), SUBAGENTS_MODE_SEQUENCE (1 protocol)
+- Protocol loading: `load_protocol_file()` helper reads from `sessions/protocols/kickstart/` directory
 
 ### Directory Task Support (v0.3.5+)
 
@@ -1124,10 +1087,8 @@ All slash commands use: `!sessions <command> $ARGUMENTS --from-slash`
 - Permission-based access controlled by active_protocol and api.startup_load states
 
 **Kickstart Operations:**
-- `sessions kickstart next` - Load next module chunk in onboarding sequence
-- `sessions kickstart mode <full|api|seshxpert>` - Initialize kickstart with selected mode
-- `sessions kickstart remind <dd:hh>` - Schedule reminder for later onboarding (format: days:hours)
-- `sessions kickstart complete` - Exit kickstart, clear noob flag and progress metadata
+- `sessions kickstart next` - Load next protocol chunk in sequence, increment current_index
+- `sessions kickstart complete` - Exit kickstart, clear metadata, delete files
 
 **Configuration Operations:**
 - `sessions config [--json] [--from-slash]` - Full configuration inspection with optional contextual formatting

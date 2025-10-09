@@ -39,6 +39,26 @@ if (isCIEnvironment()) {
 }
 ///-///
 
+/// ===== MODULE SEQUENCES ===== ///
+const FULL_MODE_SEQUENCE = [
+    '01-discussion.md',
+    '02-implementation.md',
+    '03-tasks-overview.md',
+    '04-task-creation.md',
+    '05-task-startup.md',
+    '06-task-completion.md',
+    '07-compaction.md',
+    '08-agents.md',
+    '09-api.md',
+    '10-advanced.md',
+    '11-graduation.md'
+];
+
+const SUBAGENTS_MODE_SEQUENCE = [
+    '01-agents-only.md'
+];
+///-///
+
 //-//
 
 // ===== FUNCTIONS ===== //
@@ -59,56 +79,91 @@ function loadProtocolFile(relativePath) {
 /*
 Kickstart SessionStart Hook
 
-Handles onboarding flow for new users (noob flag = true):
-- Checks noob flag and exits immediately if false (lets normal hooks run)
-- Respects reminder dates for "later" option
-- Loads entry protocol on first run
-- Resumes kickstart progress from where user left off
+Handles onboarding flow for users who chose kickstart in installer:
+- Checks for kickstart metadata (should ALWAYS exist if this hook is running)
+- Loads first module on first run, resumes from current_index on subsequent runs
+- Sequences determined by mode (full or subagents)
 */
 
 // ===== EXECUTION ===== //
 
-//!> 1. Load state and check noob flag
+//!> 1. Load state and check kickstart metadata
 const STATE = loadState();
 
-// Not a noob? Exit immediately and let normal hooks run
-if (!STATE.flags.noob) {
-    process.exit(0);
+// Get kickstart metadata (should ALWAYS exist if this hook is running)
+const kickstartMeta = STATE.metadata?.kickstart;
+if (!kickstartMeta) {
+    // This is a BUG - fail loudly
+    console.log(JSON.stringify({
+        hookSpecificOutput: {
+            hookEventName: 'SessionStart',
+            additionalContext: 'ERROR: kickstart_session_start hook fired but no kickstart metadata found. This is an installer bug.'
+        }
+    }));
+    process.exit(1);
+}
+
+const mode = kickstartMeta.mode;  // 'full' or 'subagents'
+if (!mode) {
+    console.log(JSON.stringify({
+        hookSpecificOutput: {
+            hookEventName: 'SessionStart',
+            additionalContext: 'ERROR: kickstart metadata exists but no mode specified. This is an installer bug.'
+        }
+    }));
+    process.exit(1);
 }
 //!<
 
-//!> 2. Check reminder date
-const reminderDate = STATE.metadata?.kickstart_reminder_date;
-if (reminderDate) {
-    if (new Date().toISOString() < reminderDate) {
-        // Still in reminder period, use normal flow
-        process.exit(0);
-    }
-}
-//!<
-
-//!> 3. Build context based on kickstart progress
-const kickstartProgress = STATE.metadata?.kickstart_progress;
-let context;
-
-if (!kickstartProgress) {
-    // First run - load entry protocol
-    context = loadProtocolFile('kickstart/01-entry.md');
+//!> 2. Initialize or load sequence
+// Determine sequence based on mode
+let sequence;
+if (mode === 'full') {
+    sequence = FULL_MODE_SEQUENCE;
+} else if (mode === 'subagents') {
+    sequence = SUBAGENTS_MODE_SEQUENCE;
 } else {
-    // Resume from where we left off
-    const mode = kickstartProgress.mode || 'full';
-    const currentModule = kickstartProgress.current_module;
+    console.log(JSON.stringify({
+        hookSpecificOutput: {
+            hookEventName: 'SessionStart',
+            additionalContext: `ERROR: Invalid kickstart mode '${mode}'. Expected 'full' or 'subagents'.`
+        }
+    }));
+    process.exit(1);
+}
 
-    context = `[Resuming Kickstart: ${mode} mode]\n\n`;
-    context += loadProtocolFile(`kickstart/${mode}/${currentModule}.md`);
+// Initialize sequence on first run
+let protocolContent;
+if (!('sequence' in kickstartMeta)) {
+    const { editState } = require(sharedStatePath);
+    editState((s) => {
+        s.metadata.kickstart.sequence = sequence;
+        s.metadata.kickstart.current_index = 0;
+        s.metadata.kickstart.completed = [];
+        return s;
+    });
+
+    protocolContent = loadProtocolFile(`kickstart/${sequence[0]}`);
+} else {
+    // Load current protocol from sequence
+    const currentIndex = kickstartMeta.current_index ?? 0;
+    protocolContent = loadProtocolFile(`kickstart/${sequence[currentIndex]}`);
 }
 //!<
 
-//!> 4. Output context and exit
+//!> 3. Append user instructions and output
+protocolContent += `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+USER INSTRUCTIONS:
+Just say 'kickstart' and press enter to begin
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
 console.log(JSON.stringify({
     hookSpecificOutput: {
         hookEventName: 'SessionStart',
-        additionalContext: context
+        additionalContext: protocolContent
     }
 }));
 process.exit(0);

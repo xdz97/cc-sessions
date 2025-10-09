@@ -10,7 +10,7 @@
 An opinionated approach to productive development with Claude Code
 <br>
 <sub>_A public good brought to you by GWUDCAP and Three AIrrows Capital_</sub>
-
+<br>
 <div align="center">
 
 [![npm version](https://badge.fury.io/js/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)
@@ -19,7 +19,6 @@ An opinionated approach to productive development with Claude Code
 [![npm downloads](https://img.shields.io/npm/dm/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)
 [![PyPI downloads](https://pepy.tech/badge/cc-sessions)](https://pepy.tech/project/cc-sessions)
 </div>
-<br>
 <div align="center">
 
 [![Discord](https://img.shields.io/discord/1325216825805504602?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/9ebFr6VEb)

@@ -49,7 +49,7 @@ npx cc-sessions
 npm install -g cc-sessions
 ```
 
-### What Gets Installed
+<details><summary>### What Gets Installed</summary>
 
 The installer sets up:
 - Hook files in `sessions/hooks/` for DAIC enforcement
@@ -60,6 +60,7 @@ The installer sets up:
 - Initial state in `sessions/sessions-state.json`
 - Configuration in `sessions/sessions-config.json`
 - Automatic `.gitignore` entries for runtime files
+</details>
 
 ### Updates & Reinstalls
 

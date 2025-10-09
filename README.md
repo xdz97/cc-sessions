@@ -29,8 +29,6 @@ You install cc-sessions into a repo from the project root:
 ```bash
 cd ~/my-git-repo && [npx|pipx] install cc-sessions
 ```
-```
-```
 
 There are Python and Node packages - use whichever you have:
 

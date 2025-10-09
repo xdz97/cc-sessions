@@ -86,6 +86,7 @@ The system teaches itself through index-based progression, then cleans up its ow
 
 <details><summary><em>Best way to get started is kickstart, but...</em></summary>
 <br>
+
 **After installation (and, optionally, kickstart), use trigger phrases to control workflows:**
 
 ```
@@ -121,7 +122,7 @@ Check `sessions/sessions-config.json` to see all configuration options.
 
 ## why I made cc-sessions
 
-<details><summary><strong><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></strong></summary>
+<details><summary><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></summary>
 <br>
 If you ask Claude a question he may just start writing code, especially if you are in the middle of a task.
 

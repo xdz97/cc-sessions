@@ -119,13 +119,14 @@ Check `sessions/sessions-config.json` to see all configuration options.
 
 ---
 
-## The Problem
+## Raison D'etre
 
-AI pair programming with Claude Code should make you more productive, but it creates new friction.
+<details>
+<summary><strong></strong> <em>I made cc-sessions to solve what I don't like about AI pair programming...</em></summary>
 
-You ask Claude a question about your architecture and he may just start writing code, especially if you are in the middle of a task.
+If you ask Claude a question he may just start writing code, especially if you are in the middle of a task.
 
-Without additional scaffolding, you are often manually adding files to context for 20% of the context window and being perenially terrified of having to compact context.
+Without additional scaffolding, you are often manually adding files to context for 20% of the context window and being perennially terrified of having to compact context.
 
 The list of things you have to remember can get quite large: 
 
@@ -140,19 +141,20 @@ The list of things you have to remember can get quite large:
 
 The cognitive overhead balloons quickly.
 
-Tasks don't survive restarts. Close Claude Code, reopen it, and you're explaining everything from scratch. No confidence that work will continue cleanly.
+Tasks don't survive restarts. Close Claude Code, reopen it, and you're explaining everything from scratch. No confidence that work will continue cleanly and no structure to how to handle working across context windows.
 
-**You discover problems faster than you can solve them.** Without a friction-free way to capture tasks, these insights vanish.
+**You discover problems faster than you can solve them.** Without a standardized, friction-free way to capture tasks, these insights vanish.
 
 When context does get compacted automatically, it doesn't preserve enough detail to inspire confidence. 
 
-Most have a CLAUDE.md file stuffed with behavioral rules, some of which are simple where others are branching conditional logic. 
+Most have a CLAUDE.md file stuffed with behavioral rules, some of which are simple where others are complex branching conditional logic. 
 
 LLMs are terrible at following long instruction lists throughout an entire conversation. The guidance degrades as the conversation progresses.
 
 Git workflow adds constant friction: creating branches, crafting commit messages, merging when complete, pushing to remote. More cognitive overhead.
 
 **So, cc-sessions fixes all of this.**
+</details>
 
 ---
 

@@ -457,42 +457,121 @@ After completion of the last task in any todo list:
     }
     //!<
 
-    //!> 4. Check cc-sessions version
+    //!> 4. Check cc-sessions version with flag-based caching
+    // Get current version from package.json
+    let currentVersion = null;
     try {
-        // Check local version from package.json
-        let currentVersion = null;
         const pkgPath = path.join(__dirname, '..', '..', '..', 'package.json');
         if (fs.existsSync(pkgPath)) {
             const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
             currentVersion = pkg.version;
         }
-
-        // Check npm registry for latest version
-        await new Promise((resolve) => {
-            https.get('https://registry.npmjs.org/cc-sessions/latest', {
-                timeout: 2000
-            }, (res) => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    try {
-                        const latest = JSON.parse(data);
-                        const latestVersion = latest.version;
-                        if (currentVersion && currentVersion !== latestVersion) {
-                            context += `Update available for cc-sessions: ${currentVersion} → ${latestVersion}. Run \`npm install -g cc-sessions\` to update.`;
-                        }
-                        resolve();
-                    } catch (e) {
-                        resolve();
-                    }
-                });
-            }).on('error', () => resolve());
-
-            // Timeout after 2 seconds
-            setTimeout(resolve, 2000);
-        });
     } catch (error) {
-        // Ignore version check errors
+        currentVersion = null;
+    }
+
+    // Check update flag in metadata
+    let updateFlag = STATE.metadata.update_available;
+    let latestVersion = STATE.metadata.latest_version;
+
+    // If flag doesn't exist, check npm registry
+    if (updateFlag === undefined && currentVersion) {
+        try {
+            await new Promise((resolve) => {
+                https.get('https://registry.npmjs.org/cc-sessions/latest', {
+                    timeout: 2000
+                }, (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => {
+                        try {
+                            const registryData = JSON.parse(data);
+                            latestVersion = registryData.version;
+
+                            // Set flag based on version comparison
+                            editState(s => {
+                                s.metadata.current_version = currentVersion;
+                                s.metadata.latest_version = latestVersion;
+                                s.metadata.update_available = (currentVersion !== latestVersion);
+                                updateFlag = s.metadata.update_available;
+                            });
+                            resolve();
+                        } catch (e) {
+                            resolve();
+                        }
+                    });
+                }).on('error', () => resolve());
+
+                // Timeout after 2 seconds
+                setTimeout(resolve, 2000);
+            });
+        } catch (error) {
+            // Ignore check errors
+        }
+    }
+
+    // Display update notification if flag is True
+    if (updateFlag && latestVersion && currentVersion) {
+        // Check if auto-update is enabled
+        if (CONFIG.features.auto_update) {
+            // Attempt auto-update (blocking)
+            context += `\nAuto-update enabled. Updating cc-sessions: ${currentVersion} → ${latestVersion}...\n`;
+            try {
+                const { execSync } = require('child_process');
+                const result = execSync('npm install -g cc-sessions', {
+                    encoding: 'utf8',
+                    timeout: 60000
+                });
+
+                // Clear update flag on success
+                editState(s => {
+                    delete s.metadata.update_available;
+                    delete s.metadata.latest_version;
+                    delete s.metadata.current_version;
+                });
+                context += `✓ Updated to ${latestVersion}\n\n`;
+            } catch (error) {
+                // Fall back to manual update message
+                context += `✗ Auto-update failed. Please update manually:\n`;
+                context += `  npm install -g cc-sessions\n\n`;
+            }
+        } else {
+            // Show manual update message
+            // Extract first few lines from CHANGELOG for the latest version
+            let changelogExcerpt = null;
+            try {
+                const changelogPath = path.join(PROJECT_ROOT, '..', 'CHANGELOG.md');
+                if (fs.existsSync(changelogPath)) {
+                    const content = fs.readFileSync(changelogPath, 'utf8');
+                    // Find the latest version section
+                    const versionPattern = new RegExp(`##\\s*\\[${latestVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`);
+                    const match = content.match(versionPattern);
+                    if (match) {
+                        // Extract until next ## or end
+                        const start = match.index + match[0].length;
+                        const nextHeading = content.indexOf('\n## ', start);
+                        const section = content.substring(start, nextHeading !== -1 ? nextHeading : start + 500).trim();
+                        // Take first 3 lines of changes
+                        const lines = section.split('\n')
+                            .map(l => l.trim())
+                            .filter(l => l && l.startsWith('-'))
+                            .slice(0, 3);
+                        if (lines.length > 0) {
+                            changelogExcerpt = lines.map(l => `  ${l}`).join('\n');
+                        }
+                    }
+                }
+            } catch (error) {
+                // Ignore changelog extraction errors
+            }
+
+            context += `\nUpdate available: ${currentVersion} → ${latestVersion}\n`;
+            if (changelogExcerpt) {
+                context += `What's new:\n${changelogExcerpt}\n\n`;
+            }
+            context += `Run: npm install -g cc-sessions\n`;
+            context += `To suppress this warning: sessions update suppress\n\n`;
+        }
     }
     //!<
 

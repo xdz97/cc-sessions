@@ -57,6 +57,10 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/agents/context-gathering.md` - Enhanced context-gathering with better pattern examples and comprehensive research methodology
 - `cc_sessions/agents/logging.md` - Improved logging agent with simplified transcript access and better cleanup patterns
 - `cc_sessions/agents/context-refinement.md` - Context refinement with streamlined transcript reading
+- `scripts/prepare-release.py` - Pre-flight validation with 7 automated checks (version sync, branch state, CHANGELOG format, git cleanliness, build tests, tool availability)
+- `scripts/publish-release.py` - Atomic 15-step publishing workflow (merge next→main, tag, build, publish to PyPI/npm, GitHub release, CHANGELOG rotation)
+- `scripts/check-version-sync.sh` - Standalone version consistency validator between package.json:3 and pyproject.toml:7
+- `RELEASE.md` - Complete release workflow documentation for maintainers
 - `cc_sessions/protocols/task-creation/task-creation.md:37-74` - Main templated task creation protocol with directory task structure decision and user confirmation
 - `cc_sessions/protocols/task-startup/task-startup.md` - Main templated task startup protocol with conditional sections
 - `cc_sessions/protocols/task-startup/directory-task-startup.md` - Planning guidance for parent README.md startup emphasizing comprehensive subtask specification, comprehensive planning, and task branch creation
@@ -289,6 +293,7 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 - `task_detection` - Task-based workflow automation
 - `auto_ultrathink` - Enhanced AI reasoning
 - `use_nerd_fonts` - Nerd Fonts icon display in statusline (default: true, shows icons when enabled, ASCII fallback when disabled)
+- `auto_update` - Automatic package updates on session start (default: false, when enabled updates cc-sessions automatically when new version detected)
 - `context_warnings` - Token usage warnings at 85%/90%
 
 ### State Management
@@ -378,6 +383,72 @@ Configuration in `.claude/settings.json`:
 - **Improved Error Handling**: Comprehensive backup and recovery mechanisms for corrupted configuration/state files
 
 ## Recent Enhancements
+
+### Release Management Workflow (v0.3.13+)
+
+Complete release automation system for dual-package publishing to PyPI and npm with automatic update detection for users.
+
+**Release Workflow Overview:**
+- Simplified `next` → `main` branching strategy for solo development
+- Development accumulates on `next` with continuous CHANGELOG maintenance
+- Manual version bumping and CHANGELOG finalization on `next` branch
+- Automated validation ensures consistency before publishing
+- Atomic publishing sequence merges, tags, builds, and publishes to both registries
+- Complete workflow documented in `RELEASE.md` for maintainers
+
+**Pre-Flight Validation (prepare-release.py):**
+- 7 automated checks: version sync (package.json:3 and pyproject.toml:7), branch state (on `next`), CHANGELOG format (version with date, no "Unreleased"), git cleanliness (no uncommitted files), Python build (`python -m build`), npm validation (`npm pack --dry-run`), tool availability (python, npm, twine, git)
+- Interactive mode with detailed actionable guidance for each failure
+- `--auto` flag for CI integration with simple checklist output
+- Offers to launch publish script on successful validation
+
+**Atomic Publishing (publish-release.py):**
+- 15-step sequence with comprehensive pre-flight checks before point of no return
+- Extracts version from package.json automatically
+- Validates credentials for PyPI (twine) and npm (npm whoami)
+- Merges `next` → `main`, creates git tag `vX.Y.Z` on main
+- Builds Python artifacts and publishes to PyPI via twine
+- Publishes to npm registry simultaneously
+- Pushes commits and tags to GitHub
+- Extracts CHANGELOG section and creates GitHub Release with notes
+- Returns to `next` branch and creates new "Unreleased" section for next cycle
+- Interactive rollback support with manual recovery instructions on failure
+
+**Version Consistency (check-version-sync.sh):**
+- Standalone bash utility for version validation across package managers
+- Reads package.json line 3 and pyproject.toml line 7
+- Exits 0 if versions match, exits 1 if mismatched
+- Used by release scripts, CI workflows, and manual validation
+
+**Update Detection for Users:**
+- Flag-based caching in `STATE.metadata` prevents redundant PyPI/npm checks on every session start
+- Update status tracked: `update_available` (true/false/undefined), `latest_version`, `current_version`
+- Check logic: if flag doesn't exist, query PyPI (Python) or npm registry (JavaScript), set flag based on result
+- CHANGELOG excerpt extraction shows first 3 changes from new version in notification
+- Notification appears on session start with upgrade instructions for both package managers
+
+**Auto-Update Feature (Opt-In):**
+- Configurable via `CONFIG.features.auto_update` (default: false, users must enable)
+- When enabled, automatically runs pip/npm upgrade on session start when update detected
+- Blocking operation with 60-second timeout and graceful fallback to manual message
+- Clears update flag on successful upgrade, shows confirmation message
+- Maintains user control over when package updates occur
+
+**Update Management API:**
+- `sessions state update suppress` - Sets flag to false, suppresses notifications until next actual update (user remains on current version but stops seeing warnings)
+- `sessions state update check` - Clears cached flags, forces fresh PyPI/npm check on next session start
+- `sessions state update status` - Shows current version, latest version, and update availability with flag state
+
+**Implementation Files:**
+- scripts/prepare-release.py (404 lines) - Pre-flight validation with 7 checks, interactive/auto modes, actionable error guidance
+- scripts/publish-release.py (418 lines) - Atomic 15-step publishing with rollback support and manual recovery instructions
+- scripts/check-version-sync.sh (38 lines) - Bash version consistency validator
+- RELEASE.md - Complete release workflow documentation for maintainers
+- session_start.py lines 352-434 (Python) - Update detection with PyPI checks, CHANGELOG parsing, auto-update support
+- session_start.js lines 111-226 (JavaScript) - Update detection with npm registry checks, CHANGELOG parsing, auto-update support
+- shared_state.py line 304 - auto_update feature flag in EnabledFeatures dataclass
+- state_commands.py lines 513-579 (Python) - Update management commands (suppress, check, status)
+- state_commands.js - JavaScript parity for update management commands
 
 ### Statusline Nerd Fonts and Git Branch Display (v0.3.12+)
 
@@ -1046,6 +1117,7 @@ New comprehensive guide at `cc_sessions/kickstart/agent-customization-guide.md` 
 
 ## Related Documentation
 
+- **RELEASE.md** - Complete release workflow guide for maintainers (version bumping, validation, publishing to PyPI/npm, GitHub releases)
 - docs/INSTALL.md - Detailed installation guide
 - docs/USAGE_GUIDE.md - Workflow and feature documentation
 - cc_sessions/knowledge/ - Internal architecture documentation
@@ -1077,6 +1149,9 @@ All slash commands use: `!sessions <command> $ARGUMENTS --from-slash`
 - `sessions state <component> [--json]` - Specific component (mode/task/todos/flags/active_protocol/api)
 - `sessions state active_protocol [--json]` - View currently active protocol
 - `sessions state api [--json]` - View protocol-specific API permissions
+- `sessions state update suppress` - Suppress update notifications
+- `sessions state update check` - Force re-check for updates
+- `sessions state update status` - Show current update status and version information
 - `sessions mode discussion` - One-way switch to discussion mode
 - `sessions flags clear` - Reset behavioral flags
 - `sessions status` - Human-readable state summary
@@ -1095,7 +1170,7 @@ All slash commands use: `!sessions <command> $ARGUMENTS --from-slash`
 - `sessions config phrases list [category] [--from-slash]` - View trigger phrases
 - `sessions config phrases add <category> "<phrase>" [--from-slash]` - Add trigger phrase
 - `sessions config phrases remove <category> "<phrase>" [--from-slash]` - Remove trigger phrase
-- `sessions config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, warn_85, warn_90)
+- `sessions config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, auto_update, warn_85, warn_90)
 - `sessions config git show [--from-slash]` - View git preferences
 - `sessions config git set <setting> <value> [--from-slash]` - Update git preference
 - `sessions config env show [--from-slash]` - View environment settings

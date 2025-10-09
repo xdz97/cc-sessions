@@ -4,7 +4,7 @@
 
 ## ===== STDLIB ===== ##
 from importlib.metadata import version, PackageNotFoundError
-import requests, json, sys, shutil, os
+import requests, json, sys, shutil, os, subprocess
 from typing import Dict, List, Optional, Tuple
 ##-##
 
@@ -349,16 +349,89 @@ else:
     context += list_open_tasks_grouped()
 #!<
 
-#!> 4. Check cc-sessions version
+#!> 4. Check cc-sessions version with flag-based caching
 try: current_version = version('cc-sessions')
 except PackageNotFoundError: current_version = None
-try:
-    resp = requests.get("https://pypi.org/pypi/cc-sessions/json", timeout=2)
-    if resp.ok:
-        latest_version = resp.json().get("info", {}).get("version")
-        if current_version and current_version != latest_version:
-            context += f"Update available for cc-sessions: {current_version} → {latest_version}. Run `pip install --upgrade cc-sessions` to update."
-except requests.RequestException: pass
+
+# Check update flag in metadata
+update_flag = STATE.metadata.get('update_available')
+latest_version = STATE.metadata.get('latest_version')
+
+# If flag doesn't exist, check PyPI
+if update_flag is None and current_version:
+    try:
+        resp = requests.get("https://pypi.org/pypi/cc-sessions/json", timeout=2)
+        if resp.ok:
+            latest_version = resp.json().get("info", {}).get("version")
+
+            # Set flag based on version comparison
+            with edit_state() as s:
+                s.metadata['current_version'] = current_version
+                s.metadata['latest_version'] = latest_version
+                s.metadata['update_available'] = (current_version != latest_version)
+                update_flag = s.metadata['update_available']
+    except requests.RequestException:
+        pass
+
+# Display update notification if flag is True
+if update_flag and latest_version and current_version:
+    # Check if auto-update is enabled
+    if CONFIG.features.auto_update:
+        # Attempt auto-update (blocking)
+        context += f"\nAuto-update enabled. Updating cc-sessions: {current_version} → {latest_version}...\n"
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'pip', 'install', '--upgrade', 'cc-sessions'],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if result.returncode == 0:
+                # Clear update flag on success
+                with edit_state() as s:
+                    s.metadata.pop('update_available', None)
+                    s.metadata.pop('latest_version', None)
+                    s.metadata.pop('current_version', None)
+                context += f"✓ Updated to {latest_version}\n\n"
+            else:
+                # Fall back to manual update message
+                context += f"✗ Auto-update failed. Please update manually:\n"
+                context += f"  pip install --upgrade cc-sessions\n\n"
+        except (subprocess.TimeoutExpired, Exception) as e:
+            context += f"✗ Auto-update failed ({e}). Please update manually:\n"
+            context += f"  pip install --upgrade cc-sessions\n\n"
+    else:
+        # Show manual update message
+        # Extract first few lines from CHANGELOG for the latest version
+        try:
+            changelog_path = PROJECT_ROOT.parent / 'CHANGELOG.md'
+            if changelog_path.exists():
+                with open(changelog_path, 'r') as f:
+                    content = f.read()
+                    # Find the latest version section
+                    import re
+                    version_pattern = rf'##\s*\[{re.escape(latest_version)}\]'
+                    match = re.search(version_pattern, content)
+                    if match:
+                        # Extract until next ## or end
+                        start = match.end()
+                        next_heading = content.find('\n## ', start)
+                        section = content[start:next_heading if next_heading != -1 else start+500].strip()
+                        # Take first 3 lines of changes
+                        lines = [l.strip() for l in section.split('\n') if l.strip() and l.strip().startswith('-')][:3]
+                        changelog_excerpt = '\n'.join(f"  {l}" for l in lines)
+                    else:
+                        changelog_excerpt = None
+            else:
+                changelog_excerpt = None
+        except:
+            changelog_excerpt = None
+
+        context += f"\nUpdate available: {current_version} → {latest_version}\n"
+        if changelog_excerpt:
+            context += f"What's new:\n{changelog_excerpt}\n\n"
+        context += f"Run: pip install --upgrade cc-sessions\n"
+        context += f"To suppress this warning: sessions update suppress\n\n"
 #!<
 
 #-#

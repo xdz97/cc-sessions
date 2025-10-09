@@ -74,6 +74,8 @@ function handleStateCommand(args, jsonOutput = false, fromSlash = false) {
         return handleTodosCommand(cleanedSectionArgs, jsonOutput);
     } else if (section === 'flags') {
         return handleFlagsCommand(cleanedSectionArgs, jsonOutput);
+    } else if (section === 'update') {
+        return handleUpdateCommand(cleanedSectionArgs, jsonOutput, fromSlash);
     } else {
         // For backward compatibility, support direct component access
         const component = section;
@@ -693,6 +695,91 @@ function handleVersionCommand(args, jsonOutput = false) {
         return { version: pkgVersion };
     }
     return `cc-sessions version: ${pkgVersion}`;
+}
+
+function handleUpdateCommand(args, jsonOutput = false, fromSlash = false) {
+    /**
+     * Handle update management commands.
+     *
+     * Usage:
+     *     update suppress  - Suppress update notifications
+     *     update check     - Force re-check for updates
+     *     update status    - Show current update status
+     */
+    if (!args || args.length === 0) {
+        if (fromSlash) {
+            return "Usage: /sessions state update <subcommand>\n\nSubcommands:\n  suppress  - Suppress update notifications\n  check     - Force re-check for updates\n  status    - Show current update status";
+        }
+        throw new Error("update command requires a subcommand. Valid: suppress, check, status");
+    }
+
+    const subcommand = args[0].toLowerCase();
+
+    if (subcommand === 'suppress') {
+        editState(s => {
+            s.metadata.update_available = false;
+        });
+
+        if (jsonOutput) {
+            return { message: "Update notifications suppressed" };
+        }
+        if (fromSlash) {
+            return "✓ Update notifications suppressed\n\nUpdate checks will resume after next package update.";
+        }
+        return "Update notifications suppressed";
+
+    } else if (subcommand === 'check') {
+        editState(s => {
+            delete s.metadata.update_available;
+            delete s.metadata.latest_version;
+            delete s.metadata.current_version;
+        });
+
+        if (jsonOutput) {
+            return { message: "Update check flag cleared" };
+        }
+        if (fromSlash) {
+            return "✓ Update check flag cleared\n\nVersion check will run on next session start.";
+        }
+        return "Update check flag cleared - will re-check on next session start";
+
+    } else if (subcommand === 'status') {
+        const updateFlag = STATE.metadata.update_available;
+        const latestVersion = STATE.metadata.latest_version;
+        const currentVersion = STATE.metadata.current_version;
+
+        if (jsonOutput) {
+            return {
+                current_version: currentVersion || "unknown",
+                latest_version: latestVersion || "not checked",
+                update_available: updateFlag
+            };
+        }
+
+        if (fromSlash) {
+            const lines = [
+                "Update Status:",
+                `  Current version: ${currentVersion || 'unknown'}`,
+                `  Latest version: ${latestVersion || 'not checked'}`,
+                `  Update available: ${updateFlag ? 'Yes' : (updateFlag === false ? 'No' : 'Unknown (not checked)')}`
+            ];
+            return lines.join('\n');
+        }
+
+        if (updateFlag === undefined || updateFlag === null) {
+            return "Update check: Not performed yet";
+        } else if (updateFlag) {
+            return `Update available: ${currentVersion} → ${latestVersion}`;
+        } else {
+            return `Up to date: ${currentVersion}`;
+        }
+
+    } else {
+        if (fromSlash) {
+            return `Unknown subcommand: ${subcommand}\n\nAvailable subcommands: suppress, check, status`;
+        }
+        throw new Error(`Unknown update subcommand: ${subcommand}. Valid: suppress, check, status`);
+    }
 }
 //!<
 

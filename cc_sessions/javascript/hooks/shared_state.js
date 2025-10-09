@@ -313,6 +313,7 @@ class EnabledFeatures {
         this.task_detection = data.task_detection !== undefined ? data.task_detection : true;
         this.auto_ultrathink = data.auto_ultrathink !== undefined ? data.auto_ultrathink : true;
         this.use_nerd_fonts = data.use_nerd_fonts !== undefined ? data.use_nerd_fonts : true;
+        this.auto_update = data.auto_update !== undefined ? data.auto_update : false;
         this.context_warnings = data.context_warnings instanceof ContextWarnings
             ? data.context_warnings
             : new ContextWarnings(data.context_warnings || {});
@@ -347,6 +348,7 @@ class SessionsConfig {
                 task_detection: this.features.task_detection,
                 auto_ultrathink: this.features.auto_ultrathink,
                 use_nerd_fonts: this.features.use_nerd_fonts,
+                auto_update: this.features.auto_update,
                 context_warnings: {
                     warn_85: this.features.context_warnings.warn_85,
                     warn_90: this.features.context_warnings.warn_90

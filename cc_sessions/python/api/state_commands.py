@@ -70,6 +70,7 @@ def handle_state_command(args: List[str], json_output: bool = False, from_slash:
     elif section == 'task': return handle_task_command(section_args, json_output, from_slash)
     elif section == 'todos': return handle_todos_command(section_args, json_output)
     elif section == 'flags': return handle_flags_command(section_args, json_output)
+    elif section == 'update': return handle_update_command(section_args, json_output, from_slash)
     else:
         # For backward compatibility, support direct component access
         component = section
@@ -505,9 +506,78 @@ def handle_version_command(args: List[str], json_output: bool = False) -> Any:
     """
     try: pkg_version = version("cc-sessions")
     except PackageNotFoundError: pkg_version = "development"
-    
+
     if json_output: return {"version": pkg_version}
     return f"cc-sessions version: {pkg_version}"
+
+def handle_update_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
+    """
+    Handle update management commands.
+
+    Usage:
+        update suppress  - Suppress update notifications
+        update check     - Force re-check for updates
+        update status    - Show current update status
+    """
+    if not args:
+        if from_slash:
+            return "Usage: /sessions state update <subcommand>\n\nSubcommands:\n  suppress  - Suppress update notifications\n  check     - Force re-check for updates\n  status    - Show current update status"
+        raise ValueError("update command requires a subcommand. Valid: suppress, check, status")
+
+    subcommand = args[0].lower()
+
+    if subcommand == 'suppress':
+        with edit_state() as s:
+            s.metadata['update_available'] = False
+
+        if json_output: return {"message": "Update notifications suppressed"}
+        if from_slash:
+            return "✓ Update notifications suppressed\n\nUpdate checks will resume after next package update."
+        return "Update notifications suppressed"
+
+    elif subcommand == 'check':
+        with edit_state() as s:
+            s.metadata.pop('update_available', None)
+            s.metadata.pop('latest_version', None)
+            s.metadata.pop('current_version', None)
+
+        if json_output: return {"message": "Update check flag cleared"}
+        if from_slash:
+            return "✓ Update check flag cleared\n\nVersion check will run on next session start."
+        return "Update check flag cleared - will re-check on next session start"
+
+    elif subcommand == 'status':
+        update_flag = STATE.metadata.get('update_available')
+        latest_version = STATE.metadata.get('latest_version')
+        current_version = STATE.metadata.get('current_version')
+
+        if json_output:
+            return {
+                "current_version": current_version or "unknown",
+                "latest_version": latest_version or "not checked",
+                "update_available": update_flag
+            }
+
+        if from_slash:
+            lines = [
+                "Update Status:",
+                f"  Current version: {current_version or 'unknown'}",
+                f"  Latest version: {latest_version or 'not checked'}",
+                f"  Update available: {'Yes' if update_flag else 'No' if update_flag is False else 'Unknown (not checked)'}"
+            ]
+            return "\n".join(lines)
+
+        if update_flag is None:
+            return "Update check: Not performed yet"
+        elif update_flag:
+            return f"Update available: {current_version} → {latest_version}"
+        else:
+            return f"Up to date: {current_version}"
+
+    else:
+        if from_slash:
+            return f"Unknown subcommand: {subcommand}\n\nAvailable subcommands: suppress, check, status"
+        raise ValueError(f"Unknown update subcommand: {subcommand}. Valid: suppress, check, status")
 #!<
 
 #-#

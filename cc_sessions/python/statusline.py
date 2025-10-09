@@ -43,18 +43,15 @@ def find_current_transcript(transcript_path, session_id, stale_threshold=30):
         # Read last line of transcript to get last message timestamp
         with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f:
             lines = f.readlines()
-            if not lines:
-                return transcript_path
+            if not lines: return transcript_path
 
             last_line = lines[-1].strip()
-            if not last_line:
-                return transcript_path
+            if not last_line: return transcript_path
 
             last_msg = json.loads(last_line)
             last_timestamp = last_msg.get('timestamp')
 
-            if not last_timestamp:
-                return transcript_path
+            if not last_timestamp: return transcript_path
 
             # Parse ISO timestamp and compare to current time
             last_time = datetime.fromisoformat(last_timestamp.replace('Z', '+00:00'))
@@ -62,8 +59,7 @@ def find_current_transcript(transcript_path, session_id, stale_threshold=30):
             age_seconds = (current_time - last_time).total_seconds()
 
             # If transcript is fresh, return it
-            if age_seconds <= stale_threshold:
-                return transcript_path
+            if age_seconds <= stale_threshold: return transcript_path
 
             # Transcript is stale - search for current one
             transcript_dir = Path(transcript_path).parent
@@ -78,8 +74,7 @@ def find_current_transcript(transcript_path, session_id, stale_threshold=30):
                 try:
                     with open(candidate, 'r', encoding='utf-8', errors='backslashreplace') as cf:
                         candidate_lines = cf.readlines()
-                        if not candidate_lines:
-                            continue
+                        if not candidate_lines: continue
 
                         # Check last line for session ID
                         candidate_last = json.loads(candidate_lines[-1].strip())
@@ -92,17 +87,13 @@ def find_current_transcript(transcript_path, session_id, stale_threshold=30):
                                 candidate_time = datetime.fromisoformat(candidate_timestamp.replace('Z', '+00:00'))
                                 candidate_age = (current_time - candidate_time).total_seconds()
 
-                                if candidate_age <= stale_threshold:
-                                    return str(candidate)
-                except:
-                    continue
+                                if candidate_age <= stale_threshold: return str(candidate)
+                except: continue
 
             # No fresh transcript found, return original
             return transcript_path
 
-    except:
-        # Any error, return original path
-        return transcript_path
+    except: return transcript_path # Any error, return original path
 
 #-#
 

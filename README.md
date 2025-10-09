@@ -22,11 +22,19 @@ An opinionated approach to productive development with Claude Code
 
 ---
 
-## Installation & Kickstart
+## installing the extension
 
-cc-sessions provides complete feature parity between Python and JavaScript implementations. Choose your runtime—both work identically.
+You install cc-sessions into a repo from the project root:
 
-### Python (no Node.js required)
+```bash
+cd ~/my-git-repo && [npx|pipx] install cc-sessions
+```
+```
+```
+
+There are Python and Node packages - use whichever you have:
+
+### Python
 
 ```bash
 # Recommended: Isolated install
@@ -39,7 +47,7 @@ pip install cc-sessions
 uv pip install cc-sessions
 ```
 
-### JavaScript (no Python required)
+### Node
 
 ```bash
 # One-time execution
@@ -52,7 +60,7 @@ npm install -g cc-sessions
 <details>
 <summary>
 
-### What Gets Installed
+### what gets installed
 </summary>
 
 The installer sets up:
@@ -69,7 +77,7 @@ The installer sets up:
 <details>
 <summary>
 
-### Updates & Reinstalls
+### updates and uninstalls/reinstalls
 </summary>
 
 The system automatically preserves your work:
@@ -79,13 +87,17 @@ The system automatically preserves your work:
 - State and config files regenerate fresh
 </details>
 
+---
+
 <details>
 <summary>
 
-### First Run: Kickstart Onboarding
+## interactive tutorial
 </summary>
 
-After installation, cc-sessions detects that you're new and offers interactive onboarding:
+You can select whether to take the interactive tutorial at the end of the installer.
+
+Its pretty quick and it will fully onboard you if you're new using cc-sessions to teach you cc-sessions.
 
 **Full Mode (15-30 minutes)**
 Complete walkthrough with hands-on exercises covering DAIC enforcement, task workflows, agents, protocols, and advanced features. You practice creating, starting, and completing a real task with immediate feedback.
@@ -101,7 +113,7 @@ The system teaches itself through index-based progression, then cleans up its ow
 <details>
 <summary>
 
-## Quick Start
+## the gist
 </summary>
 
 **After installation (and, optionally, kickstart), use trigger phrases to control workflows:**
@@ -139,9 +151,12 @@ Check `sessions/sessions-config.json` to see all configuration options.
 
 ---
 
-## Raison D'etre
-
 <details>
+<summary>
+
+## why it exists
+</summary>
+
 <summary><strong><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></strong></summary>
 <br>
 If you ask Claude a question he may just start writing code, especially if you are in the middle of a task.
@@ -181,7 +196,7 @@ Git workflow adds constant friction: creating branches, crafting commit messages
 <details>
 <summary>
 
-## Features
+## features summary
 </summary>
 
 ### Discussion-Alignment-Implementation-Check (DAIC)
@@ -237,15 +252,15 @@ The system backs up your work before updates, preserves task files and agent cus
 
 ---
 
-## Contributing
+## contributing
 
 We mostly inline contributions unless your PR is exceptionally solid - there are a lot of concerns to manage when updating this repo. If your suggestion or PR is good, we'll credit you whether we inline it in a release or not.
 
 ---
 
-## License
+## license
 
-MIT License. It's a public good—use it, fork it, make it better.
+MIT License. It's a public good - use it, fork it, make it better.
 
 See the [LICENSE](LICENSE) file for the legal details.
 

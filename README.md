@@ -66,15 +66,24 @@ The installer sets up:
 - Automatic `.gitignore` entries for runtime files
 </details>
 
+<details>
+<summary>
+
 ### Updates & Reinstalls
+</summary>
 
 The system automatically preserves your work:
 - Creates timestamped backups in `.claude/.backup-YYYYMMDD-HHMMSS/`
 - Preserves all task files and agent customizations
 - Restores everything after installation completes
 - State and config files regenerate fresh
+</details>
+
+<details>
+<summary>
 
 ### First Run: Kickstart Onboarding
+</summary>
 
 After installation, cc-sessions detects that you're new and offers interactive onboarding:
 
@@ -85,10 +94,15 @@ Complete walkthrough with hands-on exercises covering DAIC enforcement, task wor
 Fast-track for experienced users who just want to customize agents for their tech stack. Skip the tutorial, get straight to configuration.
 
 The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
+</details>
 
 ---
 
+<details>
+<summary>
+
 ## Quick Start
+</summary>
 
 **After installation (and, optionally, kickstart), use trigger phrases to control workflows:**
 
@@ -121,6 +135,7 @@ Claude: [Completes task: commits, merges, cleans up]
 ```
 
 Check `sessions/sessions-config.json` to see all configuration options.
+</details>
 
 ---
 
@@ -163,11 +178,11 @@ Git workflow adds constant friction: creating branches, crafting commit messages
 
 ---
 
-## Features
-
 <details>
-<summary><strong><em>Here is an itemization of the features in the package...</em></strong></summary>
-<br>
+<summary>
+
+## Features
+</summary>
 
 ### Discussion-Alignment-Implementation-Check (DAIC)
 

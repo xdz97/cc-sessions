@@ -41,9 +41,7 @@ uv pip install cc-sessions
 
 ### JavaScript (no Python required)
 
-```bash
-# One-time execution
-npx cc-sessions
+One-time execution: `npx cc-sessions`
 
 # Or install globally
 npm install -g cc-sessions

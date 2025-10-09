@@ -82,7 +82,7 @@ The system automatically preserves your work:
 
 ## kickstart: interactive tutorial
 
-You can select whether to take the interactive tutorial at the end of the installer. Its pretty quick and it will fully onboard you if you're new using cc-sessions to teach you cc-sessions.
+You can select whether to take the interactive tutorial at the end of the installer. Its pretty quick and it will fully onboard you if you're new, using cc-sessions to teach you cc-sessions.
 
 The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
 

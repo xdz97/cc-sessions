@@ -15,11 +15,8 @@ submodules: [list of git submodules affected (delete if not super-repo)]
 - [ ] Specific, measurable outcome
 - [ ] Another concrete goal
 
-## Context Files
-<!-- Added by context-gathering agent or manually -->
-- @service/file.py:123-145  # Specific lines
-- @other/module.py          # Whole file  
-- patterns/auth-flow        # Pattern reference
+## Context Manifest
+<!-- Added by context-gathering agent -->
 
 ## User Notes
 <!-- Any specific notes or requirements from the developer -->

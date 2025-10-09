@@ -488,11 +488,31 @@ After completion of the last task in any todo list:
                             const registryData = JSON.parse(data);
                             latestVersion = registryData.version;
 
-                            // Set flag based on version comparison
+                            // Set flag based on semantic version comparison
+                            const versionTuple = (v) => {
+                                try {
+                                    return v.split('.').map(n => parseInt(n, 10));
+                                } catch (e) {
+                                    return [0, 0, 0];
+                                }
+                            };
+
+                            const isNewer = (latest, current) => {
+                                const latestParts = versionTuple(latest);
+                                const currentParts = versionTuple(current);
+                                for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+                                    const l = latestParts[i] || 0;
+                                    const c = currentParts[i] || 0;
+                                    if (l > c) return true;
+                                    if (l < c) return false;
+                                }
+                                return false;
+                            };
+
                             editState(s => {
                                 s.metadata.current_version = currentVersion;
                                 s.metadata.latest_version = latestVersion;
-                                s.metadata.update_available = (currentVersion !== latestVersion);
+                                s.metadata.update_available = isNewer(latestVersion, currentVersion);
                                 updateFlag = s.metadata.update_available;
                             });
                             resolve();

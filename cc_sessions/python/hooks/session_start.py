@@ -364,11 +364,20 @@ if update_flag is None and current_version:
         if resp.ok:
             latest_version = resp.json().get("info", {}).get("version")
 
-            # Set flag based on version comparison
+            # Set flag based on semantic version comparison
+            def version_tuple(v):
+                """Convert version string to tuple for comparison."""
+                try:
+                    return tuple(map(int, v.split('.')))
+                except (ValueError, AttributeError):
+                    return (0, 0, 0)
+
+            is_newer = version_tuple(latest_version) > version_tuple(current_version)
+
             with edit_state() as s:
                 s.metadata['current_version'] = current_version
                 s.metadata['latest_version'] = latest_version
-                s.metadata['update_available'] = (current_version != latest_version)
+                s.metadata['update_available'] = is_newer
                 update_flag = s.metadata['update_available']
     except requests.RequestException:
         pass

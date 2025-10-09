@@ -122,8 +122,8 @@ Check `sessions/sessions-config.json` to see all configuration options.
 ## Raison D'etre
 
 <details>
-<summary><strong></strong> <em>I made cc-sessions to solve what I don't like about AI pair programming...</em></summary>
-
+<summary><strong><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></strong></summary>
+<br>
 If you ask Claude a question he may just start writing code, especially if you are in the middle of a task.
 
 Without additional scaffolding, you are often manually adding files to context for 20% of the context window and being perennially terrified of having to compact context.
@@ -159,6 +159,10 @@ Git workflow adds constant friction: creating branches, crafting commit messages
 ---
 
 ## Features
+
+<details>
+<summary><strong><em>Here is an itemization of the features in the package...</em></strong></summary>
+<br>
 
 ### Discussion-Alignment-Implementation-Check (DAIC)
 
@@ -209,6 +213,7 @@ Every behavior is configurable through `sessions/sessions-config.json`. Customiz
 ### Automatic State Preservation
 
 The system backs up your work before updates, preserves task files and agent customizations during reinstalls, and maintains state across session restarts. Your `.gitignore` gets configured automatically to keep runtime state out of version control. Everything persists, nothing gets lost.
+</details>
 
 ---
 

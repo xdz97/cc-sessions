@@ -49,7 +49,11 @@ npx cc-sessions
 npm install -g cc-sessions
 ```
 
-<details><summary>### What Gets Installed</summary>
+<details>
+<summary>
+
+### What Gets Installed
+</summary>
 
 The installer sets up:
 - Hook files in `sessions/hooks/` for DAIC enforcement

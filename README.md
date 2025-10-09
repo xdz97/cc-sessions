@@ -1,6 +1,6 @@
 <p align="center"><img src="sessions.png" alt="cc-sessions"></p>
 <div align="center">An opinionated approach to productive development with Claude Code</div>
-<div align="center"><sub>_A public good brought to you by GWUDCAP and Three AIrrows Capital_</sub></div>
+<div align="center"><sub><em>A public good brought to you by GWUDCAP and Three AIrrows Capital</em></sub></div>
 <br>
 <br>
 <div align="center">

@@ -18,6 +18,8 @@
 [![Donate](https://img.shields.io/badge/Donate-Solana-14F195?logo=solana&logoColor=white)](https://dexscreener.com/solana/oy5mbertfqdytu8atyonycvcvu62fpmz3nkqoztrflq)
 </div>
 
+<br>
+
 ## installing the extension
 
 You install cc-sessions into a repo from the project root:
@@ -76,11 +78,15 @@ The system automatically preserves your work:
 - Restores everything after installation completes
 - State and config files regenerate fresh
 
+<br>
+
 ## kickstart: interactive tutorial
 
 You can select whether to take the interactive tutorial at the end of the installer. Its pretty quick and it will fully onboard you if you're new using cc-sessions to teach you cc-sessions.
 
 The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
+
+<br>
 
 ## quick start
 
@@ -120,6 +126,8 @@ Claude: [Completes task: commits, merges, cleans up]
 Check `sessions/sessions-config.json` to see all configuration options.
 </details>
 
+<br>
+
 ## why I made cc-sessions
 
 <details><summary><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></summary>
@@ -155,6 +163,8 @@ Git workflow adds constant friction: creating branches, crafting commit messages
 
 **So, cc-sessions fixes all of this.**
 </details>
+
+<br>
 
 ## features summary
 
@@ -212,11 +222,15 @@ Every behavior is configurable through `sessions/sessions-config.json`. Customiz
 The system backs up your work before updates, preserves task files and agent customizations during reinstalls, and maintains state across session restarts. Your `.gitignore` gets configured automatically to keep runtime state out of version control. Everything persists, nothing gets lost.
 </details>
 
+<br>
+
 ## contributing
 
 We mostly inline contributions unless your PR is exceptionally solid - there are a lot of concerns to manage when updating this repo. 
 
 If your suggestion or PR is good and used, we'll credit you even if inlined.
+
+<br>
 
 ## license
 

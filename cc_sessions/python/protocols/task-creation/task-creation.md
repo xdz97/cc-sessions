@@ -111,24 +111,17 @@ Then fill out task frontmatter
 
 ### 2: Ask user about task success and propose success criteria
 
-First, ask the user about their vision:
+First, ask the user about their vision and propose specific success criteria based on the task:
 
 ```markdown
 [QUESTION: Task Success]
-What will be true when this task is complete/successful?
-```
-
-Wait for the user's response, then propose specific criteria based on their input:
-
-```markdown
-[PROPOSAL: Success Criteria]
 Based on your requirements, I propose the following success criteria:
 
 □ [Specific measurable criterion based on user input]
 □ [Additional criterion I've identified]
 □ [Another criterion for completeness]
 
-Would you like to adjust or add to these criteria?
+Would you like to adjust or add to these criteria? What else might need to be true in order for this task to be complete/successful?
 ```
 
 Once approved, write a clear description of what we're solving/building in Problem/Goal section and record the success criteria with checkboxes in the text file.

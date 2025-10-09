@@ -9,56 +9,210 @@
 
 <sub>_A public good brought to you by GWUDCAP and Three AIrrows Capital_</sub>
 
----
-`Expand this and then format it as a concise problem statement section - we might re-position it`
-
-- There is no prescribed way to remember things
-- You discover problems faster than you solve them and have to remember what you want to fix/do
-- The list of things you need to manually do to be productive (add files to context, write specs, etc.) only grows
-  - Remember to compact/clear
-  - Remember to add files to context
-  - Read every diff before approving
-  - Manage allowed tools
-  - Remember to run slash commands
-  - Remember to write specs/task files and complete them
-  - Remember to commit/merge/push etc.
-- Claude doesn't discuss - ask a question and he will start coding without talking
-- Auto-compaction doesn't capture the detail in a way that inspires confidence for continuing the task
-- You often have to spend 20% of your context window gathering proper context (and still miss important stuff)
-- LLMs are really bad at following a list of rules for an entire context window (CLAUDE.md poor control surface)
+[![npm version](https://badge.fury.io/js/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)
+[![PyPI version](https://badge.fury.io/py/cc-sessions.svg)](https://pypi.org/project/cc-sessions/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm downloads](https://img.shields.io/npm/dm/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)
+[![PyPI downloads](https://pepy.tech/badge/cc-sessions)](https://pepy.tech/project/cc-sessions)
+[![Discord](https://img.shields.io/discord/1325216825805504602?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/9ebFr6VEb)
+[![Follow Dev](https://img.shields.io/twitter/follow/AgentofToastX?style=social)](https://x.com/AgentofToastX)
+[![Donate](https://img.shields.io/badge/Donate-Solana-14F195?logo=solana&logoColor=white)](https://dexscreener.com/solana/oy5mbertfqdytu8atyonycvcvu62fpmz3nkqoztrflq)
 
 ---
-`expand and fill out`
+
+## The Problem
+
+AI pair programming with Claude Code should make you more productive. Instead, it creates new friction.
+
+You ask Claude a question about your architecture, and before you can blink, he's rewriting half your codebase. You wanted discussion, you got implementation. Now you've burned context window on code you didn't want.
+
+Every session starts the same way: manually adding files to context, hoping you remembered everything important (you didn't). Twenty percent of your context window gone before real work begins.
+
+The list of things you have to remember keeps growing: compact before you run out of tokens, read every diff before approving, write task files, commit changes, merge branches, push to remote, manage which tools Claude can use, remember to run the right slash commands. The cognitive overhead never decreases.
+
+Tasks don't survive restarts. Close Claude Code, reopen it, and you're explaining everything from scratch. No confidence that work will continue cleanly.
+
+You discover problems faster than you can solve them. Without a friction-free way to capture tasks, these insights vanish.
+
+When context does get compacted automatically, it doesn't preserve enough detail to inspire confidence. And that CLAUDE.md file with all your behavioral rules? LLMs are terrible at following long instruction lists throughout an entire conversation. The guidance degrades as the conversation progresses.
+
+Git workflow adds constant friction: creating branches, crafting commit messages, merging when complete, pushing to remote. More cognitive overhead.
+
+**cc-sessions fixes all of this.**
+
+---
+
 ## Features
 
-### Claude *earns* the right to code
-- By default, Claude can't use write-like tools of *any* kind
-- Claude has to prove he understands what you want
-- Claude has to propose todos you agree with
-- Once you agree, you can use a trigger phrase (customizable)
+### Discussion-Alignment-Implementation-Check (DAIC)
 
-### Claude needs your consent
-- Once approved, Claude can set todos but *can't change them*
-- We track todos externally
-- If we detect changing of the plan, we throw Claude back in discussion mode
+Claude earns the right to write code. By default, Edit, Write, and MultiEdit tools are completely blocked. Before Claude can touch your codebase, he has to discuss his approach, explain his reasoning, and propose specific todos you explicitly approve with trigger phrases like "go ahead" or "make it so" (fully customizable).
 
-### Claude supports task management
+Once you approve the plan, Claude loads those exact todos and can only work on what you agreed to. Try to change the plan mid-stream? The system detects it and throws him back to discussion mode. No scope creep. No surprise rewrites. Just the work you approved.
 
-### Maintenance work is automatic
+### Task Management That Survives Restarts
 
-### Kickstart configuration
+Tasks are markdown files with frontmatter that tracks status, branches, and success criteria. The system automatically creates matching git branches, enforces branch discipline (no committing to wrong branches), and loads complete context when you restart a task days later.
 
-### etc.
+Directory-based tasks support complex multi-phase work with subtask workflows. File-based tasks handle focused objectives. Task indexes let you filter by service area. Everything persists through session restarts.
+
+### Specialized Agents for Heavy Lifting
+
+Five specialized agents run in separate context windows to handle operations that would otherwise burn your main thread:
+
+- **context-gathering** - Analyzes your codebase and creates comprehensive context manifests
+- **logging** - Consolidates work logs chronologically
+- **code-review** - Reviews implementations for quality and patterns
+- **context-refinement** - Updates task context based on session discoveries
+- **service-documentation** - Maintains CLAUDE.md files for services
+
+Each agent receives the full conversation transcript and returns structured results to your main session.
+
+### Protocols That Automate Workflows
+
+Pre-built protocol templates guide task creation, startup, completion, and context compaction. They adapt automatically based on your configuration—no manual decisions about submodules, commit styles, or git workflows. The protocols just know what you prefer and act accordingly.
+
+All protocols use structured output formats (`[PROPOSAL]`, `[STATUS]`, `[PLAN]`) so you always know when Claude needs your input.
+
+### Sessions API & Slash Commands
+
+Unified `sessions` command provides programmatic access to state, configuration, and task management. Slash commands (`/sessions`) give you quick access through Claude Code's command palette.
+
+Configure trigger phrases, manage git preferences, toggle features, inspect state—everything through a clean API with JSON output support for scripting.
+
+### Interactive Kickstart Onboarding
+
+First install drops you into interactive onboarding with two modes: Full (15-30 min walkthrough of every feature with hands-on exercises) or Subagents-only (5 min agent customization crash course). You learn by doing, not by reading docs.
+
+The system teaches itself, then cleans up after graduation.
+
+### Complete Configuration Control
+
+Every behavior is configurable through `sessions/sessions-config.json`. Customize trigger phrases, blocked tools, git workflows (commit styles, auto-merge, auto-push), environment settings, feature toggles. The system respects your preferences automatically—protocols adapt, enforcement rules adjust, everything just works your way.
+
+### Automatic State Preservation
+
+The system backs up your work before updates, preserves task files and agent customizations during reinstalls, and maintains state across session restarts. Your `.gitignore` gets configured automatically to keep runtime state out of version control. Everything persists, nothing gets lost.
 
 ---
-`expand/fill this out`
+
 ## Installation & Kickstart
 
-### JS/Node-only (npm/npx)
+cc-sessions provides complete feature parity between Python and JavaScript implementations. Choose your runtime—both work identically.
 
-### Python only (pip/pipx)
+### Python (no Node.js required)
 
-### Kickstart Configuration
+```bash
+# Recommended: Isolated install
+pipx install cc-sessions
+
+# Alternative: Direct pip
+pip install cc-sessions
+
+# Alternative: UV package manager
+uv pip install cc-sessions
+```
+
+### JavaScript (no Python required)
+
+```bash
+# One-time execution
+npx cc-sessions
+
+# Or install globally
+npm install -g cc-sessions
+```
+
+### What Gets Installed
+
+The installer sets up:
+- Hook files in `sessions/hooks/` for DAIC enforcement
+- API commands in `sessions/api/` for state/config management
+- Protocol templates in `sessions/protocols/` for workflow automation
+- Specialized agents in `.claude/agents/` for heavy operations
+- Initial state in `sessions/sessions-state.json`
+- Configuration in `sessions/sessions-config.json`
+- Automatic `.gitignore` entries for runtime files
+
+### Updates & Reinstalls
+
+The system automatically preserves your work:
+- Creates timestamped backups in `.claude/.backup-YYYYMMDD-HHMMSS/`
+- Preserves all task files and agent customizations
+- Restores everything after installation completes
+- State and config files regenerate fresh
+
+### First Run: Kickstart Onboarding
+
+After installation, cc-sessions detects that you're new and offers interactive onboarding:
+
+**Full Mode (15-30 minutes)**
+Complete walkthrough with hands-on exercises covering DAIC enforcement, task workflows, agents, protocols, and advanced features. You practice creating, starting, and completing a real task with immediate feedback.
+
+**Subagents-Only Mode (5 minutes)**
+Fast-track for experienced users who just want to customize agents for their tech stack. Skip the tutorial, get straight to configuration.
+
+The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
 
 ---
+
+## Quick Start
+
+**After installation, use trigger phrases to control workflows:**
+
+```
+You: "mek: add user authentication"
+Claude: [Creates task with interactive prompts]
+
+You: "start^: @sessions/tasks/h-implement-user-auth.md"
+Claude: [Loads context, proposes implementation plan with specific todos]
+
+You: "yert"
+Claude: [Implements only the approved todos]
+
+You: "finito"
+Claude: [Completes task: commits, merges, cleans up]
+```
+
+**These trigger phrases are the defaults.** Customize them to whatever you prefer:
+
+```bash
+# See current triggers
+sessions config triggers list
+
+# Add your own phrase to any category
+sessions config triggers add go lets do this
+
+# Categories: go, no, create, start, complete, compact
+```
+
+Check `sessions/sessions-config.json` to see all configuration options.
+
+---
+
+## Contributing
+
+We mostly inline contributions unless your PR is exceptionally solid - there are a lot of concerns to manage when updating this repo. If your suggestion or PR is good, we'll credit you whether we inline it in a release or not.
+
+---
+
+## Why cc-sessions?
+
+**My take:** Vanilla Claude Code is excellent. I could work with it just fine. This project exists because I tweaked it to my preferences and removed friction I didn't like. If vanilla Claude Code works for you, great - keep using it.
+
+**vs Cursor:** Way too expensive compared to Claude Code with a max subscription when you're doing serious work. The agentic loop is opaque - you can't really control how it thinks or acts. And it's clearly optimized for React/TypeScript developers. The models are already predisposed that direction - I don't need my tooling doubling down on it.
+
+**vs GitHub Copilot:** Copilot is great. I use it constantly. But it's about inline code completion, not agentic chat workflows. It's a perfect complement to cc-sessions. I'd never use Copilot's chat mode though - GitHub (and by extension Microsoft) seem to not quite nail agentic chat-based development.
+
+**vs Custom CLAUDE.md Files:** Agents follow instructions as they're trained, but adding rules to a context window degrades performance during that conversation. The more rules you add, the less likely they follow any single one. CLAUDE.md isn't programmable - it's a terrible control surface for agent behavior.
+
+**vs Cline/Roo-Coda:** Also really solid tools, but same issues as Cursor: cost, control, and visibility into how things work for customization are all pretty bad.
+
+---
+
+## License
+
+MIT License. It's a public good—use it, fork it, make it better.
+
+See the [LICENSE](LICENSE) file for the legal details.
 

@@ -68,44 +68,24 @@ The installer sets up:
 - Automatic `.gitignore` entries for runtime files
 </details>
 
-<details>
-<summary>
-
 ### updates and uninstalls/reinstalls
-</summary>
 
 The system automatically preserves your work:
 - Creates timestamped backups in `.claude/.backup-YYYYMMDD-HHMMSS/`
 - Preserves all task files and agent customizations
 - Restores everything after installation completes
 - State and config files regenerate fresh
-</details>
 
-<details>
-<summary>
+## kickstart: interactive tutorial
 
-## interactive tutorial
-</summary>
-
-You can select whether to take the interactive tutorial at the end of the installer.
-
-Its pretty quick and it will fully onboard you if you're new using cc-sessions to teach you cc-sessions.
-
-**Full Mode (15-30 minutes)**
-Complete walkthrough with hands-on exercises covering DAIC enforcement, task workflows, agents, protocols, and advanced features. You practice creating, starting, and completing a real task with immediate feedback.
-
-**Subagents-Only Mode (5 minutes)**
-Fast-track for experienced users who just want to customize agents for their tech stack. Skip the tutorial, get straight to configuration.
+You can select whether to take the interactive tutorial at the end of the installer. Its pretty quick and it will fully onboard you if you're new using cc-sessions to teach you cc-sessions.
 
 The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
-</details>
-
-<details>
-<summary>
 
 ## quick start
-</summary>
 
+<details><summary><em>Best way to get started is kickstart, but...</em></summary>
+<br>
 **After installation (and, optionally, kickstart), use trigger phrases to control workflows:**
 
 ```
@@ -139,13 +119,9 @@ Claude: [Completes task: commits, merges, cleans up]
 Check `sessions/sessions-config.json` to see all configuration options.
 </details>
 
-<details>
-<summary>
+## why I made cc-sessions
 
-## why it exists
-</summary>
-
-<summary><strong><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></strong></summary>
+<details><summary><strong><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></strong></summary>
 <br>
 If you ask Claude a question he may just start writing code, especially if you are in the middle of a task.
 
@@ -179,11 +155,10 @@ Git workflow adds constant friction: creating branches, crafting commit messages
 **So, cc-sessions fixes all of this.**
 </details>
 
-<details>
-<summary>
-
 ## features summary
-</summary>
+
+<details><summary><em>click to learn about features...</em></summary>
+<br>
 
 ### Discussion-Alignment-Implementation-Check (DAIC)
 
@@ -238,7 +213,9 @@ The system backs up your work before updates, preserves task files and agent cus
 
 ## contributing
 
-We mostly inline contributions unless your PR is exceptionally solid - there are a lot of concerns to manage when updating this repo. If your suggestion or PR is good, we'll credit you whether we inline it in a release or not.
+We mostly inline contributions unless your PR is exceptionally solid - there are a lot of concerns to manage when updating this repo. 
+
+If your suggestion or PR is good and used, we'll credit you even if inlined.
 
 ## license
 

@@ -5,7 +5,7 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
-// ===== EXCEPTIONS ===== #
+// ==== EXCEPTIONS ===== //
 class StateError extends Error {
     constructor(message) {
         super(message);
@@ -20,7 +20,7 @@ class StashOccupiedError extends Error {
     }
 }
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 
 function findProjectRoot() {
     if (process.env.CLAUDE_PROJECT_DIR) {
@@ -46,7 +46,7 @@ const CONFIG_FILE = path.join(PROJECT_ROOT, 'sessions', 'sessions-config.json');
 const DISCUSSION_MODE_MSG = "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)";
 const IMPLEMENTATION_MODE_MSG = "You are now in Implementation Mode and may use tools to execute the agreed upon actions - when you are done return immediately to Discussion Mode";
 
-// ===== ENUMS ===== #
+// ==== ENUMS ===== //
 
 const TriggerCategory = {
     IMPLEMENTATION_MODE: 'implementation_mode',
@@ -125,7 +125,7 @@ const Model = {
     UNKNOWN: 'unknown'
 };
 
-// ===== CLASSES ===== #
+// ==== CLASSES ===== //
 
 class TriggerPhrases {
     constructor(data = {}) {
@@ -676,9 +676,9 @@ class SessionsState {
     }
 }
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
-// ===== HELPERS ===== #
+// ==== HELPERS ===== //
 /**
  * Walk up directory tree to find .git directory.
  * @param {string} dirPath - Directory to start search from (NOT a file path)
@@ -710,7 +710,7 @@ function sleepSync(ms) {
     }
 }
 
-// ===== STATE PROTECTION ===== #
+// ==== STATE PROTECTION ===== //
 function atomicWrite(filePath, obj) {
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
@@ -828,7 +828,7 @@ function releaseLock() {
     }
 }
 
-// ===== GEIPI ===== #
+// ==== GEIPI ===== //
 function loadState() {
     if (!fs.existsSync(STATE_FILE)) {
         const initial = new SessionsState();

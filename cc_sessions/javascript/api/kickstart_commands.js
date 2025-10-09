@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== STDLIB ===== //
 const fs = require('fs');
@@ -13,13 +13,13 @@ const { loadState, editState, loadConfig, PROJECT_ROOT, Mode } = require('../../
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 const CONFIG = loadConfig();
 const STATE = loadState();
 
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 function formatConfigForDisplay(config) {
     /**Format config as readable markdown for kickstart display.*/
@@ -242,7 +242,7 @@ After completing these todos, kickstart will be fully removed. These files won't
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 module.exports = {
     handleKickstartCommand
 };

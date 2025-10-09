@@ -20,6 +20,66 @@
 
 ---
 
+## Installation & Kickstart
+
+cc-sessions provides complete feature parity between Python and JavaScript implementations. Choose your runtime—both work identically.
+
+### Python (no Node.js required)
+
+```bash
+# Recommended: Isolated install
+pipx install cc-sessions
+
+# Alternative: Direct pip
+pip install cc-sessions
+
+# Alternative: UV package manager
+uv pip install cc-sessions
+```
+
+### JavaScript (no Python required)
+
+```bash
+# One-time execution
+npx cc-sessions
+
+# Or install globally
+npm install -g cc-sessions
+```
+
+### What Gets Installed
+
+The installer sets up:
+- Hook files in `sessions/hooks/` for DAIC enforcement
+- API commands in `sessions/api/` for state/config management
+- Protocol templates in `sessions/protocols/` for workflow automation
+- Specialized agents in `.claude/agents/` for heavy operations
+- Initial state in `sessions/sessions-state.json`
+- Configuration in `sessions/sessions-config.json`
+- Automatic `.gitignore` entries for runtime files
+
+### Updates & Reinstalls
+
+The system automatically preserves your work:
+- Creates timestamped backups in `.claude/.backup-YYYYMMDD-HHMMSS/`
+- Preserves all task files and agent customizations
+- Restores everything after installation completes
+- State and config files regenerate fresh
+
+### First Run: Kickstart Onboarding
+
+After installation, cc-sessions detects that you're new and offers interactive onboarding:
+
+**Full Mode (15-30 minutes)**
+Complete walkthrough with hands-on exercises covering DAIC enforcement, task workflows, agents, protocols, and advanced features. You practice creating, starting, and completing a real task with immediate feedback.
+
+**Subagents-Only Mode (5 minutes)**
+Fast-track for experienced users who just want to customize agents for their tech stack. Skip the tutorial, get straight to configuration.
+
+The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
+
+---
+
 ## The Problem
 
 AI pair programming with Claude Code should make you more productive. Instead, it creates new friction.
@@ -93,66 +153,6 @@ Every behavior is configurable through `sessions/sessions-config.json`. Customiz
 ### Automatic State Preservation
 
 The system backs up your work before updates, preserves task files and agent customizations during reinstalls, and maintains state across session restarts. Your `.gitignore` gets configured automatically to keep runtime state out of version control. Everything persists, nothing gets lost.
-
----
-
-## Installation & Kickstart
-
-cc-sessions provides complete feature parity between Python and JavaScript implementations. Choose your runtime—both work identically.
-
-### Python (no Node.js required)
-
-```bash
-# Recommended: Isolated install
-pipx install cc-sessions
-
-# Alternative: Direct pip
-pip install cc-sessions
-
-# Alternative: UV package manager
-uv pip install cc-sessions
-```
-
-### JavaScript (no Python required)
-
-```bash
-# One-time execution
-npx cc-sessions
-
-# Or install globally
-npm install -g cc-sessions
-```
-
-### What Gets Installed
-
-The installer sets up:
-- Hook files in `sessions/hooks/` for DAIC enforcement
-- API commands in `sessions/api/` for state/config management
-- Protocol templates in `sessions/protocols/` for workflow automation
-- Specialized agents in `.claude/agents/` for heavy operations
-- Initial state in `sessions/sessions-state.json`
-- Configuration in `sessions/sessions-config.json`
-- Automatic `.gitignore` entries for runtime files
-
-### Updates & Reinstalls
-
-The system automatically preserves your work:
-- Creates timestamped backups in `.claude/.backup-YYYYMMDD-HHMMSS/`
-- Preserves all task files and agent customizations
-- Restores everything after installation completes
-- State and config files regenerate fresh
-
-### First Run: Kickstart Onboarding
-
-After installation, cc-sessions detects that you're new and offers interactive onboarding:
-
-**Full Mode (15-30 minutes)**
-Complete walkthrough with hands-on exercises covering DAIC enforcement, task workflows, agents, protocols, and advanced features. You practice creating, starting, and completing a real task with immediate feedback.
-
-**Subagents-Only Mode (5 minutes)**
-Fast-track for experienced users who just want to customize agents for their tech stack. Skip the tutorial, get straight to configuration.
-
-The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
 
 ---
 

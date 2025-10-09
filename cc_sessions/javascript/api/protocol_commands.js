@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== STDLIB ===== //
 const fs = require('fs');
@@ -13,10 +13,10 @@ const { loadState, editState, TaskState, SessionsProtocol, PROJECT_ROOT } = requ
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 function handleProtocolCommand(args, jsonOutput = false, fromSlash = false) {
     /**
@@ -207,7 +207,7 @@ function handleStartupLoad(args, jsonOutput = false) {
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 module.exports = {
     handleProtocolCommand
 };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== STDLIB ===== //
 const fs = require('fs');
@@ -26,16 +26,16 @@ const {
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 //-#
 
-// ===== DECLARATIONS ===== #
+// ==== DECLARATIONS ===== //
 //-#
 
-// ===== CLASSES ===== #
+// ==== CLASSES ===== //
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 //!> Protocol loading helper
 function loadProtocolFile(relativePath) {
@@ -606,7 +606,7 @@ function formatTaskHelp() {
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 module.exports = {
     handleTaskCommand
 };

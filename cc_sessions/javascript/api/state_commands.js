@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== STDLIB ===== //
 const fs = require('fs');
@@ -24,11 +24,11 @@ const {
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 const STATE = loadState();
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 //!> State inspection handlers
 function handleStateCommand(args, jsonOutput = false, fromSlash = false) {
@@ -785,7 +785,7 @@ function handleUpdateCommand(args, jsonOutput = false, fromSlash = false) {
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 module.exports = {
     handleStateCommand,
     handleModeCommand,

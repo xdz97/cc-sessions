@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== STDLIB ===== //
 //--//
@@ -23,7 +23,7 @@ const { handleUninstallCommand } = require('./uninstall_commands.js');
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 
 const COMMAND_HANDLERS = {
     'protocol': handleProtocolCommand,
@@ -41,13 +41,13 @@ const COMMAND_HANDLERS = {
 
 //-#
 
-// ===== DECLARATIONS ===== #
+// ==== DECLARATIONS ===== //
 //-#
 
-// ===== CLASSES ===== #
+// ==== CLASSES ===== //
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 function routeCommand(command, args, jsonOutput = false, fromSlash = false) {
     /**
@@ -158,7 +158,7 @@ function formatSlashHelp() {
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 module.exports = {
     routeCommand,
     formatSlashHelp

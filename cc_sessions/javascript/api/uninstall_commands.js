@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== STDLIB ===== //
 const fs = require('fs');
@@ -13,7 +13,7 @@ const readline = require('readline');
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 
 // Colors for terminal output
 const Colors = {
@@ -27,7 +27,7 @@ const Colors = {
 
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 function color(text, colorCode) {
     return `${colorCode}${text}${Colors.RESET}`;
@@ -427,5 +427,5 @@ After uninstall completes, run:
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 module.exports = { handleUninstallCommand };

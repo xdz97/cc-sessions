@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== LOCAL ===== //
 const { loadConfig, editConfig, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools } = require('../../hooks/shared_state.js');
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 //!> Main config handler
 function handleConfigCommand(args, jsonOutput = false, fromSlash = false) {
@@ -1261,7 +1261,7 @@ function validateConfig(jsonOutput = false) {
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 module.exports = {
     handleConfigCommand
 };

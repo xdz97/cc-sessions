@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ===== IMPORTS ===== #
+// ==== IMPORTS ===== //
 
 // ===== LOCAL ===== //
 const { routeCommand } = require('./router.js');
@@ -8,10 +8,10 @@ const { routeCommand } = require('./router.js');
 
 //-#
 
-// ===== GLOBALS ===== #
+// ==== GLOBALS ===== //
 //-#
 
-// ===== FUNCTIONS ===== #
+// ==== FUNCTIONS ===== //
 
 function main() {
     /**Main entry point for sessions.api commands.*/
@@ -60,7 +60,7 @@ function main() {
 
 //-#
 
-// ===== EXECUTIONS ===== #
+// ==== EXECUTIONS ===== //
 
 if (require.main === module) {
     main();
@@ -68,6 +68,6 @@ if (require.main === module) {
 
 //-#
 
-// ===== EXPORTS ===== #
+// ==== EXPORTS ===== //
 // No exports needed for main entry point
 //-#

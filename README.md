@@ -178,25 +178,36 @@ Git workflow adds constant friction: creating branches, crafting commit messages
 
 ---
 
-<details>
-<summary>
-
 ## Features
 </summary>
 
+<details>
+<summary>
+
 ### Discussion-Alignment-Implementation-Check (DAIC)
+</summary>
 
 Claude earns the right to write code. By default, Edit, Write, and MultiEdit tools are completely blocked. Before Claude can touch your codebase, he has to discuss his approach, explain his reasoning, and propose specific todos you explicitly approve with trigger phrases like "go ahead" or "make it so" (fully customizable).
 
 Once you approve the plan, Claude loads those exact todos and can only work on what you agreed to. Try to change the plan mid-stream? The system detects it and throws him back to discussion mode. No scope creep. No surprise rewrites. Just the work you approved.
+</details>
+
+<details>
+<summary>
 
 ### Task Management That Survives Restarts
+</summary>
 
 Tasks are markdown files with frontmatter that tracks status, branches, and success criteria. The system automatically creates matching git branches, enforces branch discipline (no committing to wrong branches or editing files off branch), and loads complete context when you restart a task days later.
 
 Directory-based tasks support complex multi-phase work with subtask workflows. File-based tasks handle focused objectives. Task indexes let you filter by service area. Everything persists through session restarts.
+</details>
+
+<details>
+<summary>
 
 ### Specialized Agents for Heavy Lifting
+</summary>
 
 Five specialized agents run in separate context windows to handle operations that would otherwise burn your main thread:
 
@@ -207,30 +218,55 @@ Five specialized agents run in separate context windows to handle operations tha
 - **service-documentation** - Maintains CLAUDE.md files for services
 
 Each agent receives the full conversation transcript and returns structured results to your main session.
+</details>
+
+<details>
+<summary>
 
 ### Protocols That Automate Workflows
+</summary>
 
 Pre-built protocol templates guide task creation, startup, completion, and context compaction. They adapt automatically based on your configuration—no manual decisions about submodules, commit styles, or git workflows. The protocols just know what you prefer and act accordingly.
 
 All protocols use structured output formats (`[PROPOSAL]`, `[STATUS]`, `[PLAN]`) so you always know when Claude needs your input.
+</details>
+
+<details>
+<summary>
 
 ### Sessions API & Slash Commands
+</summary>
 
 Unified `sessions` command provides programmatic access to state, configuration, and task management. Slash commands (`/sessions`) give you quick access through Claude Code's command palette.
 
 Configure trigger phrases, manage git preferences, toggle features, inspect state—everything through a clean API with JSON output support for scripting.
+</details>
+
+<details>
+<summary>
 
 ### Interactive Kickstart Onboarding
+</summary>
 
 First install drops you into interactive onboarding with two modes: Full (15-30 min walkthrough of every feature with hands-on exercises) or Subagents-only (5 min agent customization crash course). You learn by doing, not by reading docs.
 
 The system teaches itself, then cleans up after graduation.
+</details>
+
+<details>
+<summary>
 
 ### Complete Configuration Control
+</summary>
 
 Every behavior is configurable through `sessions/sessions-config.json`. Customize trigger phrases, blocked tools, git workflows (commit styles, auto-merge, auto-push), environment settings, feature toggles. The system respects your preferences automatically—protocols adapt, enforcement rules adjust, everything just works your way.
+</details>
+
+<details>
+<summary>
 
 ### Automatic State Preservation
+</summary>
 
 The system backs up your work before updates, preserves task files and agent customizations during reinstalls, and maintains state across session restarts. Your `.gitignore` gets configured automatically to keep runtime state out of version control. Everything persists, nothing gets lost.
 </details>
@@ -240,20 +276,6 @@ The system backs up your work before updates, preserves task files and agent cus
 ## Contributing
 
 We mostly inline contributions unless your PR is exceptionally solid - there are a lot of concerns to manage when updating this repo. If your suggestion or PR is good, we'll credit you whether we inline it in a release or not.
-
----
-
-## Why cc-sessions?
-
-**My take:** Vanilla Claude Code is excellent. I could work with it just fine. This project exists because I tweaked it to my preferences and removed friction I didn't like. If vanilla Claude Code works for you, great - keep using it.
-
-**vs Cursor:** Way too expensive compared to Claude Code with a max subscription when you're doing serious work. The agentic loop is opaque - you can't really control how it thinks or acts. And it's clearly optimized for React/TypeScript developers. The models are already predisposed that direction - I don't need my tooling doubling down on it.
-
-**vs GitHub Copilot:** Copilot is great. I use it constantly. But it's about inline code completion, not agentic chat workflows. It's a perfect complement to cc-sessions. I'd never use Copilot's chat mode though - GitHub (and by extension Microsoft) seem to not quite nail agentic chat-based development.
-
-**vs Custom CLAUDE.md Files:** Agents follow instructions as they're trained, but adding rules to a context window degrades performance during that conversation. The more rules you add, the less likely they follow any single one. CLAUDE.md isn't programmable - it's a terrible control surface for agent behavior.
-
-**vs Cline/Roo-Coda:** Also really solid tools, but same issues as Cursor: cost, control, and visibility into how things work for customization are all pretty bad.
 
 ---
 

@@ -54,6 +54,7 @@ The installer sets up:
 - API commands in `sessions/api/` for state/config management
 - Protocol templates in `sessions/protocols/` for workflow automation
 - Specialized agents in `.claude/agents/` for heavy operations
+- Sessions API wrapper slash command in `.claude/commands`
 - Initial state in `sessions/sessions-state.json`
 - Configuration in `sessions/sessions-config.json`
 - Automatic `.gitignore` entries for runtime files
@@ -80,25 +81,76 @@ The system teaches itself through index-based progression, then cleans up its ow
 
 ---
 
+## Quick Start
+
+**After installation (and, optionally, kickstart), use trigger phrases to control workflows:**
+
+```
+You: "mek: add user authentication"
+Claude: [Creates task with interactive prompts]
+
+You: "start^: @sessions/tasks/h-implement-user-auth.md"
+Claude: [Loads context, proposes implementation plan with specific todos]
+
+You: "yert"
+Claude: [Implements only the approved todos]
+
+You: "finito"
+Claude: [Completes task: commits, merges, cleans up]
+```
+
+**These trigger phrases are the defaults.** Add any trigger phrases you like:
+
+```bash
+# See current triggers
+/sessions config triggers list
+
+# Add your own phrase to any category
+/sessions config triggers add go lets do this
+
+# Categories: go, no, create, start, complete, compact
+# Slash command API syntax: /sessions [subsystem] [command] [arguments]
+# Context-aware help on failed commands - fail away
+```
+
+Check `sessions/sessions-config.json` to see all configuration options.
+
+---
+
 ## The Problem
 
-AI pair programming with Claude Code should make you more productive. Instead, it creates new friction.
+AI pair programming with Claude Code should make you more productive, but it creates new friction.
 
-You ask Claude a question about your architecture, and before you can blink, he's rewriting half your codebase. You wanted discussion, you got implementation. Now you've burned context window on code you didn't want.
+You ask Claude a question about your architecture and he may just start writing code, especially if you are in the middle of a task.
 
-Every session starts the same way: manually adding files to context, hoping you remembered everything important (you didn't). Twenty percent of your context window gone before real work begins.
+Without additional scaffolding, you are often manually adding files to context for 20% of the context window and being perenially terrified of having to compact context.
 
-The list of things you have to remember keeps growing: compact before you run out of tokens, read every diff before approving, write task files, commit changes, merge branches, push to remote, manage which tools Claude can use, remember to run the right slash commands. The cognitive overhead never decreases.
+The list of things you have to remember can get quite large: 
+
+  - compact before you run out of tokens 
+  - read every diff before approving
+  - write task files
+  - commit changes
+  - merge branches
+  - push to remote
+  - manage which tools Claude can use
+  - remember to run the right slash commands 
+
+The cognitive overhead balloons quickly.
 
 Tasks don't survive restarts. Close Claude Code, reopen it, and you're explaining everything from scratch. No confidence that work will continue cleanly.
 
-You discover problems faster than you can solve them. Without a friction-free way to capture tasks, these insights vanish.
+**You discover problems faster than you can solve them.** Without a friction-free way to capture tasks, these insights vanish.
 
-When context does get compacted automatically, it doesn't preserve enough detail to inspire confidence. And that CLAUDE.md file with all your behavioral rules? LLMs are terrible at following long instruction lists throughout an entire conversation. The guidance degrades as the conversation progresses.
+When context does get compacted automatically, it doesn't preserve enough detail to inspire confidence. 
+
+Most have a CLAUDE.md file stuffed with behavioral rules, some of which are simple where others are branching conditional logic. 
+
+LLMs are terrible at following long instruction lists throughout an entire conversation. The guidance degrades as the conversation progresses.
 
 Git workflow adds constant friction: creating branches, crafting commit messages, merging when complete, pushing to remote. More cognitive overhead.
 
-**cc-sessions fixes all of this.**
+**So, cc-sessions fixes all of this.**
 
 ---
 
@@ -112,7 +164,7 @@ Once you approve the plan, Claude loads those exact todos and can only work on w
 
 ### Task Management That Survives Restarts
 
-Tasks are markdown files with frontmatter that tracks status, branches, and success criteria. The system automatically creates matching git branches, enforces branch discipline (no committing to wrong branches), and loads complete context when you restart a task days later.
+Tasks are markdown files with frontmatter that tracks status, branches, and success criteria. The system automatically creates matching git branches, enforces branch discipline (no committing to wrong branches or editing files off branch), and loads complete context when you restart a task days later.
 
 Directory-based tasks support complex multi-phase work with subtask workflows. File-based tasks handle focused objectives. Task indexes let you filter by service area. Everything persists through session restarts.
 
@@ -120,7 +172,7 @@ Directory-based tasks support complex multi-phase work with subtask workflows. F
 
 Five specialized agents run in separate context windows to handle operations that would otherwise burn your main thread:
 
-- **context-gathering** - Analyzes your codebase and creates comprehensive context manifests
+- **context-gathering** - Analyzes your codebase and creates comprehensive context manifests for each task you create
 - **logging** - Consolidates work logs chronologically
 - **code-review** - Reviews implementations for quality and patterns
 - **context-refinement** - Updates task context based on session discoveries
@@ -153,40 +205,6 @@ Every behavior is configurable through `sessions/sessions-config.json`. Customiz
 ### Automatic State Preservation
 
 The system backs up your work before updates, preserves task files and agent customizations during reinstalls, and maintains state across session restarts. Your `.gitignore` gets configured automatically to keep runtime state out of version control. Everything persists, nothing gets lost.
-
----
-
-## Quick Start
-
-**After installation, use trigger phrases to control workflows:**
-
-```
-You: "mek: add user authentication"
-Claude: [Creates task with interactive prompts]
-
-You: "start^: @sessions/tasks/h-implement-user-auth.md"
-Claude: [Loads context, proposes implementation plan with specific todos]
-
-You: "yert"
-Claude: [Implements only the approved todos]
-
-You: "finito"
-Claude: [Completes task: commits, merges, cleans up]
-```
-
-**These trigger phrases are the defaults.** Customize them to whatever you prefer:
-
-```bash
-# See current triggers
-sessions config triggers list
-
-# Add your own phrase to any category
-sessions config triggers add go lets do this
-
-# Categories: go, no, create, start, complete, compact
-```
-
-Check `sessions/sessions-config.json` to see all configuration options.
 
 ---
 

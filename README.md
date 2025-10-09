@@ -8,6 +8,7 @@
 ```
 
 An opinionated approach to productive development with Claude Code
+<br>
 <sub>_A public good brought to you by GWUDCAP and Three AIrrows Capital_</sub>
 
 [![npm version](https://badge.fury.io/js/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)

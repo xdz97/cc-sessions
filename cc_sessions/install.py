@@ -1,18 +1,37 @@
 #!/usr/bin/env python3
+
+# ===== IMPORTS ===== #
+
+## ===== STDLIB ===== ##
+import shutil, json, sys, os
+from pathlib import Path
+##-##
+
+## ===== 3RD-PARTY ===== ##
+from inquirer import themes
+import platform
+import inquirer
+##-##
+
+## ===== LOCAL ===== ##
+##-##
+
+#-#
+
 """
+╔═════════════════════════════════════════════════════════════════════╗
+║ ██████╗██╗  ██╗██████╗██████╗ █████╗ ██╗     ██╗     ██████╗█████╗  ║
+║ ╚═██╔═╝███╗ ██║██╔═══╝╚═██╔═╝██╔══██╗██║     ██║     ██╔═══╝██╔═██╗ ║
+║   ██║  ████╗██║██████╗  ██║  ███████║██║     ██║     █████╗ █████╔╝ ║
+║   ██║  ██╔████║╚═══██║  ██║  ██╔══██║██║     ██║     ██╔══╝ ██╔═██╗ ║
+║ ██████╗██║╚███║██████║  ██║  ██║  ██║███████╗███████╗██████╗██║ ██║ ║
+║ ╚═════╝╚═╝ ╚══╝╚═════╝  ╚═╝  ╚═╝  ╚═╝╚══════╝╚══════╝╚═════╝╚═╝ ╚═╝ ║
+╚═════════════════════════════════════════════════════════════════════╝
 cc-sessions installer module for pip/pipx installation.
 This module is imported and executed when running `cc-sessions` command.
 """
 
-import sys
-import os
-import json
-import shutil
-import platform
-from pathlib import Path
-import inquirer
-from inquirer import themes
-
+# ===== DECLARATIONS ===== #
 # Colors for terminal output
 class Colors:
     RESET = '\033[0m'
@@ -21,7 +40,11 @@ class Colors:
     YELLOW = '\033[33m'
     CYAN = '\033[36m'
     BOLD = '\033[1m'
+#-#
 
+# ===== FUNCTIONS ===== #
+
+## ===== HELPERS ===== ##
 def color(text, color_code):
     return f"{color_code}{text}{Colors.RESET}"
 
@@ -32,6 +55,7 @@ def get_package_root():
 def get_project_root():
     """Get the root directory where cc-sessions should be installed."""
     return Path.cwd()
+##-##
 
 def main():
     SCRIPT_DIR = get_package_root()
@@ -1164,6 +1188,7 @@ def restore_tasks(project_root, backup_dir):
         print(color(f'   Your backup is safe at: {backup_dir.relative_to(project_root)}/', Colors.YELLOW))
         print(color('   Manually copy files from backup/tasks/ to sessions/tasks/', Colors.YELLOW))
         # Don't raise - let user recover manually
+#-#
 
 if __name__ == '__main__':
     try:

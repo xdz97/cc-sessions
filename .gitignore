@@ -57,7 +57,10 @@ htmlcov/
 # Documentation builds
 docs/_build/
 docs/.doctrees
+
+# Release artifacts
 RELEASE.md
+scripts/
 
 # Temporary files
 *.tmp

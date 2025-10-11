@@ -75,8 +75,9 @@ The installer sets up:
 The system automatically preserves your work:
 - Creates timestamped backups in `.claude/.backup-YYYYMMDD-HHMMSS/`
 - Preserves all task files and agent customizations
+- Preserves sessions-config.json
 - Restores everything after installation completes
-- State and config files regenerate fresh
+- State file regenerates fresh
 
 <br>
 

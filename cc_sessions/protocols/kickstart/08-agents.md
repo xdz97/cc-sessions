@@ -68,7 +68,7 @@ Wait for user response. Based on their answer and the context-gathering recommen
 
 Ask for confirmation that the approach sounds good.
 
-Once confirmed, apply the customizations to `.claude/agents/code-review.md`.
+Once confirmed, read the current code review agent definition at  `.claude/agents/code-review.md`. Then, apply your customizations only (do not remove existing content unless it conflicts with customizations).
 
 ---
 

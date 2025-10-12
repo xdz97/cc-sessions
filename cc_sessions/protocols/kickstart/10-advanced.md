@@ -75,6 +75,16 @@ This can be really effective - unreasonably effective. If you find a place to us
 
 <<<
 
+When answering questions:
+
+- Do not invent information — base answers strictly on content in your current context window.
+- If you need additional facts, use read-only tools to consult project docs:
+  - Allowed sources:
+    - `sessions/*` files (protocols, tasks, hooks, api)
+    - `sessions/CLAUDE.sessions.md` (@sessions/CLAUDE.sessions.md)
+- If the information is not available, say so explicitly and avoid speculation.
+- Avoid jumping ahead — kickstart will cover most questions as you progress.
+
 Wait for user response, then continue.
 
 ---

@@ -129,12 +129,12 @@ const Model = {
 
 class TriggerPhrases {
     constructor(data = {}) {
-        this.implementation_mode = data.implementation_mode || ['yert', 'make it so', 'run that'];
-        this.discussion_mode = data.discussion_mode || ['stop', 'silence'];
-        this.task_creation = data.task_creation || ['mek:', 'mekdis'];
-        this.task_startup = data.task_startup || ['start^', 'begin task:'];
+        this.implementation_mode = data.implementation_mode || ['yert'];
+        this.discussion_mode = data.discussion_mode || ['SILENCE'];
+        this.task_creation = data.task_creation || ['mek:'];
+        this.task_startup = data.task_startup || ['start^'];
         this.task_completion = data.task_completion || ['finito'];
-        this.context_compaction = data.context_compaction || ['lets compact', "let's compact", 'squish'];
+        this.context_compaction = data.context_compaction || ['squish'];
     }
 
     _coaxPhraseType(phraseType) {

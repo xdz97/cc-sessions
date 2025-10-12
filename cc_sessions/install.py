@@ -564,6 +564,39 @@ def copy_directory(src, dest):
         else:
             copy_file(src_path, dest_path)
 
+def _files_differ(src: Path, dest: Path) -> bool:
+    try:
+        if not dest.exists():
+            return True
+        if src.stat().st_size != dest.stat().st_size:
+            return True
+        return src.read_bytes() != dest.read_bytes()
+    except Exception:
+        return True
+
+def copy_agents_if_changed(src_root: Path, dest_root: Path) -> tuple[int, int]:
+    """Copy agent files if content differs. Returns (copied, skipped_identical)."""
+    copied = 0
+    skipped = 0
+    if not src_root.exists():
+        return (0, 0)
+    for p in src_root.rglob('*'):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(src_root)
+        dst = dest_root / rel
+        if _files_differ(p, dst):
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(p, dst)
+            try:
+                dst.chmod(p.stat().st_mode)
+            except Exception:
+                pass
+            copied += 1
+        else:
+            skipped += 1
+    return (copied, skipped)
+
 def color(text, color_code) -> str:
     return f"{color_code}{text}{Colors.RESET}"
 
@@ -1029,19 +1062,28 @@ def create_backup(project_root):
 
     # Backup all agents
     agents_src = project_root / '.claude' / 'agents'
-    agent_count = 0
     if agents_src.exists():
+        script_agents = get_package_root() / 'agents'
         agents_dest = backup_dir / 'agents'
-        copy_directory(agents_src, agents_dest)
-
-        agent_count = len(list(agents_src.glob('*.md')))
-        backed_up_agents = len(list(agents_dest.glob('*.md')))
-
-        if agent_count != backed_up_agents:
-            print(color(f'   ✗ Backup verification failed: {backed_up_agents}/{agent_count} agents backed up', Colors.RED))
+        to_backup: list[tuple[Path, Path]] = []
+        for p in agents_src.rglob('*'):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(agents_src)
+            src_pkg = script_agents / rel
+            # Only back up if we are installing a same-named file and contents differ
+            if src_pkg.exists() and _files_differ(src_pkg, p):
+                to_backup.append((p, agents_dest / rel))
+        # Perform backup copies
+        for src_file, dst_file in to_backup:
+            dst_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_file, dst_file)
+        # Verify
+        backed_up_agents = sum(1 for _ in agents_dest.rglob('*') if _.is_file()) if agents_dest.exists() else 0
+        if backed_up_agents != len(to_backup):
+            print(color(f'   ✗ Backup verification failed: {backed_up_agents}/{len(to_backup)} modified agents backed up', Colors.RED))
             raise Exception('Backup verification failed - aborting to prevent data loss')
-
-        print(color(f'   ✓ Backed up {agent_count} agent files', Colors.GREEN))
+        print(color(f'   ✓ Backed up {len(to_backup)} modified agent file(s)', Colors.GREEN))
 
     return backup_dir
 #!<
@@ -1077,7 +1119,11 @@ def copy_files(script_dir, project_root):
     agents_source = script_dir / 'agents'
     agents_dest = project_root / '.claude' / 'agents'
     if agents_source.exists():
-        copy_directory(agents_source, agents_dest)
+        copied, skipped = copy_agents_if_changed(agents_source, agents_dest)
+        if copied:
+            print(color(f'   ✓ Installed/updated {copied} agent file(s)', Colors.GREEN))
+        if skipped:
+            print(color(f'   • Skipped {skipped} identical agent file(s)', Colors.GRAY))
 
     # Copy knowledge base
     knowledge_source = script_dir / 'knowledge'
@@ -1117,19 +1163,38 @@ def copy_files(script_dir, project_root):
 #!<
 
 #!> Configure settings.json
-def configure_settings(project_root):
-    print(color('Configuring Claude Code hooks...', Colors.CYAN))
+def write_settings(project_root: Path, settings: dict) -> bool:
+    """Persist settings.json with pretty formatting.
+    Returns True on success.
+    """
+    try:
+        settings_path = project_root / '.claude' / 'settings.json'
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(settings_path, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, indent=2)
+        return True
+    except Exception as e:
+        print(color(f'✗ Failed writing settings.json: {e}', Colors.RED))
+        return False
 
+def get_settings(project_root: Path) -> dict:
+    """Load settings.json, returning an empty dict if missing or invalid."""
     settings_path = project_root / '.claude' / 'settings.json'
-    settings = {}
-
-    # Load existing settings if they exist
+    settings: dict = {}
     if settings_path.exists():
         try:
             with open(settings_path, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
         except json.JSONDecodeError:
             print(color('⚠️  Could not parse existing settings.json, will create new one', Colors.YELLOW))
+        except Exception as e:
+            print(color(f'⚠️  Error reading settings.json: {e}', Colors.YELLOW))
+    return settings
+
+def configure_settings(project_root: Path):
+    print(color('Configuring Claude Code hooks...', Colors.CYAN))
+
+    settings = get_settings(project_root)
 
     # Define sessions hooks
     is_windows = sys.platform == 'win32'
@@ -1184,8 +1249,8 @@ def configure_settings(project_root):
                 'hooks': [
                     {
                         'type': 'command',
-                        'command': 'python "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\session_start.py"' if is_windows
-                                 else 'python $CLAUDE_PROJECT_DIR/sessions/hooks/session_start.py'
+                        'command': 'python "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\kickstart_session_start.py"' if is_windows
+                                 else 'python $CLAUDE_PROJECT_DIR/sessions/hooks/kickstart_session_start.py'
                     }
                 ]
             }
@@ -1193,20 +1258,30 @@ def configure_settings(project_root):
     }
 
     # Initialize hooks object if it doesn't exist
-    if 'hooks' not in settings:
+    if 'hooks' not in settings or not isinstance(settings['hooks'], dict):
         settings['hooks'] = {}
 
-    # Merge each hook type (sessions hooks take precedence)
-    for hook_type, hook_config in sessions_hooks.items():
-        if hook_type not in settings['hooks']:
-            settings['hooks'][hook_type] = []
+    def find_hook_in_settings(hook_type: str, hook_block: dict) -> bool:
+        """Return True if any command in hook_block already exists under hook_type."""
+        for existing_cfg in settings['hooks'].get(hook_type, []) or []:
+            for existing_hook in existing_cfg.get('hooks', []) or []:
+                existing_cmd = existing_hook.get('command', '')
+                for candidate in hook_block.get('hooks', []) or []:
+                    cand_cmd = candidate.get('command', '')
+                    if cand_cmd and cand_cmd in existing_cmd:
+                        return True
+        return False
 
-        # Add sessions hooks (prepend so they run first)
-        settings['hooks'][hook_type] = hook_config + settings['hooks'][hook_type]
+    for hook_type, hook_blocks in sessions_hooks.items():
+        # Ensure list exists
+        settings['hooks'].setdefault(hook_type, [])
+        # Prepend required blocks if missing (avoid duplicates)
+        for block in hook_blocks:
+            if not find_hook_in_settings(hook_type, block):
+                settings['hooks'][hook_type] = [block] + settings['hooks'][hook_type]
 
     # Write updated settings
-    with open(settings_path, 'w', encoding='utf-8') as f:
-        json.dump(settings, f, indent=2)
+    write_settings(project_root, settings)
 #!<
 
 #!> Configure CLAUDE.md
@@ -1351,73 +1426,96 @@ def setup_shared_state_and_initialize(project_root):
 
 #!> Kickstart cleanup
 def kickstart_cleanup(project_root):
-    """
-    Delete kickstart files when user skips onboarding.
-    Returns manual cleanup instructions for router/settings that require careful editing.
-    """
-    print(color('\n🧹 Removing kickstart files...', Colors.CYAN))
+    """Delete kickstart files when user skips onboarding, with TUI-friendly info output."""
+    info_lines = [color('🧹 Removing kickstart files...', Colors.CYAN)]
+    set_info(info_lines)
 
     sessions_dir = project_root / 'sessions'
 
-    # 1. Delete kickstart hook (check both language variants)
+    # 1. Delete kickstart hook (Python variant for Python installer)
     py_hook = sessions_dir / 'hooks' / 'kickstart_session_start.py'
-    js_hook = sessions_dir / 'hooks' / 'kickstart_session_start.js'
+
+    # Update settings.json to swap kickstart hook -> regular session_start hook
+    settings = get_settings(project_root)
+    updated_settings = False
+    try:
+        hooks_root = settings.get('hooks', {}) if isinstance(settings, dict) else {}
+        session_start_cfgs = hooks_root.get('SessionStart', []) if isinstance(hooks_root, dict) else []
+        # Replace kickstart commands with regular ones
+        for cfg in session_start_cfgs or []:
+            hooks_list = cfg.get('hooks', []) if isinstance(cfg, dict) else []
+            for hook in hooks_list:
+                cmd = hook.get('command') if isinstance(hook, dict) else None
+                if isinstance(cmd, str) and 'kickstart_session_start' in cmd:
+                    # Replace the kickstart hook with the regular session_start variant
+                    if 'kickstart_session_start.py' in cmd:
+                        hook['command'] = cmd.replace('kickstart_session_start.py', 'session_start.py')
+                        updated_settings = True
+                    elif 'kickstart_session_start.js' in cmd:
+                        hook['command'] = cmd.replace('kickstart_session_start.js', 'session_start.js')
+                        updated_settings = True
+        # De-duplicate any resulting duplicate session_start commands
+        commands_seen = set()
+        new_cfgs = []
+        for cfg in session_start_cfgs or []:
+            hooks_list = cfg.get('hooks', []) if isinstance(cfg, dict) else []
+            new_hooks = []
+            for hook in hooks_list:
+                cmd = hook.get('command') if isinstance(hook, dict) else None
+                if isinstance(cmd, str):
+                    if cmd in commands_seen:
+                        updated_settings = True
+                        continue
+                    commands_seen.add(cmd)
+                new_hooks.append(hook)
+            if new_hooks:
+                cfg['hooks'] = new_hooks
+                new_cfgs.append(cfg)
+        if isinstance(hooks_root, dict):
+            hooks_root['SessionStart'] = new_cfgs
+    except Exception as e:
+        info_lines.append(color(f'⚠️  Could not update settings.json hooks: {e}', Colors.YELLOW))
+        set_info(info_lines)
+
+    if updated_settings:
+        if write_settings(project_root, settings):
+            info_lines.append(color('✓ Updated .claude/settings.json to use session_start hook', Colors.GREEN))
+        else:
+            info_lines.append(color('✗ Failed to write updated .claude/settings.json', Colors.RED))
+        set_info(info_lines)
 
     if py_hook.exists():
         py_hook.unlink()
-        is_python = True
-        print(color('   ✓ Deleted kickstart_session_start.py', Colors.GREEN))
-    elif js_hook.exists():
-        js_hook.unlink()
-        is_python = False
-        print(color('   ✓ Deleted kickstart_session_start.js', Colors.GREEN))
-    else:
-        is_python = True  # default fallback
+        info_lines.append(color('✓ Deleted kickstart_session_start.py', Colors.GREEN))
+        set_info(info_lines)
 
     # 2. Delete kickstart protocols directory
     protocols_dir = sessions_dir / 'protocols' / 'kickstart'
     if protocols_dir.exists():
         shutil.rmtree(protocols_dir)
-        print(color('   ✓ Deleted protocols/kickstart/', Colors.GREEN))
+        info_lines.append(color('✓ Deleted protocols/kickstart/', Colors.GREEN))
+        set_info(info_lines)
 
     # 3. Delete kickstart setup task
     task_file = sessions_dir / 'tasks' / 'h-kickstart-setup.md'
     if task_file.exists():
         task_file.unlink()
-        print(color('   ✓ Deleted h-kickstart-setup.md', Colors.GREEN))
+        info_lines.append(color('✓ Deleted h-kickstart-setup.md', Colors.GREEN))
+        set_info(info_lines)
 
-    # Generate language-specific cleanup instructions
-    if is_python:
-        instructions = """
-Manual cleanup required (edit these files carefully):
+    # 4. Remove kickstart API (Python variant) and rely on optional import in router
+    py_api = sessions_dir / 'api' / 'kickstart_commands.py'
+    if py_api.exists():
+        try:
+            py_api.unlink()
+            info_lines.append(color('✓ Deleted sessions/api/kickstart_commands.py', Colors.GREEN))
+        except Exception as e:
+            info_lines.append(color(f'⚠️  Could not delete kickstart_commands.py: {e}', Colors.YELLOW))
+        set_info(info_lines)
 
-1. sessions/api/router.py
-   - Remove: from .kickstart_commands import handle_kickstart_command
-   - Remove: 'kickstart': handle_kickstart_command from COMMAND_HANDLERS
-
-2. .claude/settings.json
-   - Remove the kickstart SessionStart hook entry
-
-3. sessions/api/kickstart_commands.py
-   - Delete this entire file
-"""
-    else:  # JavaScript
-        instructions = """
-Manual cleanup required (edit these files carefully):
-
-1. sessions/api/router.js
-   - Remove: const { handleKickstartCommand } = require('./kickstart_commands');
-   - Remove: 'kickstart': handleKickstartCommand from COMMAND_HANDLERS
-
-2. .claude/settings.json
-   - Remove the kickstart SessionStart hook entry
-
-3. sessions/api/kickstart_commands.js
-   - Delete this entire file
-"""
-
-    print(color(instructions, Colors.YELLOW))
-    return instructions
+    info_lines.append(color('✓ Kickstart cleanup complete', Colors.GREEN))
+    set_info(info_lines)
+    return 'Kickstart cleanup complete'
 #!<
 
 #!> Restore tasks
@@ -2215,7 +2313,6 @@ def kickstart_decision(project_root: Path) -> str:
     # Skip
     print(color('\n⏭️  Skipping kickstart onboarding...', Colors.CYAN))
     kickstart_cleanup(project_root)
-    print(color('\n✓ Kickstart files removed', Colors.GREEN))
     return 'skip'
 ##-##
 
@@ -2275,15 +2372,27 @@ def main():
         # Output final message
         print(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN))
         print(color('Next steps:', Colors.BOLD))
-        print('  1. Restart your Claude Code session (or run /clear)'
+        # Read current trigger phrases from config for helpful onboarding
+        try:
+            cfg = ss.load_config()
+            t = getattr(cfg, 'trigger_phrases', None)
+        except Exception:
+            t = None
+        def _fmt(xs):
+            try: return ', '.join([x for x in (xs or []) if x]) or 'None'
+            except Exception: return 'None'
 
-        if kickstart_mode == 'full':
-              print('  2. The kickstart onboarding will guide you through setup\n')
-        elif kickstart_mode == 'subagents': print('  2. Kickstart will guide you through subagent customization\n')
+        if kickstart_mode in ('full', 'subagents'):
+            print('  1. In your terminal, run: claude')
+            print("  2. At the prompt, type: kickstart\n")
         else:  # skip
-            print('  2. You can start using cc-sessions right away!')
-            print('     - Try "mek: my first task" to create a task')
-            print('     - Type "help" to see available commands\n')
+            print('  1. Create your first task using a trigger:')
+            print(f"     - Task creation: {color(_fmt(getattr(t, 'task_creation', None)), Colors.YELLOW)}")
+            print(f"     - Task startup:  {color(_fmt(getattr(t, 'task_startup', None)), Colors.YELLOW)}")
+            print(f"     - Implementation: {color(_fmt(getattr(t, 'implementation_mode', None)), Colors.YELLOW)}")
+            print(f"     - Discussion:    {color(_fmt(getattr(t, 'discussion_mode', None)), Colors.YELLOW)}")
+            print(f"     - Completion:    {color(_fmt(getattr(t, 'task_completion', None)), Colors.YELLOW)}")
+            print(f"     - Compaction:    {color(_fmt(getattr(t, 'context_compaction', None)), Colors.YELLOW)}\n")
 
         if backup_dir: print(color('Note: Check backup/ for any custom agents you want to restore\n', Colors.CYAN))
 

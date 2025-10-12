@@ -27,12 +27,10 @@ So that's how it works. If you ask me a question, I can't just run off changing 
 
 toast wrote cc-sessions with a philosophy of **"90%+ of what we do is discussion and less than 10% is writing code"**
 
-The DAIC workflow just makes that a physical law. Does that make sense? Any questions before we continue?
+The DAIC workflow just makes that a physical law. Does that make sense?
 <<<
 
-**Field any questions the user has. Do not jump ahead to explaining other features. Keep answers focused on DAIC and mode switching.**
-
-## After questions are addressed:
+**If the user has questions, tell them kickstart should answer all their questions. Do not jump ahead to explaining other features.**
 
 Run: `sessions kickstart next`
 

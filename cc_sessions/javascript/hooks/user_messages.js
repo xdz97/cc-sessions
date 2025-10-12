@@ -76,12 +76,11 @@ if (CONFIG.features.auto_ultrathink && !isApiCommand) {
 
 //!> Trigger phrase detection
 function phraseMatches(phrase, text) {
-    // Check if phrase matches text. Case-sensitive if phrase is all caps, case-insensitive otherwise.
-    if (phrase === phrase.toUpperCase()) {
-        return text.includes(phrase);
-    } else {
-        return text.toLowerCase().includes(phrase.toLowerCase());
-    }
+    // Case-sensitive only if phrase contains letters and all letters are uppercase.
+    const hasLetters = /[A-Za-z]/.test(phrase);
+    const isAllCaps = hasLetters && phrase === phrase.toUpperCase();
+    if (isAllCaps) return text.includes(phrase);
+    return text.toLowerCase().includes(phrase.toLowerCase());
 }
 
 const implementationPhraseDetected = CONFIG.trigger_phrases.implementation_mode.some(

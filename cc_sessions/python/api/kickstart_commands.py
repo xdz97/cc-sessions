@@ -6,7 +6,7 @@
 from typing import Any, List, Optional, Dict
 from datetime import datetime, timedelta
 from pathlib import Path
-import shutil
+import shutil, json, contextlib
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -70,13 +70,17 @@ def load_protocol_file(relative_path: str) -> str:
     return protocol_path.read_text()
 
 
+
+
 def handle_kickstart_command(args: List[str], json_output: bool = False) -> Any:
     """
     Handle kickstart-specific commands for onboarding flow.
 
     Usage:
-        kickstart next      - Load next module chunk
-        kickstart complete  - Exit kickstart mode
+        kickstart full          - Initialize full kickstart onboarding
+        kickstart subagents     - Initialize subagents-only onboarding
+        kickstart next          - Load next module chunk
+        kickstart complete      - Exit kickstart mode
     """
     if not args:
         return format_kickstart_help(json_output)
@@ -84,7 +88,9 @@ def handle_kickstart_command(args: List[str], json_output: bool = False) -> Any:
     command = args[0].lower()
     command_args = args[1:] if len(args) > 1 else []
 
-    if command == 'next':
+    if command in ('full', 'subagents'):
+        return begin_kickstart(command, json_output)
+    elif command == 'next':
         return load_next_module(json_output)
     elif command == 'complete':
         return complete_kickstart(json_output)
@@ -98,6 +104,8 @@ def handle_kickstart_command(args: List[str], json_output: bool = False) -> Any:
 def format_kickstart_help(json_output: bool) -> Any:
     """Format help for kickstart commands."""
     commands = {
+        "full": "Initialize full kickstart onboarding",
+        "subagents": "Initialize subagents-only onboarding",
         "next": "Load next module chunk based on current progress",
         "complete": "Exit kickstart mode and clean up files"
     }
@@ -162,8 +170,46 @@ def load_next_module(json_output: bool = False) -> Any:
     return protocol_content
 
 
+FULL_MODE_SEQUENCE = [
+    '01-discussion.md',
+    '02-implementation.md',
+    '03-tasks-overview.md',
+    '04-task-creation.md',
+    '05-task-startup.md',
+    '06-task-completion.md',
+    '07-compaction.md',
+    '08-agents.md',
+    '09-api.md',
+    '10-advanced.md',
+    '11-graduation.md'
+]
+
+SUBAGENTS_MODE_SEQUENCE = [
+    '01-agents-only.md'
+]
+
+def begin_kickstart(mode: str, json_output: bool = False) -> Any:
+    """Initialize kickstart (full or subagents) and return first module content."""
+    sequence = SUBAGENTS_MODE_SEQUENCE if mode == 'subagents' else FULL_MODE_SEQUENCE
+    with edit_state() as s:
+        if not getattr(s, 'metadata', None):
+            s.metadata = {}
+        s.metadata['kickstart'] = {
+            'mode': 'subagents' if mode == 'subagents' else 'full',
+            'sequence': sequence,
+            'current_index': 0,
+            'completed': [],
+            'last_active': datetime.now().isoformat(),
+        }
+    first_file = sequence[0]
+    protocol_content = load_protocol_file(f'kickstart/{first_file}')
+    if json_output:
+        return {"success": True, "started": mode, "first_file": first_file, "protocol": protocol_content}
+    return protocol_content
+
+
 def complete_kickstart(json_output: bool = False) -> Any:
-    """Exit kickstart mode, clean up files, and return cleanup instructions."""
+    """Exit kickstart mode and clean up kickstart files/settings programmatically."""
     # Switch to implementation mode if in discussion mode
     if STATE.mode == Mode.NO:
         with edit_state() as s:
@@ -172,18 +218,59 @@ def complete_kickstart(json_output: bool = False) -> Any:
     # Delete kickstart files immediately
     sessions_dir = PROJECT_ROOT / 'sessions'
 
-    # 1. Delete kickstart hook (check both language variants)
-    py_hook = sessions_dir / 'hooks' / 'kickstart_session_start.py'
-    js_hook = sessions_dir / 'hooks' / 'kickstart_session_start.js'
+    # 1. Update settings.json to replace kickstart hook with regular session_start
+    settings_path = PROJECT_ROOT / '.claude' / 'settings.json'
+    settings: Dict[str, Any] = {}
+    updated_settings = False
+    if settings_path.exists():
+        try:
+            settings = json.loads(settings_path.read_text(encoding='utf-8'))
+        except Exception:
+            settings = {}
 
+    hooks_root = settings.get('hooks', {}) if isinstance(settings, dict) else {}
+    session_start_cfgs = hooks_root.get('SessionStart', []) if isinstance(hooks_root, dict) else []
+    # Replace kickstart commands with regular ones
+    for cfg in session_start_cfgs or []:
+        hooks_list = cfg.get('hooks', []) if isinstance(cfg, dict) else []
+        for hook in hooks_list:
+            cmd = hook.get('command') if isinstance(hook, dict) else None
+            if isinstance(cmd, str) and 'kickstart_session_start' in cmd:
+                if 'kickstart_session_start.py' in cmd:
+                    hook['command'] = cmd.replace('kickstart_session_start.py', 'session_start.py')
+                    updated_settings = True
+                elif 'kickstart_session_start.js' in cmd:
+                    hook['command'] = cmd.replace('kickstart_session_start.js', 'session_start.js')
+                    updated_settings = True
+    # De-duplicate resulting duplicates
+    commands_seen = set()
+    new_cfgs = []
+    for cfg in session_start_cfgs or []:
+        hooks_list = cfg.get('hooks', []) if isinstance(cfg, dict) else []
+        new_hooks = []
+        for hook in hooks_list:
+            cmd = hook.get('command') if isinstance(hook, dict) else None
+            if isinstance(cmd, str):
+                if cmd in commands_seen:
+                    updated_settings = True
+                    continue
+                commands_seen.add(cmd)
+            new_hooks.append(hook)
+        if new_hooks:
+            cfg['hooks'] = new_hooks
+            new_cfgs.append(cfg)
+    if isinstance(hooks_root, dict):
+        hooks_root['SessionStart'] = new_cfgs
+    if updated_settings:
+        with contextlib.suppress(Exception):
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+            settings_path.write_text(json.dumps(settings, indent=2), encoding='utf-8')
+
+    # 2. Delete kickstart hook (Python variant)
+    py_hook = sessions_dir / 'hooks' / 'kickstart_session_start.py'
     if py_hook.exists():
-        py_hook.unlink()
-        is_python = True
-    elif js_hook.exists():
-        js_hook.unlink()
-        is_python = False
-    else:
-        is_python = True  # default fallback
+        with contextlib.suppress(Exception):
+            py_hook.unlink()
 
     # 2. Delete kickstart protocols directory
     protocols_dir = sessions_dir / 'protocols' / 'kickstart'
@@ -202,36 +289,15 @@ def complete_kickstart(json_output: bool = False) -> Any:
     with edit_state() as s:
         s.metadata.pop('kickstart', None)
 
-    # Generate language-specific cleanup instructions based on which hook was found
-    if is_python:
-        instructions = """Kickstart complete!
+    # 5. Remove kickstart API (this file)
+    py_api = sessions_dir / 'api' / 'kickstart_commands.py'
+    if py_api.exists():
+        with contextlib.suppress(Exception):
+            py_api.unlink()
 
-I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
-
-□ Remove kickstart import from sessions/api/router.py
-□ Remove 'kickstart': handle_kickstart_command from COMMAND_HANDLERS in router.py
-□ Remove kickstart SessionStart hook entry from .claude/settings.json
-□ Delete sessions/api/kickstart_commands.py
-
-After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install."""
-    else:  # JavaScript
-        instructions = """Kickstart complete!
-
-I've deleted the kickstart protocols, hook, and setup task. Now you need to complete the cleanup by using TodoWrite to add these todos immediately, then executing them:
-
-□ Remove kickstart import from sessions/api/router.js
-□ Remove 'kickstart': handleKickstartCommand from COMMAND_HANDLERS in router.js
-□ Remove kickstart SessionStart hook entry from .claude/settings.json
-□ Delete sessions/api/kickstart_commands.js
-
-After completing these todos, kickstart will be fully removed. These files won't exist in future package installations since users get fresh copies during install."""
-
+    success_message = "Kickstart complete! Cleanup finished and SessionStart restored."
     if json_output:
-        return {
-            "success": True,
-            "instructions": instructions
-        }
-
-    return instructions
+        return {"success": True, "message": success_message}
+    return success_message
 
 #-#

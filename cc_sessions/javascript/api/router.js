@@ -17,7 +17,15 @@ const {
 const { handleConfigCommand } = require('./config_commands.js');
 const { handleProtocolCommand } = require('./protocol_commands.js');
 const { handleTaskCommand } = require('./task_commands.js');
-const { handleKickstartCommand } = require('./kickstart_commands.js');
+let handleKickstartCommand;
+let _HAS_KICKSTART = false;
+try {
+    // Optional: kickstart is only available before completion/cleanup
+    handleKickstartCommand = require('./kickstart_commands.js').handleKickstartCommand;
+    _HAS_KICKSTART = typeof handleKickstartCommand === 'function';
+} catch (e) {
+    _HAS_KICKSTART = false;
+}
 const { handleUninstallCommand } = require('./uninstall_commands.js');
 //--//
 
@@ -35,9 +43,13 @@ const COMMAND_HANDLERS = {
     'config': handleConfigCommand,
     'todos': handleTodosCommand,
     'tasks': handleTaskCommand,
-    'kickstart': handleKickstartCommand,
     'uninstall': handleUninstallCommand,
 };
+
+// Register kickstart only if available
+if (_HAS_KICKSTART) {
+    COMMAND_HANDLERS['kickstart'] = handleKickstartCommand;
+}
 
 //-#
 
@@ -76,7 +88,9 @@ function routeCommand(command, args, jsonOutput = false, fromSlash = false) {
         const subsystemArgs = args.length > 1 ? args.slice(1) : [];
 
         // Route to appropriate subsystem
-        if (['tasks', 'state', 'config', 'uninstall'].includes(subsystem)) {
+        const subsystems = ['tasks', 'state', 'config', 'uninstall'];
+        if (_HAS_KICKSTART) subsystems.push('kickstart');
+        if (subsystems.includes(subsystem)) {
             return routeCommand(subsystem, subsystemArgs, jsonOutput, true);
         } else if (subsystem === 'bypass') {
             return routeCommand('mode', ['bypass'], jsonOutput, true);
@@ -135,6 +149,18 @@ function formatSlashHelp() {
         "  /sessions config read ...   - Manage readonly bash commands",
         "  /sessions config features ...   - Manage feature toggles",
         "",
+    ];
+    if (_HAS_KICKSTART) {
+        lines.push(
+            "### Kickstart",
+            "  /sessions kickstart full          - Initialize full kickstart onboarding",
+            "  /sessions kickstart subagents     - Initialize subagents-only onboarding",
+            "  /sessions kickstart next          - Load the next module",
+            "  /sessions kickstart complete      - Finish kickstart and cleanup",
+            ""
+        );
+    }
+    lines.push(
         "### Uninstall",
         "  /sessions uninstall             - Safely remove cc-sessions framework",
         "  /sessions uninstall --dry-run   - Preview what would be removed",
@@ -152,7 +178,7 @@ function formatSlashHelp() {
         "  /sessions config show                       # View all settings",
         "",
         "**Use '/sessions <subsystem> help' for detailed help on each subsystem**",
-    ];
+    );
     return lines.join('\n');
 }
 

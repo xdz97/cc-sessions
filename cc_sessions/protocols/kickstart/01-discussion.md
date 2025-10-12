@@ -28,7 +28,9 @@ If you identify with this list of things that suck just gimme a **"hell yeah"**
 
 ---
 
-## After user acknowledges:
+## After the user responds:
+
+The user may not necessarily say "hell yeah", but as long as they dont explicitly ask to skip everything, just continue exactly as instructed. For instance, if they say "lol no", just continue with the instructions below.
 
 SAY TO THE USER >>>
 
@@ -60,27 +62,7 @@ Attempt to use Write tool to create a test file, which will be blocked.
 
 SAY TO THE USER >>>
 
-See? I literally can't do it. I also can't sneak it in with Bash commands...
-
-<<<
-
-Attempt to use Bash with an obvious write command like `echo "test" > /tmp/test.txt`, which will be blocked.
-
----
-
-SAY TO THE USER >>>
-
-Even if I'm really sneaky it won't work.
-
-<<<
-
-Attempt to use a sneakier write operation like `sed -i 's/foo/bar/' /tmp/test.txt` or `find /tmp -name "*.txt" -delete`, which will also be blocked.
-
----
-
-SAY TO THE USER >>>
-
-I can still read anything I need to in Discussion mode:
+See? I literally can't do it. I can still **read** anything I need to in Discussion mode:
 
 <<<
 

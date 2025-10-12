@@ -11,7 +11,12 @@ from typing import Any, List
 
 ## ===== LOCAL ===== ##
 from api.state_commands import handle_state_command, handle_mode_command, handle_flags_command, handle_status_command, handle_version_command, handle_todos_command
-from api.kickstart_commands import handle_kickstart_command
+try:
+    from api.kickstart_commands import handle_kickstart_command  # optional
+    _HAS_KICKSTART = True
+except Exception:
+    handle_kickstart_command = None  # type: ignore
+    _HAS_KICKSTART = False
 from api.protocol_commands import handle_protocol_command
 from api.config_commands import handle_config_command
 from api.task_commands import handle_task_command
@@ -32,9 +37,12 @@ COMMAND_HANDLERS = {
     'config': handle_config_command,
     'todos': handle_todos_command,
     'tasks': handle_task_command,
-    'kickstart': handle_kickstart_command,
     'uninstall': handle_uninstall_command,
 }
+
+# Register kickstart handler only if the module is available
+if _HAS_KICKSTART and callable(handle_kickstart_command):
+    COMMAND_HANDLERS['kickstart'] = handle_kickstart_command
 
 #-#
 
@@ -76,12 +84,14 @@ def route_command(command: str, args: List[str], json_output: bool = False, from
         subsystem_args = args[1:] if len(args) > 1 else []
 
         # Route to appropriate subsystem
-        if subsystem in ['tasks', 'state', 'config', 'uninstall']: return route_command(subsystem, subsystem_args,
-                                                                           json_output=json_output, from_slash=True)
+        subsystems = ['tasks', 'state', 'config', 'uninstall']
+        if _HAS_KICKSTART: subsystems.append('kickstart')
+        if subsystem in subsystems: return route_command(subsystem, subsystem_args,
+                                                         json_output=json_output, from_slash=True)
         elif subsystem == 'bypass': return route_command('mode', ['bypass'], json_output=json_output, from_slash=True)
         elif subsystem == 'help': return format_slash_help()
         else:
-            return f"Unknown subsystem: {subsystem}\n\nValid subsystems: tasks, state, config, uninstall, bypass\n\nUse '/sessions help' for full usage information."
+            return f"Unknown subsystem: {subsystem}\n\nValid subsystems: tasks, state, config, uninstall, bypass{', kickstart' if _HAS_KICKSTART else ''}\n\nUse '/sessions help' for full usage information."
 
     if command not in COMMAND_HANDLERS: raise ValueError(f"Unknown command: {command}. Available commands: {', '.join(COMMAND_HANDLERS.keys())}")
     handler = COMMAND_HANDLERS[command]
@@ -112,6 +122,17 @@ def format_slash_help() -> str:
         "  /sessions config env ...        - Manage environment settings",
         "  /sessions config read ...   - Manage readonly bash commands",
         "  /sessions config features ...   - Manage feature toggles", "",
+    ]
+    if _HAS_KICKSTART:
+        lines += [
+            "### Kickstart",
+            "  /sessions kickstart full          - Initialize full kickstart onboarding",
+            "  /sessions kickstart subagents     - Initialize subagents-only onboarding",
+            "  /sessions kickstart next          - Load the next module",
+            "  /sessions kickstart complete      - Finish kickstart and cleanup",
+            "",
+        ]
+    lines += [
         "### Uninstall", "  /sessions uninstall             - Safely remove cc-sessions framework",
         "  /sessions uninstall --dry-run   - Preview what would be removed", "",
         "### Quick Shortcuts", "  /sessions bypass                - Disable bypass mode (return to normal)", "",

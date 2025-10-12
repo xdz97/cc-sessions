@@ -150,12 +150,12 @@ class Model(str, Enum):
 #!> Config components
 @dataclass
 class TriggerPhrases:
-    implementation_mode: List[str] = field(default_factory=lambda: ["yert", "make it so", "run that"])
-    discussion_mode: List[str] = field(default_factory=lambda: ["stop", "silence"])
-    task_creation: List[str] = field(default_factory=lambda: ["mek:", "mekdis"])
-    task_startup: List[str] = field(default_factory=lambda: ["start^", "begin task:"])
+    implementation_mode: List[str] = field(default_factory=lambda: ["yert"])
+    discussion_mode: List[str] = field(default_factory=lambda: ["SILENCE"])
+    task_creation: List[str] = field(default_factory=lambda: ["mek:"])
+    task_startup: List[str] = field(default_factory=lambda: ["start^"])
     task_completion: List[str] = field(default_factory=lambda: ["finito"])
-    context_compaction: List[str] = field(default_factory=lambda: ["lets compact", "let's compact", "squish"])
+    context_compaction: List[str] = field(default_factory=lambda: ["squish"])
 
     def _coax_phrase_type(self, phrase_type: str) -> TriggerCategory:
         mapping = {

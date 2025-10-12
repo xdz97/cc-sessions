@@ -2,10 +2,10 @@
   "name": "cc-sessions",
   "version": "0.2.9",
   "description": "Claude Code Sessions Framework - Enforced methodology for AI pair programming",
-  "main": "install.js",
+  "main": "cc_sessions/install.js",
   "bin": {
-    "cc-sessions": "install.js",
-    "cc-sessions-install": "install.js",
+    "cc-sessions": "cc_sessions/install.js",
+    "cc-sessions-install": "cc_sessions/install.js",
     "sessions": "cc_sessions/javascript/api/index.js"
   },
   "scripts": {
@@ -42,10 +42,13 @@
   ],
   "preferGlobal": true,
   "files": [
-    "install.js",
+    "cc_sessions/install.js",
     "cc_sessions/javascript/",
     "cc_sessions/agents/",
     "cc_sessions/knowledge/",
+    "cc_sessions/protocols/",
+    "cc_sessions/commands/",
+    "cc_sessions/templates/",
     "README.md",
     "LICENSE"
   ],

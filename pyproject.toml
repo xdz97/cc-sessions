@@ -59,4 +59,7 @@ include-package-data = true
     "python/**/*",
     "agents/*.md",
     "knowledge/**/*.md",
+    "protocols/**/*",
+    "commands/**/*",
+    "templates/**/*",
 ]

@@ -35,10 +35,10 @@ Wait for user to provide their trigger phrase and task description. The task cre
 
 ## During task creation protocol:
 
-When the protocol asks about using the context-gathering agent, STRONGLY RECOMMEND it and explain:
+DURING the protocol step where you ask about using the context-gathering agent, STRONGLY RECOMMEND it and explain (after YES|NO prompt):
 
 SAY TO THE USER >>>
-**Yes, use the context-gathering agent.** Here's why:
+**My recommendation**: use the context-gathering agent. Here's why:
 
 Remember that problem where you spend 20% of every session gathering context? The context-gathering agent solves this.
 

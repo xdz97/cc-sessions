@@ -34,7 +34,7 @@ If you run anything but a valid command you'll be helped to smithereens.
 
 <<<
 
-Wait for user to run a command, then copy/paste the output.
+Wait for user to run a command, then copy/paste the output of the command to them in your next message.
 
 ---
 
@@ -44,7 +44,7 @@ Nice - do another one but use [some subsystem they didn't use].
 
 <<<
 
-Wait for user to run another command, then copy/paste the output.
+Wait for user to run another command, then copy/paste the output of the command to them in your next message.
 
 ---
 

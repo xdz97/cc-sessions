@@ -11,10 +11,9 @@ const path = require('path');
 ///-///
 
 /// ===== LOCAL ===== ///
-// Import from shared_state (same pattern as normal hooks)
-const PROJECT_ROOT = path.resolve(__dirname, '../../../../..');
-const sharedStatePath = path.join(PROJECT_ROOT, 'sessions', 'hooks', 'shared_state.js');
-const { loadState } = require(sharedStatePath);
+// Import from shared_state (same pattern as normal hooks). Runtime file lives in sessions/hooks
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+const { loadState, editState } = require('./shared_state.js');
 ///-///
 
 //-//
@@ -115,55 +114,16 @@ if (!mode) {
 }
 //!<
 
-//!> 2. Initialize or load sequence
-// Determine sequence based on mode
-let sequence;
-if (mode === 'full') {
-    sequence = FULL_MODE_SEQUENCE;
-} else if (mode === 'subagents') {
-    sequence = SUBAGENTS_MODE_SEQUENCE;
-} else {
-    console.log(JSON.stringify({
-        hookSpecificOutput: {
-            hookEventName: 'SessionStart',
-            additionalContext: `ERROR: Invalid kickstart mode '${mode}'. Expected 'full' or 'subagents'.`
-        }
-    }));
-    process.exit(1);
-}
-
-// Initialize sequence on first run
-let protocolContent;
-if (!('sequence' in kickstartMeta)) {
-    const { editState } = require(sharedStatePath);
-    editState((s) => {
-        s.metadata.kickstart.sequence = sequence;
-        s.metadata.kickstart.current_index = 0;
-        s.metadata.kickstart.completed = [];
-        return s;
-    });
-
-    protocolContent = loadProtocolFile(`kickstart/${sequence[0]}`);
-} else {
-    // Load current protocol from sequence
-    const currentIndex = kickstartMeta.current_index ?? 0;
-    protocolContent = loadProtocolFile(`kickstart/${sequence[currentIndex]}`);
-}
-//!<
-
-//!> 3. Append user instructions and output
-protocolContent += `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-USER INSTRUCTIONS:
-Just say 'kickstart' and press enter to begin
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
+//!> 2. Output deterministic instructions for Claude to begin kickstart via API
+const beginCmd = mode === 'subagents' ? '/sessions kickstart subagents' : '/sessions kickstart full';
+let instructions = `Kickstart onboarding is enabled. Begin immediately by running:\n\n  ${beginCmd}\n\nThen, for each module chunk returned, follow all instructions completely. When finished with a chunk, run:\n\n  /sessions kickstart next\n\nRepeat until kickstart is complete.`;
+// Add a clearly delineated user section to guide manual starts
+instructions += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nUSER INSTRUCTIONS:\nJust say 'kickstart' and press enter to begin\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
 
 console.log(JSON.stringify({
     hookSpecificOutput: {
         hookEventName: 'SessionStart',
-        additionalContext: protocolContent
+        additionalContext: instructions
     }
 }));
 process.exit(0);

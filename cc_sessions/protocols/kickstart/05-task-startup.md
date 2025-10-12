@@ -25,6 +25,16 @@ This prevents me from going rogue and doing stuff you didn't ask for. In a secon
 **Does that make sense? Any questions?**
 <<<
 
+When answering questions:
+
+- Do not invent information — base answers strictly on content in your current context window.
+- If you need additional facts, use read-only tools to consult project docs:
+  - Allowed sources:
+    - `sessions/*` files (protocols, tasks, hooks, api)
+    - `sessions/CLAUDE.sessions.md` (@sessions/CLAUDE.sessions.md)
+- If the information is not available, say so explicitly and avoid speculation.
+- Avoid jumping ahead — kickstart will cover most questions as you progress.
+
 Wait for user response, address questions, then continue.
 
 ---
@@ -40,7 +50,7 @@ Run: `sessions config phrases list task_startup`
 SAY TO THE USER >>>
 Here are your task startup triggers: [list triggers]
 
-Use one of those triggers with the dummy task we created for practice:
+Use one of those triggers with the kickstart dummy task:
 
 **[trigger] @h-kickstart-setup.md**
 

@@ -280,7 +280,7 @@ class TuiManager {
     this.inPrompt = true;
     this.setLegend('j/k or arrows • Enter select • Ctrl+C exit');
     let idx = 0;
-    const opts = Array.pipfrom(choices || []);
+    const opts = Array.from(choices || []);
     if (def != null) {
       const defIndex = opts.indexOf(def);
       if (defIndex >= 0) idx = defIndex;
@@ -471,8 +471,14 @@ class _TuiSession {
   async exit() {
     console.log = this._origLog;
     console.error = this._origError;
+    // Ensure stdin is restored so the process can exit cleanly
+    try { if (process.stdin.isTTY) process.stdin.setRawMode(false); } catch {}
+    try { process.stdin.pause(); } catch {}
+    try { process.stdin.removeAllListeners('data'); } catch {}
     // Restore terminal cursor on exit
     try { if (process.stdout.isTTY) process.stdout.write('\x1b[?25h'); } catch {}
+    // Clear TUI artifacts and reset cursor to a clean screen line
+    try { if (process.stdout.isTTY) process.stdout.write('\x1b[0m\x1b[2J\x1b[H'); } catch {}
     _TUI_ACTIVE = false;
     _TUI = null;
   }
@@ -535,6 +541,47 @@ function copy_directory(src, dest) {
     if (fs.statSync(sp).isDirectory()) copy_directory(sp, dp);
     else copy_file(sp, dp);
   }
+}
+
+function files_differ(src, dest) {
+  try {
+    if (!fs.existsSync(dest)) return true;
+    const sa = fs.statSync(src);
+    const sb = fs.statSync(dest);
+    if (sa.size !== sb.size) return true;
+    const a = fs.readFileSync(src);
+    const b = fs.readFileSync(dest);
+    return a.compare(b) !== 0;
+  } catch {
+    return true;
+  }
+}
+
+function copy_agents_if_changed(srcRoot, destRoot) {
+  let copied = 0;
+  let skipped = 0;
+  if (!fs.existsSync(srcRoot)) return [0, 0];
+  const walk = (root) => {
+    for (const name of fs.readdirSync(root)) {
+      const sp = path.join(root, name);
+      const rel = path.relative(srcRoot, sp);
+      const dp = path.join(destRoot, rel);
+      if (fs.statSync(sp).isDirectory()) {
+        walk(sp);
+      } else {
+        if (files_differ(sp, dp)) {
+          fs.mkdirSync(path.dirname(dp), { recursive: true });
+          fs.copyFileSync(sp, dp);
+          try { fs.chmodSync(dp, fs.statSync(sp).mode); } catch {}
+          copied += 1;
+        } else {
+          skipped += 1;
+        }
+      }
+    }
+  };
+  walk(srcRoot);
+  return [copied, skipped];
 }
 
 function color(text, colorCode) { return `${colorCode}${text}${Colors.RESET}`; }
@@ -879,18 +926,35 @@ function create_backup(project_root) {
     console.log(color(`   ✓ Backed up ${taskCount} task files`, Colors.GREEN));
   }
 
-  // Backup agents
+  // Backup only agent files that will be overwritten and differ from packaged version
   const agents_src = path.join(project_root, '.claude', 'agents');
   if (fs.existsSync(agents_src)) {
+    const script_agents = path.join(get_package_root(), 'agents');
     const agents_dest = path.join(backup_dir, 'agents');
-    copy_directory(agents_src, agents_dest);
-    const agentCount = _countFiles(agents_src);
-    const backedAgents = _countFiles(agents_dest);
-    if (agentCount !== backedAgents) {
-      console.log(color(`   ✗ Backup verification failed: ${backedAgents}/${agentCount} agents backed up`, Colors.RED));
+    const to_backup = [];
+    const walk = (root) => {
+      for (const name of fs.readdirSync(root)) {
+        const p = path.join(root, name);
+        const st = fs.statSync(p);
+        if (st.isDirectory()) walk(p);
+        else {
+          const rel = path.relative(agents_src, p);
+          const pkg = path.join(script_agents, rel);
+          if (fs.existsSync(pkg) && files_differ(pkg, p)) to_backup.push([p, path.join(agents_dest, rel)]);
+        }
+      }
+    };
+    walk(agents_src);
+    for (const [srcFile, dstFile] of to_backup) {
+      fs.mkdirSync(path.dirname(dstFile), { recursive: true });
+      fs.copyFileSync(srcFile, dstFile);
+    }
+    const backedAgents = agents_dest && fs.existsSync(agents_dest) ? _countFiles(agents_dest) : 0;
+    if (backedAgents !== to_backup.length) {
+      console.log(color(`   ✗ Backup verification failed: ${backedAgents}/${to_backup.length} modified agents backed up`, Colors.RED));
       throw new Error('Backup verification failed - aborting to prevent data loss');
     }
-    console.log(color(`   ✓ Backed up ${agentCount} agent files`, Colors.GREEN));
+    console.log(color(`   ✓ Backed up ${to_backup.length} modified agent file(s)`, Colors.GREEN));
   }
 
   return backup_dir;
@@ -910,7 +974,11 @@ function copy_files(script_dir, project_root) {
   console.log(color('Installing files...', Colors.CYAN));
   const agents_src = path.join(script_dir, 'agents');
   const agents_dest = path.join(project_root, '.claude', 'agents');
-  if (fs.existsSync(agents_src)) copy_directory(agents_src, agents_dest);
+  if (fs.existsSync(agents_src)) {
+    const [copied, skipped] = copy_agents_if_changed(agents_src, agents_dest);
+    if (copied) console.log(color(`   ✓ Installed/updated ${copied} agent file(s)`, Colors.GREEN));
+    if (skipped) console.log(color(`   • Skipped ${skipped} identical agent file(s)`, Colors.GRAY));
+  }
 
   const knowledge_src = path.join(script_dir, 'knowledge');
   const knowledge_dest = path.join(project_root, 'sessions', 'knowledge');
@@ -931,14 +999,32 @@ function copy_files(script_dir, project_root) {
   copy_file(path.join(tdir, 'INDEX_TEMPLATE.md'), path.join(project_root, 'sessions', 'tasks', 'indexes', 'INDEX_TEMPLATE.md'));
 }
 
-function configure_settings(project_root) {
-  console.log(color('Configuring Claude Code hooks...', Colors.CYAN));
+// Settings helpers
+function write_settings(project_root, settings) {
+  try {
+    const settings_path = path.join(project_root, '.claude', 'settings.json');
+    fs.mkdirSync(path.dirname(settings_path), { recursive: true });
+    fs.writeFileSync(settings_path, JSON.stringify(settings, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.log(color(`✗ Failed writing settings.json: ${e}`, Colors.RED));
+    return false;
+  }
+}
+
+function get_settings(project_root) {
   const settings_path = path.join(project_root, '.claude', 'settings.json');
   let settings = {};
   if (fs.existsSync(settings_path)) {
     try { settings = JSON.parse(fs.readFileSync(settings_path, 'utf8')); }
-    catch { console.log(color('⚠️  Could not parse existing settings.json, will create new one', Colors.YELLOW)); }
+    catch (e) { console.log(color('⚠️  Could not parse existing settings.json, will create new one', Colors.YELLOW)); }
   }
+  return settings || {};
+}
+
+function configure_settings(project_root) {
+  console.log(color('Configuring Claude Code hooks...', Colors.CYAN));
+  let settings = get_settings(project_root);
   const is_windows = process.platform === 'win32';
   const sessions_hooks = {
     'UserPromptSubmit': [ { hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\user_messages.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/user_messages.js' } ] } ],
@@ -947,14 +1033,32 @@ function configure_settings(project_root) {
       { matcher: 'Task', hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\subagent_hooks.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/subagent_hooks.js' } ] },
     ],
     'PostToolUse': [ { hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\post_tool_use.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/post_tool_use.js' } ] } ],
-    'SessionStart': [ { matcher: 'startup|clear', hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\session_start.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/session_start.js' } ] } ],
+    // Install kickstart SessionStart hook initially; will be replaced if skipping
+    'SessionStart': [ { matcher: 'startup|clear', hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\kickstart_session_start.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/kickstart_session_start.js' } ] } ],
   };
-  if (!settings.hooks) settings.hooks = {};
-  for (const [hookType, hookConfig] of Object.entries(sessions_hooks)) {
+  if (!settings.hooks || typeof settings.hooks !== 'object') settings.hooks = {};
+
+  const findHookInSettings = (hookType, hookBlock) => {
+    const existing = settings.hooks[hookType] || [];
+    for (const cfg of existing) {
+      for (const hook of (cfg.hooks || [])) {
+        const existing_cmd = (hook && hook.command) || '';
+        for (const cand of (hookBlock.hooks || [])) {
+          const cand_cmd = (cand && cand.command) || '';
+          if (cand_cmd && existing_cmd.includes(cand_cmd)) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  for (const [hookType, hookBlocks] of Object.entries(sessions_hooks)) {
     if (!settings.hooks[hookType]) settings.hooks[hookType] = [];
-    settings.hooks[hookType] = [...hookConfig, ...settings.hooks[hookType]];
+    for (const block of hookBlocks) {
+      if (!findHookInSettings(hookType, block)) settings.hooks[hookType] = [block, ...settings.hooks[hookType]];
+    }
   }
-  fs.writeFileSync(settings_path, JSON.stringify(settings, null, 2));
+  write_settings(project_root, settings);
 }
 
 function configure_claude_md(project_root) {
@@ -1041,25 +1145,86 @@ async function setup_shared_state_and_initialize(project_root) {
 }
 
 function kickstart_cleanup(project_root) {
-  console.log(color('\n🧹 Removing kickstart files...', Colors.CYAN));
+  // TUI-friendly info panel output
+  let info_lines = [color('🧹 Removing kickstart files...', Colors.CYAN)];
+  set_info(info_lines);
+
   const sessions_dir = path.join(project_root, 'sessions');
-  const py_hook = path.join(sessions_dir, 'hooks', 'kickstart_session_start.py');
-  const js_hook = path.join(sessions_dir, 'hooks', 'kickstart_session_start.js');
-  let is_python = true;
-  if (fs.existsSync(py_hook)) { fs.unlinkSync(py_hook); is_python = true; console.log(color('   ✓ Deleted kickstart_session_start.py', Colors.GREEN)); }
-  else if (fs.existsSync(js_hook)) { fs.unlinkSync(js_hook); is_python = false; console.log(color('   ✓ Deleted kickstart_session_start.js', Colors.GREEN)); }
-  const protocols_dir = path.join(sessions_dir, 'protocols', 'kickstart');
-  if (fs.existsSync(protocols_dir)) { fs.rmSync(protocols_dir, { recursive: true, force: true }); console.log(color('   ✓ Deleted protocols/kickstart/', Colors.GREEN)); }
-  const task_file = path.join(sessions_dir, 'tasks', 'h-kickstart-setup.md');
-  if (fs.existsSync(task_file)) { fs.unlinkSync(task_file); console.log(color('   ✓ Deleted h-kickstart-setup.md', Colors.GREEN)); }
-  let instructions;
-  if (is_python) {
-    instructions = `\nManual cleanup required (edit these files carefully):\n\n1. sessions/api/router.py\n   - Remove: from .kickstart_commands import handle_kickstart_command\n   - Remove: 'kickstart': handle_kickstart_command from COMMAND_HANDLERS\n\n2. .claude/settings.json\n   - Remove the kickstart SessionStart hook entry\n\n3. sessions/api/kickstart_commands.py\n   - Delete this entire file\n`;
-  } else {
-    instructions = `\nManual cleanup required (edit these files carefully):\n\n1. sessions/api/router.js\n   - Remove: const { handleKickstartCommand } = require('./kickstart_commands');\n   - Remove: 'kickstart': handleKickstartCommand from COMMAND_HANDLERS\n\n2. .claude/settings.json\n   - Remove the kickstart SessionStart hook entry\n\n3. sessions/api/kickstart_commands.js\n   - Delete this entire file\n`;
+
+  // 1) Update settings.json to swap kickstart hook -> regular session_start
+  let settings = get_settings(project_root);
+  let updated_settings = false;
+  try {
+    const hooks_root = (settings && settings.hooks) || {};
+    const session_start_cfgs = (hooks_root && hooks_root.SessionStart) || [];
+    for (const cfg of session_start_cfgs) {
+      const hooks_list = (cfg && cfg.hooks) || [];
+      for (const hook of hooks_list) {
+        const cmd = hook && hook.command;
+        if (typeof cmd === 'string' && cmd.includes('kickstart_session_start')) {
+          if (cmd.includes('kickstart_session_start.js')) {
+            hook.command = cmd.replace('kickstart_session_start.js', 'session_start.js');
+            updated_settings = true;
+          } else if (cmd.includes('kickstart_session_start.py')) {
+            hook.command = cmd.replace('kickstart_session_start.py', 'session_start.py');
+            updated_settings = true;
+          }
+        }
+      }
+    }
+    // De-duplicate commands
+    const seen = new Set();
+    const new_cfgs = [];
+    for (const cfg of session_start_cfgs) {
+      const hooks_list = (cfg && cfg.hooks) || [];
+      const new_hooks = [];
+      for (const hook of hooks_list) {
+        const cmd = hook && hook.command;
+        if (typeof cmd === 'string') {
+          if (seen.has(cmd)) { updated_settings = true; continue; }
+          seen.add(cmd);
+        }
+        new_hooks.push(hook);
+      }
+      if (new_hooks.length) new_cfgs.push({ ...cfg, hooks: new_hooks });
+    }
+    if (hooks_root && typeof hooks_root === 'object') hooks_root.SessionStart = new_cfgs;
+  } catch (e) {
+    info_lines = info_lines.concat([color(`⚠️  Could not update settings.json hooks: ${e}`, Colors.YELLOW)]);
+    set_info(info_lines);
   }
-  console.log(color(instructions, Colors.YELLOW));
-  return instructions;
+
+  if (updated_settings) {
+    if (write_settings(project_root, settings)) info_lines = info_lines.concat([color('✓ Updated .claude/settings.json to use session_start hook', Colors.GREEN)]);
+    else info_lines = info_lines.concat([color('✗ Failed to write updated .claude/settings.json', Colors.RED)]);
+    set_info(info_lines);
+  }
+
+  // 2) Delete kickstart hook (JavaScript variant for JS installer)
+  const js_hook = path.join(sessions_dir, 'hooks', 'kickstart_session_start.js');
+  if (fs.existsSync(js_hook)) {
+    try { fs.unlinkSync(js_hook); info_lines = info_lines.concat([color('✓ Deleted kickstart_session_start.js', Colors.GREEN)]); set_info(info_lines); } catch {}
+  }
+
+  // 3) Delete kickstart protocols directory
+  const protocols_dir = path.join(sessions_dir, 'protocols', 'kickstart');
+  if (fs.existsSync(protocols_dir)) { fs.rmSync(protocols_dir, { recursive: true, force: true }); info_lines = info_lines.concat([color('✓ Deleted protocols/kickstart/', Colors.GREEN)]); set_info(info_lines); }
+
+  // 4) Delete kickstart setup task
+  const task_file = path.join(sessions_dir, 'tasks', 'h-kickstart-setup.md');
+  if (fs.existsSync(task_file)) { fs.unlinkSync(task_file); info_lines = info_lines.concat([color('✓ Deleted h-kickstart-setup.md', Colors.GREEN)]); set_info(info_lines); }
+
+  // 5) Remove kickstart API (JavaScript variant)
+  const js_api = path.join(sessions_dir, 'api', 'kickstart_commands.js');
+  if (fs.existsSync(js_api)) {
+    try { fs.unlinkSync(js_api); info_lines = info_lines.concat([color('✓ Deleted sessions/api/kickstart_commands.js', Colors.GREEN)]); }
+    catch (e) { info_lines = info_lines.concat([color(`⚠️  Could not delete kickstart_commands.js: ${e}`, Colors.YELLOW)]); }
+    set_info(info_lines);
+  }
+
+  info_lines = info_lines.concat([color('✓ Kickstart cleanup complete', Colors.GREEN)]);
+  set_info(info_lines);
+  return 'Kickstart cleanup complete';
 }
 
 function restore_tasks(project_root, backup_dir) {
@@ -1230,8 +1395,22 @@ async function _edit_bash_write_patterns() {
 }
 
 async function _ask_extrasafe_mode() {
-  const val = await inquirer.list_input({ message: 'Extrasafe mode:', choices: ['ON (block everything in discussion except explicitly allowed)', 'OFF'] });
+  // Parity with install.py: show an info panel before prompting
+  const info = [
+    color("What if Claude uses a bash command in discussion mode that's not in our", Colors.CYAN),
+    color('read-only *or* our write-like list?', Colors.CYAN),
+    '',
+    "The 'extrasafe' setting blocks patterns that aren't in our read-only list by default",
+    '',
+  ];
+  set_info(info);
+
+  const val = await inquirer.list_input({
+    message: 'If Claude uses an unknown Bash command, I want to',
+    choices: ['Block it (Extrasafe ON)', 'Allow it (Extrasafe OFF)'],
+  });
   await ss.editConfig((conf) => { conf.blocked_actions.extrasafe = val.includes('ON'); });
+  clear_info();
 }
 
 async function _edit_blocked_tools() {
@@ -1249,7 +1428,35 @@ async function _edit_blocked_tools() {
 }
 
 async function _customize_triggers() {
+  // Parity with install.py: show info panel describing triggers and defaults
+  set_info([
+    color('While you can drive cc-sessions using our slash command API, the preferred way', Colors.CYAN),
+    color('is with (somewhat) natural language. To achieve this, we use unique trigger', Colors.CYAN),
+    color('phrases that automatically activate the 4 protocols and 2 driving modes in', Colors.CYAN),
+    color('cc-sessions:', Colors.CYAN),
+    color('╔══════════════════════════════════════════════════════╗', Colors.YELLOW),
+    `${color('║', Colors.YELLOW)}  • Switch to implementation mode ${color('(default: "yert")', Colors.GREEN)}   ${color('║', Colors.YELLOW)}`,
+    `${color('║', Colors.YELLOW)}  • Switch to discussion mode ${color('(default: "SILENCE")', Colors.GREEN)}    ${color('║', Colors.YELLOW)}`,
+    `${color('║', Colors.YELLOW)}  • Create a new task/task file ${color('(default: "mek:")', Colors.GREEN)}     ${color('║', Colors.YELLOW)}`,
+    `${color('║', Colors.YELLOW)}  • Start a task/task file ${color('(default: "start^:")', Colors.GREEN)}       ${color('║', Colors.YELLOW)}`,
+    `${color('║', Colors.YELLOW)}  • Close/complete current task ${color('(default: "finito")', Colors.GREEN)}   ${color('║', Colors.YELLOW)}`,
+    `${color('║', Colors.YELLOW)}  • Compact context mid-task ${color('(default: "squish")', Colors.GREEN)}      ${color('║', Colors.YELLOW)}`,
+    color('╚══════════════════════════════════════════════════════╝', Colors.YELLOW),
+    ''
+  ]);
   const customize_triggers = await inquirer.list_input({ message: 'Would you like to add any of your own custom trigger phrases?', choices: ['Use defaults', 'Customize'] });
+  clear_info();
+  // Ensure sensible defaults exist in config (when user chooses defaults)
+  await ss.editConfig((conf) => {
+    if (!conf.trigger_phrases) conf.trigger_phrases = {};
+    const tp = conf.trigger_phrases;
+    if (!tp.implementation_mode || !tp.implementation_mode.length) tp.implementation_mode = ['yert'];
+    if (!tp.discussion_mode || !tp.discussion_mode.length) tp.discussion_mode = ['SILENCE'];
+    if (!tp.task_creation || !tp.task_creation.length) tp.task_creation = ['mek:'];
+    if (!tp.task_startup || !tp.task_startup.length) tp.task_startup = ['start^:'];
+    if (!tp.task_completion || !tp.task_completion.length) tp.task_completion = ['finito'];
+    if (!tp.context_compaction || !tp.context_compaction.length) tp.context_compaction = ['squish'];
+  });
   return customize_triggers === 'Customize';
 }
 
@@ -1442,7 +1649,6 @@ async function _ask_statusline() {
     settings.statusLine = { type: 'command', command: 'node $CLAUDE_PROJECT_DIR/sessions/statusline.js' };
     fs.writeFileSync(settings_file, JSON.stringify(settings, null, 2));
     set_info([color('✓ Statusline configured in .claude/settings.json', Colors.GREEN)]);
-    await sleep(500);
   } else {
     set_info([
       color('You can add the cc-sessions statusline later by adding this to .claude/settings.json:', Colors.YELLOW),
@@ -1824,7 +2030,6 @@ async function kickstart_decision(project_root) {
   }
   console.log(color('\n⏭️  Skipping kickstart onboarding...', Colors.CYAN));
   kickstart_cleanup(project_root);
-  console.log(color('\n✓ Kickstart files removed', Colors.GREEN));
   return 'skip';
 }
 
@@ -1865,27 +2070,43 @@ async function main() {
     // Phase: interactive portions under TUI
     const session = tui_session();
     await session.enter();
+    let kickstart_mode = 'skip';
     try {
       const did_import = await installer_decision_flow(PROJECT_ROOT);
       if (did_import) await run_config_editor(PROJECT_ROOT);
       else await run_full_configuration();
-      const kickstart_mode = await kickstart_decision(PROJECT_ROOT);
-      // Restore tasks if this was an update
-      if (backup_dir) {
-        restore_tasks(PROJECT_ROOT, backup_dir);
-        console.log(color(`\n📁 Backup saved at: ${path.relative(PROJECT_ROOT, backup_dir)}/`, Colors.CYAN));
-        console.log(color('   (Agents backed up for manual restoration if needed)', Colors.CYAN));
-      }
-      console.log(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN));
-      console.log(color('Next steps:', Colors.BOLD));
-      console.log('  1. Restart your Claude Code session (or run /clear)');
-      if (kickstart_mode === 'full') console.log('  2. The kickstart onboarding will guide you through setup\n');
-      else if (kickstart_mode === 'subagents') console.log('  2. Kickstart will guide you through subagent customization\n');
-      else { console.log('  2. You can start using cc-sessions right away!'); console.log('     - Try "mek: my first task" to create a task'); console.log('     - Type "help" to see available commands\n'); }
-      if (backup_dir) console.log(color('Note: Check backup/ for any custom agents you want to restore\n', Colors.CYAN));
+      kickstart_mode = await kickstart_decision(PROJECT_ROOT);
     } finally {
       await session.exit();
     }
+
+    // Post-TUI: restore tasks and print final messages to the regular terminal
+    if (backup_dir) {
+      restore_tasks(PROJECT_ROOT, backup_dir);
+      console.log(color(`\n📁 Backup saved at: ${path.relative(PROJECT_ROOT, backup_dir)}/`, Colors.CYAN));
+      console.log(color('   (Agents backed up for manual restoration if needed)', Colors.CYAN));
+    }
+    console.log(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN));
+    console.log(color('Next steps:', Colors.BOLD));
+
+    // Read trigger phrases from current config for onboarding
+    let cfg, t;
+    try { cfg = ss.loadConfig(); t = (cfg && cfg.trigger_phrases) || {}; } catch { t = {}; }
+    const fmt = (xs) => { try { const arr = xs || []; const s = arr.filter(Boolean).join(', '); return s || 'None'; } catch { return 'None'; } };
+
+    if (kickstart_mode === 'full' || kickstart_mode === 'subagents') {
+      console.log('  1. In your terminal, run: claude');
+      console.log("  2. At the prompt, type: kickstart\n");
+    } else {
+      console.log('  1. Create your first task using a trigger:');
+      console.log(`     - Task creation: ${color(fmt(t.task_creation), Colors.YELLOW)}`);
+      console.log(`     - Task startup:  ${color(fmt(t.task_startup), Colors.YELLOW)}`);
+      console.log(`     - Implementation: ${color(fmt(t.implementation_mode), Colors.YELLOW)}`);
+      console.log(`     - Discussion:    ${color(fmt(t.discussion_mode), Colors.YELLOW)}`);
+      console.log(`     - Completion:    ${color(fmt(t.task_completion), Colors.YELLOW)}`);
+      console.log(`     - Compaction:    ${color(fmt(t.context_compaction), Colors.YELLOW)}\n`);
+    }
+    if (backup_dir) console.log(color('Note: Check backup/ for any custom agents you want to restore\n', Colors.CYAN));
   } catch (error) {
     console.error(color(`\n❌ Installation failed: ${error}`, Colors.RED));
     console.error(error && error.stack ? error.stack : String(error));

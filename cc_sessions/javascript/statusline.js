@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { loadState, editState, loadConfig, Mode, Model, PROJECT_ROOT } = require('../hooks/shared_state.js');
+const { loadState, editState, loadConfig, Mode, Model, PROJECT_ROOT } = require(path.join(process.env.CLAUDE_PROJECT_DIR, 'sessions', 'hooks', 'shared_state.js'));
 
 // Colors/styles
 const green = '\033[38;5;114m';

@@ -14,10 +14,11 @@ from pathlib import Path
 ##-##
 
 ## ===== LOCAL ===== ##
-# Import from shared_state (same pattern as normal hooks)
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / 'sessions' / 'hooks'))
-from shared_state import load_state
+# Import from shared_state (runtime file lives in sessions/hooks)
+HOOKS_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = HOOKS_DIR.parent.parent
+sys.path.insert(0, str(HOOKS_DIR))
+from shared_state import load_state, edit_state
 ##-##
 
 #-#
@@ -110,49 +111,24 @@ if not mode:
     sys.exit(1)
 #!<
 
-#!> 2. Initialize or load sequence
-# Determine sequence based on mode
-if mode == 'full':
-    sequence = FULL_MODE_SEQUENCE
-elif mode == 'subagents':
-    sequence = SUBAGENTS_MODE_SEQUENCE
-else:
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
-            "additionalContext": f"ERROR: Invalid kickstart mode '{mode}'. Expected 'full' or 'subagents'."
-        }
-    }))
-    sys.exit(1)
-
-# Initialize sequence on first run
-if 'sequence' not in kickstart_meta:
-    from shared_state import edit_state
-    with edit_state() as s:
-        s.metadata['kickstart']['sequence'] = sequence
-        s.metadata['kickstart']['current_index'] = 0
-        s.metadata['kickstart']['completed'] = []
-
-    protocol_content = load_protocol_file(f'kickstart/{sequence[0]}')
-else:
-    # Load current protocol from sequence
-    current_index = kickstart_meta.get('current_index', 0)
-    protocol_content = load_protocol_file(f'kickstart/{sequence[current_index]}')
-#!<
-
-#!> 3. Append user instructions and output
-protocol_content += """
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-USER INSTRUCTIONS:
-Just say 'kickstart' and press enter to begin
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
+#!> 2. Output deterministic instructions for Claude to begin kickstart via API
+begin_cmd = '/sessions kickstart subagents' if mode == 'subagents' else '/sessions kickstart full'
+instructions = (
+    "Kickstart onboarding is enabled. Begin immediately by running:\n\n"
+    f"  {begin_cmd}\n\n"
+    "Then, for each module chunk returned, follow all instructions completely. When finished with a chunk, run:\n\n"
+    "  /sessions kickstart next\n\n"
+    "Repeat until kickstart is complete.\n\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    "USER INSTRUCTIONS:\n"
+    "Just say 'kickstart' and press enter to begin\n"
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+)
 
 print(json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "SessionStart",
-        "additionalContext": protocol_content
+        "additionalContext": instructions
     }
 }))
 sys.exit(0)

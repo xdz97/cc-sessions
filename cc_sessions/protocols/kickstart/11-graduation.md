@@ -37,7 +37,8 @@ Here's what you learned:
 - Finishing tasks and using `/clear` is best, compaction is second best
 
 **Next Steps:**
-1. Run `/clear` to start fresh
+1. Run `/exit` to refresh settings.json (necessary after kickstart cleanup)
+2. Restart (run `claude`)
 2. Either create new tasks for your actual work, or start the task you created during kickstart (e.g., "start^: sessions/tasks/h-your-task.md")
 
 **That's it. Go build something.**

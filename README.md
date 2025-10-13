@@ -21,8 +21,12 @@
 
 ## current events
 
-### Claude Code version issue
+<details>
+<summary>
 
+### Claude Code version issue
+</summary
+  
 **'ere meh now**: the recommended Claude Code version is **2.0.8** due to an upstream bug in newer versions of Claude Code.
 
 Claude Code versions after 2.0.8 have a bug in their stderr aggregation system that causes 400 API errors when:
@@ -38,9 +42,14 @@ npm install -g @anthropic-ai/claude-code@2.0.8
 ```
 
 **related**: [cc-sessions Issue #53](https://github.com/GWUDCAP/cc-sessions/issues/53)
+</details>
 
+<details>
+<summary>
+  
 ### latest release - v0.3.0
 <sup>basically autopilot</sup>
+</summary>
 
 **major highlights:**
 - **Dual Language Support**: Now available as both Python and Node.js packages with complete feature parity
@@ -54,6 +63,7 @@ npm install -g @anthropic-ai/claude-code@2.0.8
 - **Safe Uninstaller**: Interactive removal with automatic backups (thanks @gabelul)
 
 See [CHANGELOG.md](CHANGELOG.md) for complete details.
+</details>
 
 <br>
 

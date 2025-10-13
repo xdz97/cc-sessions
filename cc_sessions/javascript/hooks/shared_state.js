@@ -407,7 +407,7 @@ class TaskState {
 
             if (cleanKey === 'submodules' || cleanKey === 'modules') {
                 const cleanValue = value.replace(/[\[\]]/g, '');
-                data.submodules = cleanValue.split(',').map(s => s.trim());
+                data.submodules = cleanValue.split(',').map(s => s.trim()).filter(s => s);
             } else if (cleanKey === 'task') {
                 // Handle legacy "task:" field by mapping to "name"
                 data.name = value || null;

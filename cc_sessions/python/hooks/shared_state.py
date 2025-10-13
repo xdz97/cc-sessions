@@ -382,7 +382,7 @@ class TaskState:
             value = value.strip()
             if key == "submodules" or key == "modules":
                 value = value.strip('[]')
-                data["submodules"] = [s.strip() for s in value.split(',')]
+                data["submodules"] = [s.strip() for s in value.split(',') if s.strip()]
             elif key == "task":
                 # Handle legacy "task:" field by mapping to "name"
                 data["name"] = value or None

@@ -1,5 +1,5 @@
 ---
-task: [prefix]-[descriptive-name]
+name: [prefix]-[descriptive-name]
 branch: feature/[name]|fix/[name]|experiment/[name]|none
 status: pending|in-progress|completed|blocked
 created: YYYY-MM-DD

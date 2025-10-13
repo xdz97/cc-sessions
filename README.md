@@ -23,7 +23,6 @@
 
 <details>
 <summary>
-
 ### Claude Code version issue
 </summary
   
@@ -46,9 +45,8 @@ npm install -g @anthropic-ai/claude-code@2.0.8
 
 <details>
 <summary>
-  
 ### latest release - v0.3.0
-<sup>basically autopilot</sup>
+<sup><em>basically autopilot</em></sup>
 </summary>
 
 **major highlights:**

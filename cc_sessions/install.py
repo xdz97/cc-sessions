@@ -1314,11 +1314,11 @@ def configure_claude_md(project_root):
             claude_path.write_text(content, encoding='utf-8')
     else:
         # Create minimal CLAUDE.md with reference
-        minimal_claude = f"""# CLAUDE.md
+        minimal_claude = f"""# Additional Guidance
 
 {reference}
 
-This file provides instructions for Claude Code when working with this codebase.
+This file provides instructions for Claude Code for working in the cc-sessions framework.
 """
         claude_path.write_text(minimal_claude, encoding='utf-8')
 #!<

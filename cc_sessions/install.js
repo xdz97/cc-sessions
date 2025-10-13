@@ -1078,7 +1078,7 @@ function configure_claude_md(project_root) {
       fs.writeFileSync(claude_path, content, 'utf8');
     }
   } else {
-    const minimal = `# CLAUDE.md\n\n${reference}\n\nThis file provides instructions for Claude Code when working with this codebase.\n`;
+    const minimal = `# Additional Guidance\n\n${reference}\n\nThis file provides instructions for Claude Code for working in the cc-sessions framework.\n`;
     fs.writeFileSync(claude_path, minimal, 'utf8');
   }
 }

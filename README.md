@@ -65,8 +65,6 @@ npm install -g @anthropic-ai/claude-code@2.0.8
 See [CHANGELOG.md](CHANGELOG.md) for complete details.
 </details>
 
-<br>
-
 ## installing the extension
 
 You install cc-sessions into a repo from the project root:

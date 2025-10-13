@@ -37,7 +37,7 @@ User preferences in `sessions/sessions-config.json`:
 - **Environment**: developer_name, os, shell
 - **Trigger Phrases**: Customizable for all mode transitions
 - **Git Preferences**: Branch naming, commit styles, auto-merge/push, submodules
-- **Feature Toggles**: branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, auto_update, context warnings
+- **Feature Toggles**: branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, context warnings
 - **Blocking Patterns**: implementation_only_tools, bash_read_patterns, bash_write_patterns
 
 ### Templated Protocols
@@ -126,9 +126,9 @@ Both installers:
 ```bash
 sessions state                              # Show full state
 sessions state <component>                  # View specific component
-sessions state update suppress              # Suppress update notifications
-sessions state update check                 # Force update re-check
-sessions state update status                # View version information
+sessions state update suppress              # Suppress update notifications for current version
+sessions state update check                 # Clear cache and force update re-check
+sessions state update status                # View current and available version information
 sessions mode discussion                    # Return to discussion mode
 sessions flags clear                        # Clear session flags
 sessions status                             # Human-readable summary
@@ -200,13 +200,13 @@ sessions tasks start @<task-name>           # Start task with validation
 - **Transcript Access**: Dedicated `sessions/transcripts/[agent-name]/` directories
 - **Subagent Protection**: DAIC reminders suppressed, state editing blocked
 
-### Release Management
+### Update Detection System
 - **Dual-Language Publishing**: Atomic workflow for PyPI and npm
 - **Pre-Flight Validation**: 7 automated checks via prepare-release.py
 - **Version Sync**: check-version-sync.sh ensures consistency
 - **Update Detection**: Flag-based caching in STATE.metadata
-- **Auto-Update**: Optional automatic upgrades on session start
-- **Update Commands**: suppress, check, status operations
+- **Agent-Directive Notifications**: Prompts Claude to stop and ask user before any installation
+- **Update Commands**: suppress, check, status operations for user control
 
 ## Feature Highlights
 

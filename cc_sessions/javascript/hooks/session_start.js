@@ -532,66 +532,65 @@ After completion of the last task in any todo list:
 
     // Display update notification if flag is True
     if (updateFlag && latestVersion && currentVersion) {
-        // Check if auto-update is enabled
-        if (CONFIG.features.auto_update) {
-            // Attempt auto-update (blocking)
-            context += `\nAuto-update enabled. Updating cc-sessions: ${currentVersion} → ${latestVersion}...\n`;
-            try {
-                const { execSync } = require('child_process');
-                const result = execSync('npm install -g cc-sessions', {
-                    encoding: 'utf8',
-                    timeout: 60000
-                });
-
-                // Clear update flag on success
-                editState(s => {
-                    delete s.metadata.update_available;
-                    delete s.metadata.latest_version;
-                    delete s.metadata.current_version;
-                });
-                context += `✓ Updated to ${latestVersion}\n\n`;
-            } catch (error) {
-                // Fall back to manual update message
-                context += `✗ Auto-update failed. Please update manually:\n`;
-                context += `  npm install -g cc-sessions\n\n`;
-            }
-        } else {
-            // Show manual update message
-            // Extract first few lines from CHANGELOG for the latest version
-            let changelogExcerpt = null;
-            try {
-                const changelogPath = path.join(PROJECT_ROOT, '..', 'CHANGELOG.md');
-                if (fs.existsSync(changelogPath)) {
-                    const content = fs.readFileSync(changelogPath, 'utf8');
-                    // Find the latest version section
-                    const versionPattern = new RegExp(`##\\s*\\[${latestVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`);
-                    const match = content.match(versionPattern);
-                    if (match) {
-                        // Extract until next ## or end
-                        const start = match.index + match[0].length;
-                        const nextHeading = content.indexOf('\n## ', start);
-                        const section = content.substring(start, nextHeading !== -1 ? nextHeading : start + 500).trim();
-                        // Take first 3 lines of changes
-                        const lines = section.split('\n')
-                            .map(l => l.trim())
-                            .filter(l => l && l.startsWith('-'))
-                            .slice(0, 3);
-                        if (lines.length > 0) {
-                            changelogExcerpt = lines.map(l => `  ${l}`).join('\n');
-                        }
+        // Show manual update message
+        // Extract first few lines from CHANGELOG for the latest version
+        let changelogExcerpt = null;
+        try {
+            const changelogPath = path.join(PROJECT_ROOT, '..', 'CHANGELOG.md');
+            if (fs.existsSync(changelogPath)) {
+                const content = fs.readFileSync(changelogPath, 'utf8');
+                // Find the latest version section
+                const versionPattern = new RegExp(`##\\s*\\[${latestVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`);
+                const match = content.match(versionPattern);
+                if (match) {
+                    // Extract until next ## or end
+                    const start = match.index + match[0].length;
+                    const nextHeading = content.indexOf('\n## ', start);
+                    const section = content.substring(start, nextHeading !== -1 ? nextHeading : start + 500).trim();
+                    // Get all lines of changes
+                    const lines = section.split('\n')
+                        .map(l => l.trim())
+                        .filter(l => l && l.startsWith('-'));
+                    if (lines.length > 0) {
+                        changelogExcerpt = lines.map(l => `  ${l}`).join('\n');
                     }
                 }
-            } catch (error) {
-                // Ignore changelog extraction errors
             }
-
-            context += `\nUpdate available: ${currentVersion} → ${latestVersion}\n`;
-            if (changelogExcerpt) {
-                context += `What's new:\n${changelogExcerpt}\n\n`;
-            }
-            context += `Run: npm install -g cc-sessions\n`;
-            context += `To suppress this warning: sessions update suppress\n\n`;
+        } catch (error) {
+            // Ignore changelog extraction errors
         }
+
+        context += `
+[IMPORTANT: Update Available]
+
+A new version of cc-sessions is available: ${currentVersion} → ${latestVersion}
+
+`;
+        if (changelogExcerpt) {
+            context += `What's new in this version:
+${changelogExcerpt}
+
+`;
+        }
+
+        context += `**BEFORE STARTING ANY WORK:**
+You must stop and ask the user about this update first.
+
+First, ask the user: "I see there's a new version of cc-sessions available (${latestVersion}) with several new features. Would you like to update now? The installer will guide you through any new configuration options."
+
+If YES:
+  1. Tell them to run in their terminal: npm install -g cc-sessions
+  2. Wait for them to complete the installation
+  3. Remind them they'll need to start a new session after updating
+
+If NO:
+  - Continue with the session normally
+  - They can suppress this notification: sessions state update suppress
+  - They can check update status anytime: sessions state update status
+
+This notification will appear on every session start until they update or suppress it.
+
+`;
     }
     //!<
 

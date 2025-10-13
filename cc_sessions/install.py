@@ -1880,9 +1880,68 @@ def _ask_auto_ultrathink():
     with ss.edit_config() as conf: conf.features.auto_ultrathink = (val == 'Enabled')
     clear_info()
 
+def detect_nerd_font_support():
+    """Detect if terminal likely supports Nerd Fonts."""
+    env = os.environ
+
+    # Known terminals with good Nerd Font support
+    good_terms = {
+        'iTerm.app', 'iTerm2', 'WezTerm', 'Hyper', 'Alacritty',
+        'kitty', 'org.wezterm.wezterm-gui'
+    }
+
+    term_program = env.get('TERM_PROGRAM', '')
+    term = env.get('TERM', '')
+    lc_terminal = env.get('LC_TERMINAL', '')
+
+    # Check for known terminals
+    if term_program in good_terms or lc_terminal in good_terms:
+        return True, term_program or lc_terminal
+
+    # Kitty sets TERM=xterm-kitty
+    if 'kitty' in term.lower():
+        return True, 'Kitty'
+
+    # Windows Terminal
+    if env.get('WT_SESSION') or env.get('WT_PROFILE_ID'):
+        return True, 'Windows Terminal'
+
+    # Conservative default: assume no support
+    return False, term or 'unknown'
+
 def _ask_nerd_fonts():
-    val = inquirer.list_input(message='I want Nerd Fonts icons in statusline:', choices=['Enabled (Nerd Fonts installed)', 'Disabled (ASCII fallback)'])
-    with ss.edit_config() as conf: conf.features.use_nerd_fonts = (val == 'Enabled')
+    detected, term_name = detect_nerd_font_support()
+
+    if term_name:
+        set_info([
+            color(f'Detected terminal: {term_name}', Colors.CYAN),
+            ""
+        ])
+
+    choices = [
+        'Nerd Fonts (I have Nerd Fonts installed)',
+        'Emoji fallback',
+        'ASCII fallback (maximum compatibility)'
+    ]
+    # Default to Nerd Fonts if detected, Emoji if not
+    default_choice = choices[0] if detected else choices[1]
+
+    val = inquirer.list_input(
+        message='I want icons in statusline:',
+        choices=choices,
+        default=default_choice
+    )
+
+    # Map choice to IconStyle enum
+    with ss.edit_config() as conf:
+        if 'Nerd Fonts' in val:
+            conf.features.icon_style = ss.IconStyle.NERD_FONTS
+        elif 'Emoji' in val:
+            conf.features.icon_style = ss.IconStyle.EMOJI
+        else:  # ASCII
+            conf.features.icon_style = ss.IconStyle.ASCII
+
+    clear_info()
 
 def _ask_context_warnings():
     val = inquirer.list_input(message='I want Claude to be warned to suggest compacting context at:', choices=['85% and 90%', '90%', 'Never'])

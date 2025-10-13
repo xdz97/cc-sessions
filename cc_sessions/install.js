@@ -1622,9 +1622,78 @@ async function _ask_auto_ultrathink() {
   clear_info();
 }
 
+function detectNerdFontSupport() {
+  /**
+   * Detect if terminal likely supports Nerd Fonts.
+   * @returns {[boolean, string]} Tuple of [detected, terminalName]
+   */
+  const env = process.env;
+
+  // Known terminals with good Nerd Font support
+  const goodTerms = new Set([
+    'iTerm.app', 'iTerm2', 'WezTerm', 'Hyper', 'Alacritty',
+    'kitty', 'org.wezterm.wezterm-gui'
+  ]);
+
+  const termProgram = env.TERM_PROGRAM || '';
+  const term = env.TERM || '';
+  const lcTerminal = env.LC_TERMINAL || '';
+
+  // Check for known terminals
+  if (goodTerms.has(termProgram) || goodTerms.has(lcTerminal)) {
+    return [true, termProgram || lcTerminal];
+  }
+
+  // Kitty sets TERM=xterm-kitty
+  if (term.toLowerCase().includes('kitty')) {
+    return [true, 'Kitty'];
+  }
+
+  // Windows Terminal
+  if (env.WT_SESSION || env.WT_PROFILE_ID) {
+    return [true, 'Windows Terminal'];
+  }
+
+  // Conservative default: assume no support
+  return [false, term || 'unknown'];
+}
+
 async function _ask_nerd_fonts() {
-  const val = await inquirer.list_input({ message: 'I want Nerd Fonts icons in statusline:', choices: ['Enabled (Nerd Fonts installed)', 'Disabled (ASCII fallback)'] });
-  await ss.editConfig((conf) => { conf.features.use_nerd_fonts = (val === 'Enabled'); });
+  const [detected, termName] = detectNerdFontSupport();
+
+  if (termName) {
+    set_info([
+      color(`Detected terminal: ${termName}`, Colors.CYAN),
+      ''
+    ]);
+  }
+
+  const choices = [
+    'Nerd Fonts (I have Nerd Fonts installed)',
+    'Emoji fallback',
+    'ASCII fallback (maximum compatibility)'
+  ];
+  // Default to Nerd Fonts if detected, Emoji if not
+  const defaultChoice = detected ? choices[0] : choices[1];
+
+  const val = await inquirer.list_input({
+    message: 'I want icons in statusline:',
+    choices: choices,
+    default: defaultChoice
+  });
+
+  // Map choice to IconStyle enum
+  await ss.editConfig((conf) => {
+    if (val.includes('Nerd Fonts')) {
+      conf.features.icon_style = ss.IconStyle.NERD_FONTS;
+    } else if (val.includes('Emoji')) {
+      conf.features.icon_style = ss.IconStyle.EMOJI;
+    } else {  // ASCII
+      conf.features.icon_style = ss.IconStyle.ASCII;
+    }
+  });
+
+  clear_info();
 }
 
 async function _ask_context_warnings() {

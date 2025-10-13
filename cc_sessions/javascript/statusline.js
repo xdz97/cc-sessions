@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { loadState, editState, loadConfig, Mode, Model, PROJECT_ROOT } = require(path.join(process.env.CLAUDE_PROJECT_DIR, 'sessions', 'hooks', 'shared_state.js'));
+const { loadState, editState, loadConfig, Mode, Model, IconStyle, PROJECT_ROOT } = require(path.join(process.env.CLAUDE_PROJECT_DIR, 'sessions', 'hooks', 'shared_state.js'));
 
 // Colors/styles
 const green = '\033[38;5;114m';
@@ -155,9 +155,9 @@ function main() {
         });
     }
 
-    // Load config for nerd fonts preference
+    // Load config for icon style preference
     const config = loadConfig();
-    const useNerdFonts = config?.features?.use_nerd_fonts !== false;
+    const iconStyle = config?.features?.icon_style || IconStyle.NERD_FONTS;
 
     // Pull context length from transcript
     let contextLength = null;
@@ -240,11 +240,19 @@ function main() {
     }
 
     // Build progress bar string
-    const contextIcon = useNerdFonts ? '󱃖 ' : '';
+    let contextIcon = '';
+    if (iconStyle === IconStyle.NERD_FONTS) {
+        contextIcon = '󱃖 ';
+    } else if (iconStyle === IconStyle.EMOJI) {
+        contextIcon = '';
+    } else {  // ASCII
+        contextIcon = '';
+    }
     const progressBar =
+        `${reset}${lGray}${contextIcon} ` +
         barColor + '█'.repeat(filledBlocks) +
         gray + '░'.repeat(emptyBlocks) +
-        reset + ` ${lGray}${contextIcon}${progressPct}% (${formattedTokens}/${formattedLimit})${reset}`;
+        reset + ` ${lGray}${progressPct}% (${formattedTokens}/${formattedLimit})${reset}`;
 
     // Find git repository path
     const gitPath = findGitRepo(path.resolve(cwd));
@@ -257,7 +265,14 @@ function main() {
             const branch = execSync(`git -C "${cwd}" branch --show-current`,
                                    { encoding: 'utf-8' }).trim();
             if (branch) {
-                const branchIcon = useNerdFonts ? '󰘬 ' : '';
+                let branchIcon;
+                if (iconStyle === IconStyle.NERD_FONTS) {
+                    branchIcon = '󰘬 ';
+                } else if (iconStyle === IconStyle.EMOJI) {
+                    branchIcon = 'Branch: ';
+                } else {  // ASCII
+                    branchIcon = 'Branch: ';
+                }
                 gitBranchInfo = `${lGray}${branchIcon}${branch}${reset}`;
 
                 // Get upstream tracking status
@@ -282,10 +297,10 @@ function main() {
                 const commit = execSync(`git -C "${cwd}" rev-parse --short HEAD`,
                                        { encoding: 'utf-8' }).trim();
                 if (commit) {
-                    if (useNerdFonts) {
+                    if (iconStyle === IconStyle.NERD_FONTS) {
                         // Broken link icon to indicate detached
                         gitBranchInfo = `${lGray}󰌺 @${commit}${reset}`;
-                    } else {
+                    } else {  // EMOJI or ASCII
                         gitBranchInfo = `${lGray}@${commit} [detached]${reset}`;
                     }
                 }
@@ -300,9 +315,14 @@ function main() {
 
     // Current mode
     const currMode = state?.mode === Mode.GO ? 'Implementation' : 'Discussion';
-    const modeIcon = useNerdFonts ?
-        (state?.mode === Mode.GO ? '󰷫 ' : '󰭹 ') :
-        (state?.mode === Mode.GO ? 'I: ' : 'D: ');
+    let modeIcon;
+    if (iconStyle === IconStyle.NERD_FONTS) {
+        modeIcon = state?.mode === Mode.GO ? '󰷫 ' : '󰭹 ';
+    } else if (iconStyle === IconStyle.EMOJI) {
+        modeIcon = state?.mode === Mode.GO ? '🛠️: ' : '💬:';
+    } else {  // ASCII
+        modeIcon = 'Mode:';
+    }
 
     // Count edited & uncommitted files
     let totalEdited = 0;
@@ -346,14 +366,28 @@ function main() {
     // Final output
     // Line 1 - Progress bar | Task
     const contextPart = progressBar || `${gray}No context usage data${reset}`;
-    const taskIcon = useNerdFonts ? '󰒓 ' : 'Task: ';
+    let taskIcon;
+    if (iconStyle === IconStyle.NERD_FONTS) {
+        taskIcon = '󰒓 ';
+    } else if (iconStyle === IconStyle.EMOJI) {
+        taskIcon = '⚙️ ';
+    } else {  // ASCII
+        taskIcon = 'Task: ';
+    }
     const taskPart = currTask ?
         `${cyan}${taskIcon}${currTask}${reset}` :
         `${cyan}${taskIcon}${gray}No Task${reset}`;
     console.log(contextPart + ' | ' + taskPart);
 
     // Line 2 - Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch
-    const tasksIcon = useNerdFonts ? '󰈙 ' : '';
+    let tasksIcon;
+    if (iconStyle === IconStyle.NERD_FONTS) {
+        tasksIcon = '󰈙 ';
+    } else if (iconStyle === IconStyle.EMOJI) {
+        tasksIcon = '💼 ';
+    } else {  // ASCII
+        tasksIcon = '';
+    }
     // Build uncommitted section with optional upstream indicators
     const uncommittedParts = [`${orange}✎ ${totalEdited}${reset}`];
     if (upstreamInfo) {

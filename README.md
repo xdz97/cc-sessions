@@ -48,8 +48,10 @@ npm install -g @anthropic-ai/claude-code@2.0.8
 <summary>
 
 ### latest release - v0.3.0
-<sup><em>basically autopilot</em></sup>
 </summary>
+
+i'm happy to present cc-sessions v0.3.0
+<em>it's basically autopilot</em>
 
 **major highlights:**
 - **Dual Language Support**: Now available as both Python and Node.js packages with complete feature parity

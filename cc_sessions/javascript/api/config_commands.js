@@ -3,7 +3,7 @@
 // ==== IMPORTS ===== //
 
 // ===== LOCAL ===== //
-const { loadConfig, editConfig, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools } = require('../../hooks/shared_state.js');
+const { loadConfig, editConfig, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools, IconStyle } = require('../../hooks/shared_state.js');
 
 //-#
 
@@ -134,7 +134,7 @@ function formatConfigHuman(config) {
         `  Branch Enforcement: ${config.features.branch_enforcement}`,
         `  Task Detection: ${config.features.task_detection}`,
         `  Auto Ultrathink: ${config.features.auto_ultrathink}`,
-        `  Use Nerd Fonts: ${config.features.use_nerd_fonts}`,
+        `  Icon Style: ${getValue(config.features.icon_style)}`,
         `  Context Warnings (85%): ${config.features.context_warnings.warn_85}`,
         `  Context Warnings (90%): ${config.features.context_warnings.warn_90}`,
     ]);
@@ -752,13 +752,18 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         const config = loadConfig();
         const features = config.features;
 
+        // Helper to safely get value from enum or string
+        const getValue = (field) => {
+            return typeof field === 'object' && field.value !== undefined ? field.value : field;
+        };
+
         if (jsonOutput) {
             return {
                 features: {
                     branch_enforcement: features.branch_enforcement,
                     task_detection: features.task_detection,
                     auto_ultrathink: features.auto_ultrathink,
-                    use_nerd_fonts: features.use_nerd_fonts,
+                    icon_style: getValue(features.icon_style),
                     warn_85: features.context_warnings.warn_85,
                     warn_90: features.context_warnings.warn_90,
                 }
@@ -770,7 +775,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
             `  branch_enforcement: ${features.branch_enforcement}`,
             `  task_detection: ${features.task_detection}`,
             `  auto_ultrathink: ${features.auto_ultrathink}`,
-            `  use_nerd_fonts: ${features.use_nerd_fonts}`,
+            `  icon_style: ${getValue(features.icon_style)}`,
             `  warn_85: ${features.context_warnings.warn_85}`,
             `  warn_90: ${features.context_warnings.warn_90}`,
         ];
@@ -784,16 +789,30 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
 
         const key = args[1].toLowerCase();
         const value = args[2];
-        const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
+        let finalValue;
 
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
-                // Safe features
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
+                // Boolean features
+                const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
                 config.features[key] = boolValue;
+                finalValue = boolValue;
+
+            } else if (key === 'icon_style') {
+                // Enum feature - accepts nerd_fonts, emoji, ascii
+                const lowerValue = value.toLowerCase();
+                const validValues = Object.values(IconStyle);
+                if (!validValues.includes(lowerValue)) {
+                    throw new Error(`Invalid icon_style value: ${value}. Valid values: nerd_fonts, emoji, ascii`);
+                }
+                config.features.icon_style = lowerValue;
+                finalValue = lowerValue;
 
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 // Context warning features
+                const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
                 config.features.context_warnings[key] = boolValue;
+                finalValue = boolValue;
 
             } else {
                 throw new Error(`Unknown feature: ${key}`);
@@ -801,9 +820,9 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         });
 
         if (jsonOutput) {
-            return { updated: key, value: boolValue };
+            return { updated: key, value: finalValue };
         }
-        return `Updated features.${key} to ${boolValue}`;
+        return `Updated features.${key} to ${finalValue}`;
 
     } else if (action === 'toggle') {
         if (args.length < 2) {
@@ -815,30 +834,47 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         // Get current value
         const config = loadConfig();
         let currentValue;
-        if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
+        if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
             currentValue = config.features[key];
+        } else if (key === 'icon_style') {
+            currentValue = config.features.icon_style;
         } else if (['warn_85', 'warn_90'].includes(key)) {
             currentValue = config.features.context_warnings[key];
         } else {
             throw new Error(`Unknown feature: ${key}`);
         }
 
-        // Toggle the value
-        const newValue = !currentValue;
+        // Toggle/cycle the value
+        let newValue;
+        if (key === 'icon_style') {
+            // Cycle through enum values: nerd_fonts -> emoji -> ascii -> nerd_fonts
+            const cycle = [IconStyle.NERD_FONTS, IconStyle.EMOJI, IconStyle.ASCII];
+            const currentIdx = cycle.indexOf(currentValue);
+            newValue = cycle[(currentIdx + 1) % cycle.length];
+        } else {
+            // Boolean toggle
+            newValue = !currentValue;
+        }
 
         // Save the toggled value
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
                 config.features[key] = newValue;
+            } else if (key === 'icon_style') {
+                config.features.icon_style = newValue;
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 config.features.context_warnings[key] = newValue;
             }
         });
 
+        // Format values for display
+        const oldDisplay = typeof currentValue === 'object' && currentValue.value !== undefined ? currentValue.value : currentValue;
+        const newDisplay = typeof newValue === 'object' && newValue.value !== undefined ? newValue.value : newValue;
+
         if (jsonOutput) {
-            return { toggled: key, old_value: currentValue, new_value: newValue };
+            return { toggled: key, old_value: oldDisplay, new_value: newDisplay };
         }
-        return `Toggled ${key}: ${currentValue} → ${newValue}`;
+        return `Toggled ${key}: ${oldDisplay} → ${newDisplay}`;
 
     } else {
         if (fromSlash) {
@@ -861,12 +897,13 @@ function formatFeaturesHelp() {
         "  branch_enforcement  - Git branch validation (default: true)",
         "  task_detection      - Task-based workflow automation (default: true)",
         "  auto_ultrathink     - Enhanced AI reasoning (default: true)",
-        "  use_nerd_fonts      - Nerd Fonts icons in statusline (default: true)",
+        "  icon_style          - Statusline icon style: nerd_fonts, emoji, or ascii (default: nerd_fonts)",
         "  warn_85             - Context warning at 85% (default: true)",
         "  warn_90             - Context warning at 90% (default: true)",
         "",
         "Examples:",
-        "  /sessions config features toggle use_nerd_fonts",
+        "  /sessions config features toggle icon_style          # Cycles through nerd_fonts -> emoji -> ascii",
+        "  /sessions config features set icon_style emoji       # Set to emoji icons",
         "  /sessions config features set auto_ultrathink false",
         "  /sessions config features toggle branch_enforcement"
     ];

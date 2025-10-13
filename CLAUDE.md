@@ -37,7 +37,7 @@ User preferences in `sessions/sessions-config.json`:
 - **Environment**: developer_name, os, shell
 - **Trigger Phrases**: Customizable for all mode transitions
 - **Git Preferences**: Branch naming, commit styles, auto-merge/push, submodules
-- **Feature Toggles**: branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, context warnings
+- **Feature Toggles**: branch_enforcement, task_detection, auto_ultrathink, icon_style, context warnings
 - **Blocking Patterns**: implementation_only_tools, bash_read_patterns, bash_write_patterns
 
 ### Templated Protocols
@@ -51,9 +51,9 @@ Configuration-driven protocol system that auto-adapts based on user preferences:
 ## Key Files
 
 ### Core State & Configuration
-- `cc_sessions/hooks/shared_state.py|.js` - State/config management, atomic file operations, directory task helpers
+- `cc_sessions/hooks/shared_state.py|.js` - State/config management, enums (IconStyle, etc.), atomic file operations, directory task helpers
 - `sessions/sessions-state.json` - Unified runtime state (git-ignored)
-- `sessions/sessions-config.json` - User preferences and customization
+- `sessions/sessions-config.json` - User preferences and customization (includes icon_style enum)
 
 ### Hook System
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Pre-tool DAIC enforcement with command analysis
@@ -119,6 +119,7 @@ Both installers:
 - Preserve task files and agent customizations automatically
 - Add runtime files to `.gitignore` (sessions-state.json, transcripts/)
 - Initialize state/config files early
+- Auto-detect terminal Nerd Font capability and prompt for icon style preference
 
 ## Sessions API Commands
 
@@ -141,8 +142,8 @@ sessions config phrases list <category>     # View trigger phrases
 sessions config phrases add <category> "<phrase>"
 sessions config phrases remove <category> "<phrase>"
 sessions config features show               # View all feature toggles
-sessions config features toggle <key>       # Toggle boolean features
-sessions config features set <key> <value>  # Set feature value
+sessions config features toggle <key>       # Toggle boolean features or cycle enum values
+sessions config features set <key> <value>  # Set feature value (e.g., icon_style nerd_fonts|emoji|ascii)
 sessions config git show                    # View git preferences
 sessions config git set <setting> <value>
 sessions config env show                    # View environment settings
@@ -181,11 +182,22 @@ sessions tasks start @<task-name>           # Start task with validation
 - **Merge Prevention**: Subtasks stay on feature branch until all complete
 
 ### Configuration Management
-- **Type-Safe Enums**: CCTools, TriggerCategory, GitCommitStyle, UserOS, UserShell
-- **Nested Dataclasses**: TriggerPhrases, BlockingPatterns, GitPreferences, SessionsEnv
+- **Type-Safe Enums**: CCTools, TriggerCategory, GitCommitStyle, UserOS, UserShell, IconStyle
+- **Nested Dataclasses**: TriggerPhrases, BlockingPatterns, GitPreferences, SessionsEnv, EnabledFeatures
 - **Atomic Updates**: edit_config() context manager with file locking
 - **Runtime Customization**: Add/remove triggers, manage patterns, toggle features
 - **Validation**: Automatic type coercion and error handling
+- **Automatic Migration**: Old use_nerd_fonts boolean auto-converts to icon_style enum on config load
+
+### Icon Style System
+- **IconStyle Enum**: Three values (NERD_FONTS, EMOJI, ASCII) replace old boolean flag
+- **Backward Compatible**: Existing configs with use_nerd_fonts auto-migrate on first load
+- **Terminal Detection**: Installers check TERM_PROGRAM, LC_TERMINAL, WT_SESSION environment variables
+- **Smart Defaults**: Nerd Fonts if detected, Emoji otherwise during installation
+- **Toggle Behavior**: `config features toggle icon_style` cycles through all three options
+- **Set Command**: `config features set icon_style <value>` accepts nerd_fonts, emoji, or ascii
+- **Statusline Support**: Both Python and JavaScript implementations handle all three styles
+- **Icon Variants**: Context, Task, Mode, Tasks count, Git branch, Detached HEAD all have three-way branching
 
 ### Protocol Loading
 - **Auto-Loading Helper**: `load_protocol_file()` with template substitution
@@ -211,10 +223,12 @@ sessions tasks start @<task-name>           # Start task with validation
 ## Feature Highlights
 
 ### Statusline Integration
-- **Nerd Fonts Support**: Icons for context, task, mode, git branch
-- **Git Branch Display**: Shows current branch or detached HEAD state
+- **Three Icon Styles**: Nerd Fonts, Emoji fallback, or ASCII fallback
+- **Terminal Detection**: Auto-detects Nerd Font capability during installation
+- **Git Branch Display**: Shows current branch or detached HEAD state with appropriate icons
 - **Upstream Tracking**: Commits ahead (↑N) and behind (↓N) indicators
-- **Configurable**: Toggle via `use_nerd_fonts` feature flag
+- **Configurable**: Set via `icon_style` feature (nerd_fonts, emoji, or ascii)
+- **Feature Parity**: All three styles supported in both Python and JavaScript implementations
 
 ### Branch Enforcement
 - **Task-to-Branch Mapping**: Automatic from task naming conventions

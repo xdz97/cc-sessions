@@ -14,10 +14,10 @@ if 'CLAUDE_PROJECT_DIR' in os.environ:
     PROJECT_ROOT = Path(os.environ['CLAUDE_PROJECT_DIR']).resolve()
     sys.path.insert(0, str(PROJECT_ROOT))
     # Use local symlinked sessions package when in development mode
-    from sessions.hooks.shared_state import edit_state, Model, Mode, find_git_repo, load_state
+    from sessions.hooks.shared_state import edit_state, Model, Mode, find_git_repo, load_state, IconStyle
 else:
     # Use installed cc-sessions package in production
-    from cc_sessions.hooks.shared_state import edit_state, Model, Mode, find_git_repo, load_state
+    from cc_sessions.hooks.shared_state import edit_state, Model, Mode, find_git_repo, load_state, IconStyle
 ##-##
 
 #-#
@@ -135,13 +135,13 @@ STATE = load_state()
 if not STATE or STATE.model != curr_model:
     with edit_state() as s: s.model = curr_model; STATE = s
 
-# Load config for nerd fonts preference
+# Load config for icon style preference
 if 'CLAUDE_PROJECT_DIR' in os.environ:
     from sessions.hooks.shared_state import load_config
 else:
     from cc_sessions.hooks.shared_state import load_config
 CONFIG = load_config()
-use_nerd_fonts = CONFIG.features.use_nerd_fonts if CONFIG else True
+icon_style = CONFIG.features.icon_style if CONFIG else IconStyle.NERD_FONTS
 #!<
 
 #-#
@@ -234,7 +234,12 @@ else: bar_color = red
 #!> Construct progress bar string
 # Build progress bar string
 progress_bar = []
-context_icon = "󱃖 " if use_nerd_fonts else ""
+if icon_style == IconStyle.NERD_FONTS:
+    context_icon = "󱃖 "
+elif icon_style == IconStyle.EMOJI:
+    context_icon = ""
+else:  # ASCII
+    context_icon = ""
 progress_bar.append(f"{reset}{l_gray}{context_icon} ")
 progress_bar.append(bar_color + ("█" * filled_blocks))
 progress_bar.append(gray + ("░" * empty_blocks))
@@ -259,8 +264,13 @@ if git_path:
         branch = subprocess.check_output(branch_cmd, stderr=subprocess.PIPE).decode().strip()
 
         if branch:
-            branch_icon = "󰘬 " if use_nerd_fonts else ""
-            git_branch_info = f"{l_gray}{branch_icon} {branch}{reset}"
+            if icon_style == IconStyle.NERD_FONTS:
+                branch_icon = "󰘬 "
+            elif icon_style == IconStyle.EMOJI:
+                branch_icon = "Branch: "
+            else:  # ASCII
+                branch_icon = "Branch: "
+            git_branch_info = f"{l_gray}{branch_icon}{branch}{reset}"
 
             # Get upstream tracking status
             try:
@@ -285,10 +295,10 @@ if git_path:
             commit_cmd = ["git", "-C", str(Path(cwd)), "rev-parse", "--short", "HEAD"]
             commit = subprocess.check_output(commit_cmd, stderr=subprocess.PIPE).decode().strip()
             if commit:
-                if use_nerd_fonts:
+                if icon_style == IconStyle.NERD_FONTS:
                     # Broken link icon to indicate detached
                     git_branch_info = f"{l_gray}󰌺 @{commit}{reset}"
-                else:
+                else:  # EMOJI or ASCII
                     git_branch_info = f"{l_gray}@{commit} [detached]{reset}"
     except:
         git_branch_info = None
@@ -300,10 +310,12 @@ curr_task = STATE.current_task.name if STATE else None
 
 ## ===== CURRENT MODE ===== ##
 curr_mode = "Implement" if STATE.mode == Mode.GO else "Discuss"
-if use_nerd_fonts:
+if icon_style == IconStyle.NERD_FONTS:
     mode_icon = "󰷫 " if STATE.mode == Mode.GO else "󰭹 "
-else:
+elif icon_style == IconStyle.EMOJI:
     mode_icon = "🛠️: " if STATE.mode == Mode.GO else "💬:"
+else:  # ASCII
+    mode_icon = "Mode:"
 ##-##
 
 ## ===== COUNT EDITED & UNCOMMITTED ===== ##
@@ -338,12 +350,22 @@ if task_dir.exists() and task_dir.is_dir():
 ## ===== FINAL OUTPUT ===== ##
 # Line 1 - Progress bar | Task
 context_part = progress_bar_str if progress_bar_str else f"{gray}No context usage data{reset}"
-task_icon = "󰒓 " if use_nerd_fonts else "Task: "
-task_part = f"{cyan}{task_icon} {curr_task}{reset}" if curr_task else f"{cyan}{task_icon} {gray}No Task{reset}"
+if icon_style == IconStyle.NERD_FONTS:
+    task_icon = "󰒓 "
+elif icon_style == IconStyle.EMOJI:
+    task_icon = "⚙️ "
+else:  # ASCII
+    task_icon = "Task: "
+task_part = f"{cyan}{task_icon}{curr_task}{reset}" if curr_task else f"{cyan}{task_icon}{gray}No Task{reset}"
 print(f"{context_part} | {task_part}")
 
 # Line 2 - Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch
-tasks_icon = "󰈙 " if use_nerd_fonts else ""
+if icon_style == IconStyle.NERD_FONTS:
+    tasks_icon = "󰈙 "
+elif icon_style == IconStyle.EMOJI:
+    tasks_icon = "💼 "
+else:  # ASCII
+    tasks_icon = ""
 # Build uncommitted section with optional upstream indicators
 uncommitted_parts = [f"{orange}✎ {total_edited}{reset}"]
 if upstream_info:

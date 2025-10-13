@@ -11,7 +11,7 @@ import json
 ##-##
 
 ## ===== LOCAL ===== ##
-from hooks.shared_state import load_config, edit_config, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools
+from hooks.shared_state import load_config, edit_config, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools, IconStyle
 ##-##
 
 #-#
@@ -113,7 +113,7 @@ def format_config_human(config) -> str:
                             f"  Branch Enforcement: {config.features.branch_enforcement}",
                             f"  Task Detection: {config.features.task_detection}",
                             f"  Auto Ultrathink: {config.features.auto_ultrathink}",
-                            f"  Use Nerd Fonts: {config.features.use_nerd_fonts}",
+                            f"  Icon Style: {get_value(config.features.icon_style)}",
                             f"  Context Warnings (85%): {config.features.context_warnings.warn_85}",
                             f"  Context Warnings (90%): {config.features.context_warnings.warn_90}", ])
 
@@ -571,13 +571,16 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
         config = load_config()
         features = config.features
 
+        # Helper to safely get value from enum or string
+        def get_value(field): return field.value if hasattr(field, 'value') else field
+
         if json_output:
             return {
                 "features": {
                     "branch_enforcement": features.branch_enforcement,
                     "task_detection": features.task_detection,
                     "auto_ultrathink": features.auto_ultrathink,
-                    "use_nerd_fonts": features.use_nerd_fonts,
+                    "icon_style": get_value(features.icon_style),
                     "warn_85": features.context_warnings.warn_85,
                     "warn_90": features.context_warnings.warn_90,
                 }
@@ -588,7 +591,7 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
             f"  branch_enforcement: {features.branch_enforcement}",
             f"  task_detection: {features.task_detection}",
             f"  auto_ultrathink: {features.auto_ultrathink}",
-            f"  use_nerd_fonts: {features.use_nerd_fonts}",
+            f"  icon_style: {get_value(features.icon_style)}",
             f"  warn_85: {features.context_warnings.warn_85}",
             f"  warn_90: {features.context_warnings.warn_90}",
         ]
@@ -600,23 +603,34 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
         
         key = args[1].lower()
         value = args[2]
-        bool_value = value.lower() in ['true', '1', 'yes', 'on']
-        
+
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
-                # Safe features
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
+                # Boolean features
+                bool_value = value.lower() in ['true', '1', 'yes', 'on']
                 setattr(config.features, key, bool_value)
+                final_value = bool_value
+
+            elif key == 'icon_style':
+                # Enum feature - accepts nerd_fonts, emoji, ascii
+                try:
+                    config.features.icon_style = IconStyle(value.lower())
+                    final_value = value.lower()
+                except ValueError:
+                    raise ValueError(f"Invalid icon_style value: {value}. Valid values: nerd_fonts, emoji, ascii")
 
             elif key in ['warn_85', 'warn_90']:
                 # Context warning features
+                bool_value = value.lower() in ['true', '1', 'yes', 'on']
                 setattr(config.features.context_warnings, key, bool_value)
+                final_value = bool_value
 
             else:
                 raise ValueError(f"Unknown feature: {key}")
-        
+
         if json_output:
-            return {"updated": key, "value": bool_value}
-        return f"Updated features.{key} to {bool_value}"
+            return {"updated": key, "value": final_value}
+        return f"Updated features.{key} to {final_value}"
 
     elif action == 'toggle':
         if len(args) < 2:
@@ -626,26 +640,41 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
 
         # Get current value
         config = load_config()
-        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
+        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
             current_value = getattr(config.features, key)
+        elif key == 'icon_style':
+            current_value = config.features.icon_style
         elif key in ['warn_85', 'warn_90']:
             current_value = getattr(config.features.context_warnings, key)
         else:
             raise ValueError(f"Unknown feature: {key}")
 
-        # Toggle the value
-        new_value = not current_value
+        # Toggle/cycle the value
+        if key == 'icon_style':
+            # Cycle through enum values: nerd_fonts -> emoji -> ascii -> nerd_fonts
+            cycle = [IconStyle.NERD_FONTS, IconStyle.EMOJI, IconStyle.ASCII]
+            current_idx = cycle.index(current_value)
+            new_value = cycle[(current_idx + 1) % len(cycle)]
+        else:
+            # Boolean toggle
+            new_value = not current_value
 
         # Save the toggled value
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
                 setattr(config.features, key, new_value)
+            elif key == 'icon_style':
+                config.features.icon_style = new_value
             elif key in ['warn_85', 'warn_90']:
                 setattr(config.features.context_warnings, key, new_value)
 
+        # Format values for display
+        old_display = current_value.value if hasattr(current_value, 'value') else current_value
+        new_display = new_value.value if hasattr(new_value, 'value') else new_value
+
         if json_output:
-            return {"toggled": key, "old_value": current_value, "new_value": new_value}
-        return f"Toggled {key}: {current_value} → {new_value}"
+            return {"toggled": key, "old_value": old_display, "new_value": new_display}
+        return f"Toggled {key}: {old_display} → {new_display}"
 
     else:
         if from_slash:
@@ -665,12 +694,13 @@ def format_features_help() -> str:
         "  branch_enforcement  - Git branch validation (default: true)",
         "  task_detection      - Task-based workflow automation (default: true)",
         "  auto_ultrathink     - Enhanced AI reasoning (default: true)",
-        "  use_nerd_fonts      - Nerd Fonts icons in statusline (default: true)",
+        "  icon_style          - Statusline icon style: nerd_fonts, emoji, or ascii (default: nerd_fonts)",
         "  warn_85             - Context warning at 85% (default: true)",
         "  warn_90             - Context warning at 90% (default: true)",
         "",
         "Examples:",
-        "  /sessions config features toggle use_nerd_fonts",
+        "  /sessions config features toggle icon_style          # Cycles through nerd_fonts -> emoji -> ascii",
+        "  /sessions config features set icon_style emoji       # Set to emoji icons",
         "  /sessions config features set auto_ultrathink false",
         "  /sessions config features toggle branch_enforcement"
     ]

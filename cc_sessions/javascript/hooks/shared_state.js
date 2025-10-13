@@ -82,6 +82,12 @@ const UserShell = {
     CMD: 'cmd'
 };
 
+const IconStyle = {
+    NERD_FONTS: 'nerd_fonts',
+    EMOJI: 'emoji',
+    ASCII: 'ascii'
+};
+
 const CCTools = {
     READ: 'Read',
     WRITE: 'Write',
@@ -312,7 +318,28 @@ class EnabledFeatures {
         this.branch_enforcement = data.branch_enforcement !== undefined ? data.branch_enforcement : true;
         this.task_detection = data.task_detection !== undefined ? data.task_detection : true;
         this.auto_ultrathink = data.auto_ultrathink !== undefined ? data.auto_ultrathink : true;
-        this.use_nerd_fonts = data.use_nerd_fonts !== undefined ? data.use_nerd_fonts : true;
+
+        // Handle migration from old use_nerd_fonts boolean to new icon_style enum
+        let iconStyleValue = data.icon_style;
+        if (iconStyleValue === undefined || iconStyleValue === null) {
+            // Check for old boolean field
+            const oldUseNerdFonts = data.use_nerd_fonts;
+            if (oldUseNerdFonts !== undefined && oldUseNerdFonts !== null) {
+                // Migrate: true -> NERD_FONTS, false -> ASCII
+                iconStyleValue = oldUseNerdFonts ? IconStyle.NERD_FONTS : IconStyle.ASCII;
+            } else {
+                // No old or new field, use default
+                iconStyleValue = IconStyle.NERD_FONTS;
+            }
+        } else if (typeof iconStyleValue === 'string') {
+            // Validate the string is a valid IconStyle value
+            const validValues = Object.values(IconStyle);
+            if (!validValues.includes(iconStyleValue)) {
+                iconStyleValue = IconStyle.NERD_FONTS;
+            }
+        }
+
+        this.icon_style = iconStyleValue;
         this.context_warnings = data.context_warnings instanceof ContextWarnings
             ? data.context_warnings
             : new ContextWarnings(data.context_warnings || {});
@@ -346,7 +373,7 @@ class SessionsConfig {
                 branch_enforcement: this.features.branch_enforcement,
                 task_detection: this.features.task_detection,
                 auto_ultrathink: this.features.auto_ultrathink,
-                use_nerd_fonts: this.features.use_nerd_fonts,
+                icon_style: this.features.icon_style,
                 context_warnings: {
                     warn_85: this.features.context_warnings.warn_85,
                     warn_90: this.features.context_warnings.warn_90
@@ -858,7 +885,21 @@ function loadConfig() {
 
     try {
         const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        return SessionsConfig.fromDict(data);
+
+        // Check if migration is needed from use_nerd_fonts to icon_style
+        let needsMigration = false;
+        if (data.features && 'use_nerd_fonts' in data.features && !('icon_style' in data.features)) {
+            needsMigration = true;
+        }
+
+        const config = SessionsConfig.fromDict(data);
+
+        // If migration happened, write back the config to remove old field
+        if (needsMigration) {
+            atomicWrite(CONFIG_FILE, config.toDict());
+        }
+
+        return config;
     } catch (e) {
         // Corrupt file: back it up once and start fresh
         const backup = CONFIG_FILE.replace('.json', '.bad.json');
@@ -1124,6 +1165,7 @@ module.exports = {
     GitCommitStyle,
     UserOS,
     UserShell,
+    IconStyle,
     CCTools,
     SessionsProtocol,
     Mode,

@@ -103,6 +103,11 @@ class UserShell(str, Enum):
     POWERSHELL = "powershell"
     CMD = "cmd"
 
+class IconStyle(str, Enum):
+    NERD_FONTS = "nerd_fonts"
+    EMOJI = "emoji"
+    ASCII = "ascii"
+
 class CCTools(str, Enum):
     READ = "Read"
     WRITE = "Write"
@@ -300,7 +305,7 @@ class EnabledFeatures:
     branch_enforcement: bool = True
     task_detection: bool = True
     auto_ultrathink: bool = True
-    use_nerd_fonts: bool = True
+    icon_style: IconStyle = IconStyle.NERD_FONTS
     context_warnings: ContextWarnings = field(default_factory=ContextWarnings)
 
     @classmethod
@@ -308,11 +313,30 @@ class EnabledFeatures:
         cw_data = d.get("context_warnings", {})
         if cw_data and isinstance(cw_data, dict): cw = ContextWarnings(**cw_data)
         else: cw = ContextWarnings()
+
+        # Handle migration from old use_nerd_fonts boolean to new icon_style enum
+        icon_style_value = d.get("icon_style")
+        if icon_style_value is None:
+            # Check for old boolean field
+            old_use_nerd_fonts = d.get("use_nerd_fonts")
+            if old_use_nerd_fonts is not None:
+                # Migrate: True -> NERD_FONTS, False -> ASCII
+                icon_style_value = IconStyle.NERD_FONTS if old_use_nerd_fonts else IconStyle.ASCII
+            else:
+                # No old or new field, use default
+                icon_style_value = IconStyle.NERD_FONTS
+        elif isinstance(icon_style_value, str):
+            # Convert string to enum
+            try:
+                icon_style_value = IconStyle(icon_style_value)
+            except ValueError:
+                icon_style_value = IconStyle.NERD_FONTS
+
         return cls(
             branch_enforcement=d.get("branch_enforcement", True),
             task_detection=d.get("task_detection", True),
             auto_ultrathink=d.get("auto_ultrathink", True),
-            use_nerd_fonts=d.get("use_nerd_fonts", True),
+            icon_style=icon_style_value,
             context_warnings=cw
         )
 #!<
@@ -823,7 +847,7 @@ def load_state() -> SessionsState:
     return SessionsState.from_dict(data)
 
 def load_config() -> SessionsConfig:
-    if not CONFIG_FILE.exists(): 
+    if not CONFIG_FILE.exists():
         initial = SessionsConfig()
         _the_ol_in_out(CONFIG_FILE, initial.to_dict())
         return initial
@@ -835,7 +859,19 @@ def load_config() -> SessionsConfig:
         fresh = SessionsConfig()
         _the_ol_in_out(CONFIG_FILE, fresh.to_dict())
         return fresh
-    return SessionsConfig.from_dict(data)
+
+    # Check if migration is needed from use_nerd_fonts to icon_style
+    needs_migration = False
+    if "features" in data and "use_nerd_fonts" in data["features"] and "icon_style" not in data["features"]:
+        needs_migration = True
+
+    config = SessionsConfig.from_dict(data)
+
+    # If migration happened, write back the config to remove old field
+    if needs_migration:
+        _the_ol_in_out(CONFIG_FILE, config.to_dict())
+
+    return config
 
 @contextmanager
 def edit_state() -> Iterator[SessionsState]:

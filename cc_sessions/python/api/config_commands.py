@@ -113,6 +113,8 @@ def format_config_human(config) -> str:
                             f"  Branch Enforcement: {config.features.branch_enforcement}",
                             f"  Task Detection: {config.features.task_detection}",
                             f"  Auto Ultrathink: {config.features.auto_ultrathink}",
+                            f"  Use Nerd Fonts: {config.features.use_nerd_fonts}",
+                            f"  Auto Update: {config.features.auto_update}",
                             f"  Context Warnings (85%): {config.features.context_warnings.warn_85}",
                             f"  Context Warnings (90%): {config.features.context_warnings.warn_90}", ])
 
@@ -547,7 +549,7 @@ def format_env_missing_value(key: str) -> str:
 #!<
 
 #!> Feature toggles handlers
-def handle_features_command(args: List[str], json_output: bool = False) -> Any:
+def handle_features_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
     """
     Handle feature toggle commands.
 
@@ -556,33 +558,44 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
         config features set <key> <value>
         config features toggle <key>
     """
-    if not args or args[0] == 'show':
+    # Handle help request and no args
+    if not args:
+        return handle_features_command(['show'], json_output, from_slash)
+
+    if args[0].lower() == 'help':
+        return format_features_help()
+
+    action = args[0].lower()
+
+    if action == 'show':
         # Show feature toggles
         config = load_config()
         features = config.features
-        
+
         if json_output:
             return {
                 "features": {
                     "branch_enforcement": features.branch_enforcement,
                     "task_detection": features.task_detection,
                     "auto_ultrathink": features.auto_ultrathink,
+                    "use_nerd_fonts": features.use_nerd_fonts,
+                    "auto_update": features.auto_update,
                     "warn_85": features.context_warnings.warn_85,
                     "warn_90": features.context_warnings.warn_90,
                 }
             }
-        
+
         lines = [
             "Feature Toggles:",
             f"  branch_enforcement: {features.branch_enforcement}",
             f"  task_detection: {features.task_detection}",
             f"  auto_ultrathink: {features.auto_ultrathink}",
+            f"  use_nerd_fonts: {features.use_nerd_fonts}",
+            f"  auto_update: {features.auto_update}",
             f"  warn_85: {features.context_warnings.warn_85}",
             f"  warn_90: {features.context_warnings.warn_90}",
         ]
         return "\n".join(lines)
-    
-    action = args[0].lower()
     
     if action == 'set':
         if len(args) < 3:
@@ -593,7 +606,7 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
         bool_value = value.lower() in ['true', '1', 'yes', 'on']
         
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update']:
                 # Safe features
                 setattr(config.features, key, bool_value)
 
@@ -616,7 +629,7 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Get current value
         config = load_config()
-        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
+        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update']:
             current_value = getattr(config.features, key)
         elif key in ['warn_85', 'warn_90']:
             current_value = getattr(config.features.context_warnings, key)
@@ -628,7 +641,7 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Save the toggled value
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update']:
                 setattr(config.features, key, new_value)
             elif key in ['warn_85', 'warn_90']:
                 setattr(config.features.context_warnings, key, new_value)
@@ -638,7 +651,34 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
         return f"Toggled {key}: {current_value} → {new_value}"
 
     else:
+        if from_slash:
+            return f"Unknown features action: {action}\n\n{format_features_help()}"
         raise ValueError(f"Unknown features action: {action}. Valid actions: show, set, toggle")
+
+def format_features_help() -> str:
+    """Format features help for slash command."""
+    lines = [
+        "Feature Toggle Commands:",
+        "",
+        "  /sessions config features show              - Display all feature flags",
+        "  /sessions config features set <key> <value> - Set feature value",
+        "  /sessions config features toggle <key>      - Toggle feature boolean",
+        "",
+        "Available Features:",
+        "  branch_enforcement  - Git branch validation (default: true)",
+        "  task_detection      - Task-based workflow automation (default: true)",
+        "  auto_ultrathink     - Enhanced AI reasoning (default: true)",
+        "  use_nerd_fonts      - Nerd Fonts icons in statusline (default: true)",
+        "  auto_update         - Automatic package updates (default: false)",
+        "  warn_85             - Context warning at 85% (default: true)",
+        "  warn_90             - Context warning at 90% (default: true)",
+        "",
+        "Examples:",
+        "  /sessions config features toggle use_nerd_fonts",
+        "  /sessions config features set auto_update true",
+        "  /sessions config features toggle branch_enforcement"
+    ]
+    return "\n".join(lines)
 #!<
 
 #!> Bash read patterns handlers

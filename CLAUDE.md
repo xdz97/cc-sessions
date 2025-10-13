@@ -28,14 +28,14 @@ The framework includes persistent task management with git branch enforcement, c
 - `cc_sessions/python/statusline.py` / `cc_sessions/javascript/statusline.js` - Claude Code statusline integration with Nerd Fonts icon support, git branch display with upstream tracking indicators (↑/↓), detached HEAD detection, and UTF-8 encoding for transcript reading (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/__main__.py` - Sessions API entry point with --from-slash flag support for contextual output (Python)
 - `cc_sessions/scripts/api/index.js` - Sessions API entry point (JavaScript)
-- `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support, kickstart handler integration, and --from-slash flag handling (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/router.py|.js` - Command routing with protocol command support, kickstart handler integration, and --from-slash flag handling, enhanced format_slash_help() documents all available subsystem commands including state update, config write, and config tools operations (lines 106-148 Python) (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/protocol_commands.py|.js` - Protocol-specific API commands with startup-load returning full task content (both Python and JavaScript implementations)
 - `cc_sessions/scripts/api/kickstart_commands.py|.js` - Kickstart-specific API commands for onboarding flow state management (next, complete) with hybrid self-cleanup system (both Python and JavaScript implementations)
 - `cc_sessions/python/protocols/kickstart/01-discussion.md` through `11-graduation.md` - Full mode protocol sequence (11 protocols total)
 - `cc_sessions/python/protocols/kickstart/01-agents-only.md` - Subagents-only mode protocol
 - `cc_sessions/templates/h-kickstart-setup.md` - Dummy task template used for onboarding practice
-- `cc_sessions/scripts/api/state_commands.py|.js` - State inspection and limited write operations, uses SessionsTodos.to_dict() for simplified todo serialization in state component access and SessionsTodos.to_list('active') for todos command (both Python and JavaScript implementations)
-- `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/state_commands.py|.js` - State inspection and limited write operations, uses SessionsTodos.to_dict() for simplified todo serialization in state component access and SessionsTodos.to_list('active') for todos command, includes update management commands (suppress, check, status) with dedicated format_update_help() formatter (lines 596-600 Python) for user-friendly documentation (both Python and JavaScript implementations)
+- `cc_sessions/scripts/api/config_commands.py|.js` - Configuration management commands with --from-slash support for contextual output formatting, includes read/write/tools pattern management with CCTools enum validation, complete EnabledFeatures API parity with all 7 feature flags (branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, auto_update, warn_85, warn_90) accessible via show/set/toggle operations in handle_features_command() (lines 561-675 Python), format_config_human() displays all features (lines 90-121 Python), dedicated format_features_help() formatter provides comprehensive feature toggle documentation (lines 658-680 Python)
 - `cc_sessions/scripts/api/task_commands.py|.js` - Task management operations with index support and task startup protocols (both Python and JavaScript implementations)
 - `cc_sessions/commands/` - Thin wrapper slash commands following official Claude Code patterns
 - `cc_sessions/install.py` - Python-specific installer module with backup/restore functions: `create_backup()` creates timestamped backups, `restore_tasks()` restores task files after installation, content detection via task file counting, backup verification before proceeding, `configure_gitignore()` adds runtime file entries to project .gitignore (lines 324-346), automatic OS detection using platform.system() to configure sessions-config.json
@@ -146,9 +146,11 @@ The framework includes persistent task management with git branch enforcement, c
 - **State Inspection** - View current task, mode, todos, flags, metadata, and active protocol
 - **Configuration Management** - Manage trigger phrases, git preferences, environment settings, bash patterns, and tool blocking
 - **Pattern Management** - Configure bash_read_patterns, bash_write_patterns, and implementation_only_tools via dedicated commands
-- **Feature Toggle Operations** - Enhanced with `toggle` command for simple boolean value flipping
+- **Feature Toggle Operations** - Complete API parity with EnabledFeatures dataclass: all 7 feature flags (5 top-level: branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, auto_update plus 2 nested context warnings: warn_85, warn_90) accessible via show, set, and toggle operations with dedicated help formatter
+- **Update Management** - Suppress notifications, force re-check, view status with dedicated help formatter
 - **Limited Write Operations** - One-way mode switching (implementation → discussion)
 - **Protocol Commands** - startup-load command for task loading during startup protocol
+- **Enhanced Help System** - Dedicated formatters (format_features_help, format_update_help) provide comprehensive command documentation
 - **JSON Output Support** - Machine-readable format for programmatic use
 - **Security Boundaries** - No access to safety-critical settings or todo manipulation
 - **Slash Command Integration** - Consolidated sesh-* commands with API delegation pattern and --from-slash contextual output formatting
@@ -290,11 +292,15 @@ Primary configuration in `sessions/sessions-config.json` with comprehensive user
 
 **Feature Toggles (`features`):**
 - `branch_enforcement` - Git branch validation (default: true, can be disabled for alternative VCS systems like Jujutsu or Mercurial)
-- `task_detection` - Task-based workflow automation
-- `auto_ultrathink` - Enhanced AI reasoning
+- `task_detection` - Task-based workflow automation (default: true)
+- `auto_ultrathink` - Enhanced AI reasoning (default: true)
 - `use_nerd_fonts` - Nerd Fonts icon display in statusline (default: true, shows icons when enabled, ASCII fallback when disabled)
 - `auto_update` - Automatic package updates on session start (default: false, when enabled updates cc-sessions automatically when new version detected)
-- `context_warnings` - Token usage warnings at 85%/90%
+- `context_warnings` - Nested settings for token usage warnings:
+  - `warn_85` - Warning at 85% token usage (default: true)
+  - `warn_90` - Warning at 90% token usage (default: true)
+
+All 7 feature flags (5 top-level + 2 nested) accessible via config features API with complete parity to EnabledFeatures dataclass
 
 ### State Management
 Unified state in `sessions/sessions-state.json`:
@@ -1167,10 +1173,14 @@ All slash commands use: `!sessions <command> $ARGUMENTS --from-slash`
 
 **Configuration Operations:**
 - `sessions config [--json] [--from-slash]` - Full configuration inspection with optional contextual formatting
+- `sessions config help` - Display comprehensive configuration help
 - `sessions config phrases list [category] [--from-slash]` - View trigger phrases
 - `sessions config phrases add <category> "<phrase>" [--from-slash]` - Add trigger phrase
 - `sessions config phrases remove <category> "<phrase>" [--from-slash]` - Remove trigger phrase
+- `sessions config features show [--from-slash]` - View all feature toggles (complete EnabledFeatures parity)
+- `sessions config features set <key> <value> [--from-slash]` - Set feature value (supports all 7 features)
 - `sessions config features toggle <key> [--from-slash]` - Toggle feature boolean values (supports branch_enforcement, task_detection, auto_ultrathink, use_nerd_fonts, auto_update, warn_85, warn_90)
+- `sessions config features help` - Display detailed feature toggle documentation
 - `sessions config git show [--from-slash]` - View git preferences
 - `sessions config git set <setting> <value> [--from-slash]` - Update git preference
 - `sessions config env show [--from-slash]` - View environment settings

@@ -115,13 +115,16 @@ def format_slash_help() -> str:
         "  /sessions state mode <mode>     - Switch mode (discussion/no, bypass/off)",
         "  /sessions state task <action>   - Manage task (clear, show, restore <file>)",
         "  /sessions state todos <action>  - Manage todos (clear)",
-        "  /sessions state flags <action>  - Manage flags (clear, clear-context)", "",
+        "  /sessions state flags <action>  - Manage flags (clear, clear-context)",
+        "  /sessions state update ...      - Manage update notifications (status, suppress, check)", "",
         "### Config", "  /sessions config show           - Display current configuration",
         "  /sessions config trigger ...    - Manage trigger phrases",
         "  /sessions config git ...        - Manage git preferences",
         "  /sessions config env ...        - Manage environment settings",
-        "  /sessions config read ...   - Manage readonly bash commands",
-        "  /sessions config features ...   - Manage feature toggles", "",
+        "  /sessions config features ...   - Manage feature toggles",
+        "  /sessions config read ...       - Manage bash read patterns",
+        "  /sessions config write ...      - Manage bash write patterns",
+        "  /sessions config tools ...      - Manage blocked tools", "",
     ]
     if _HAS_KICKSTART:
         lines += [

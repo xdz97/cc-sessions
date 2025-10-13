@@ -122,11 +122,24 @@ def format_state_help() -> str:
         "  /sessions state task <action>   - Manage task (clear, show, restore <file>)",
         "  /sessions state todos <action>  - Manage todos (clear)",
         "  /sessions state flags <action>  - Manage flags (clear, clear-context)",
+        "  /sessions state update ...      - Manage update notifications (see update help)",
         "",
         "Mode Aliases:",
         "  no   → discussion mode",
         "  off  → bypass mode toggle",
         "  go   → implementation mode (use trigger phrases, not slash commands)",
+        "",
+        "Security Boundaries:",
+        "  Mode switching:",
+        "    • User can switch between modes freely via slash commands",
+        "    • API can only switch implementation → discussion (one-way safety)",
+        "    • Use trigger phrases for discussion → implementation transitions",
+        "  Bypass mode:",
+        "    • Deactivation: Available anytime (return to normal DAIC enforcement)",
+        "    • Activation: Requires user-initiated slash command (safety mechanism)",
+        "  Permission-based operations:",
+        "    • 'todos clear' requires special permission flag (api.todos_clear)",
+        "    • Only available immediately after session restoration",
         "",
         "Examples:",
         "  /sessions state show task       - Show current task",
@@ -520,9 +533,10 @@ def handle_update_command(args: List[str], json_output: bool = False, from_slash
         update status    - Show current update status
     """
     if not args:
-        if from_slash:
-            return "Usage: /sessions state update <subcommand>\n\nSubcommands:\n  suppress  - Suppress update notifications\n  check     - Force re-check for updates\n  status    - Show current update status"
         raise ValueError("update command requires a subcommand. Valid: suppress, check, status")
+
+    if args[0].lower() == 'help':
+        return format_update_help()
 
     subcommand = args[0].lower()
 
@@ -576,8 +590,28 @@ def handle_update_command(args: List[str], json_output: bool = False, from_slash
 
     else:
         if from_slash:
-            return f"Unknown subcommand: {subcommand}\n\nAvailable subcommands: suppress, check, status"
+            return f"Unknown subcommand: {subcommand}\n\n{format_update_help()}"
         raise ValueError(f"Unknown update subcommand: {subcommand}. Valid: suppress, check, status")
+
+def format_update_help() -> str:
+    """Format update help for slash command."""
+    lines = [
+        "Update Management Commands:",
+        "",
+        "  /sessions state update status    - Show current update status",
+        "  /sessions state update suppress  - Suppress update notifications",
+        "  /sessions state update check     - Force re-check for updates",
+        "",
+        "Details:",
+        "  status    - Display current and latest versions with update availability",
+        "  suppress  - Silence update notifications until next actual update",
+        "  check     - Clear cached update flags and re-check on next session start",
+        "",
+        "Examples:",
+        "  /sessions state update status",
+        "  /sessions state update suppress"
+    ]
+    return "\n".join(lines)
 #!<
 
 #-#

@@ -9,42 +9,40 @@
 [![npm downloads](https://img.shields.io/npm/dm/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)
 [![PyPI version](https://badge.fury.io/py/cc-sessions.svg)](https://pypi.org/project/cc-sessions/)
 [![PyPI downloads](https://pepy.tech/badge/cc-sessions)](https://pepy.tech/project/cc-sessions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 </div>
 <div align="center">
 
-[![Discord](https://img.shields.io/discord/1325216825805504602?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/9ebFr6VEb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Follow Dev](https://img.shields.io/twitter/follow/AgentofToastX?style=social)](https://x.com/AgentofToastX)
 [![Donate](https://img.shields.io/badge/Donate-Solana-14F195?logo=solana&logoColor=white)](https://dexscreener.com/solana/oy5mbertfqdytu8atyonycvcvu62fpmz3nkqoztrflq)
 </div>
 
 <br>
 
-## ⚠️ current events
+## current events
 
-### Claude Code Version Requirement
+### Claude Code version issue
 
-**IMPORTANT**: cc-sessions requires Claude Code version **2.0.8** due to an upstream bug in newer versions.
+**'ere meh now**: the recommended Claude Code version is **2.0.8** due to an upstream bug in newer versions of Claude Code.
 
-**The Issue**: Claude Code versions after 2.0.8 have a bug in their stderr aggregation system that causes 400 API errors when:
+Claude Code versions after 2.0.8 have a bug in their stderr aggregation system that causes 400 API errors when:
 - Multiple tool calls execute in parallel (batched in one Claude response)
 - Commands generate their own stderr output (e.g., curl progress meters)
 - PostToolUse hooks also send stderr feedback (exit code 2)
 
 This breaks cc-sessions' PostToolUse hooks that provide essential feedback like directory navigation confirmations and DAIC mode transitions.
 
-**Install the correct version**:
+**install the correct version**:
 ```bash
 npm install -g @anthropic-ai/claude-code@2.0.8
 ```
 
-**Related**: [Claude Code Issue #53](https://github.com/anthropics-ai/claude-code/issues/53)
+**related**: [cc-sessions Issue #53](https://github.com/GWUDCAP/cc-sessions/issues/53)
 
-**Reproduction**: Parallel bash commands with `cd` (triggers PostToolUse exit code 2) combined with commands that generate stderr (like curl).
+### latest release - v0.3.0
+<sup>basically autopilot</sup>
 
-### Latest Release - v0.3.0
-
-**Major highlights:**
+**major highlights:**
 - **Dual Language Support**: Now available as both Python and Node.js packages with complete feature parity
 - **Unified Sessions API**: Single `sessions` command replaces multiple slash commands
 - **Natural Language Protocols**: Full workflow automation through trigger phrases (mek:, start^:, finito, squish)
@@ -64,7 +62,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 You install cc-sessions into a repo from the project root:
 
 ```bash
-cd ~/my-git-repo && [npx|pipx install] cc-sessions
+cd ~/my-git-repo && [npx|pipx run] cc-sessions
 ```
 
 There are Python and Node packages - use whichever you have:
@@ -72,24 +70,17 @@ There are Python and Node packages - use whichever you have:
 ### Python
 
 ```bash
-# Recommended: Isolated install
-pipx install cc-sessions
-
-# Alternative: Direct pip
-pip install cc-sessions
-
-# Alternative: UV package manager
-uv pip install cc-sessions
+# Navigate to the repo you want to 
+# use cc-sessions in, then...
+pipx run cc-sessions
 ```
 
 ### Node
 
 ```bash
-# One-time execution
+# Navigate to the repo you want to 
+# use cc-sessions in, then...
 npx cc-sessions
-
-# Or install globally
-npm install -g cc-sessions
 ```
 
 <details>

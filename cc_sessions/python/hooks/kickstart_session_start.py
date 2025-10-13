@@ -112,12 +112,12 @@ if not mode:
 #!<
 
 #!> 2. Output deterministic instructions for Claude to begin kickstart via API
-begin_cmd = '/sessions kickstart subagents' if mode == 'subagents' else '/sessions kickstart full'
+begin_cmd = 'sessions kickstart subagents' if mode == 'subagents' else 'sessions kickstart full'
 instructions = (
     "Kickstart onboarding is enabled. Begin immediately by running:\n\n"
     f"  {begin_cmd}\n\n"
     "Then, for each module chunk returned, follow all instructions completely. When finished with a chunk, run:\n\n"
-    "  /sessions kickstart next\n\n"
+    "  sessions kickstart next\n\n"
     "Repeat until kickstart is complete.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "USER INSTRUCTIONS:\n"

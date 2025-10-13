@@ -19,7 +19,7 @@ const {
     TaskState,
     PROJECT_ROOT,
     STATE_FILE
-} = require('../../hooks/shared_state.js');
+} = require('../hooks/shared_state.js');
 //--//
 
 //-#

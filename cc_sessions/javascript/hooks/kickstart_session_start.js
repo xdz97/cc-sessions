@@ -115,8 +115,8 @@ if (!mode) {
 //!<
 
 //!> 2. Output deterministic instructions for Claude to begin kickstart via API
-const beginCmd = mode === 'subagents' ? '/sessions kickstart subagents' : '/sessions kickstart full';
-let instructions = `Kickstart onboarding is enabled. Begin immediately by running:\n\n  ${beginCmd}\n\nThen, for each module chunk returned, follow all instructions completely. When finished with a chunk, run:\n\n  /sessions kickstart next\n\nRepeat until kickstart is complete.`;
+const beginCmd = mode === 'subagents' ? 'sessions kickstart subagents' : 'sessions kickstart full';
+let instructions = `Kickstart onboarding is enabled. Begin immediately by running:\n\n  ${beginCmd}\n\nThen, for each module chunk returned, follow all instructions completely. When finished with a chunk, run:\n\n  sessions kickstart next\n\nRepeat until kickstart is complete.`;
 // Add a clearly delineated user section to guide manual starts
 instructions += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nUSER INSTRUCTIONS:\nJust say 'kickstart' and press enter to begin\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
 

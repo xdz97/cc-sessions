@@ -21,7 +21,7 @@ const {
     PROJECT_ROOT,
     getTaskFilePath,
     isDirectoryTask
-} = require('../../hooks/shared_state.js');
+} = require('../hooks/shared_state.js');
 //--//
 
 //-#

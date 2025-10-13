@@ -8,7 +8,7 @@ const path = require('path');
 //--//
 
 // ===== LOCAL ===== //
-const { loadState, editState, TaskState, SessionsProtocol, PROJECT_ROOT } = require('../../hooks/shared_state.js');
+const { loadState, editState, TaskState, SessionsProtocol, PROJECT_ROOT } = require('../hooks/shared_state.js');
 //--//
 
 //-#

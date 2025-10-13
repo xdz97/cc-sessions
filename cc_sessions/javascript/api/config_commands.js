@@ -3,7 +3,7 @@
 // ==== IMPORTS ===== //
 
 // ===== LOCAL ===== //
-const { loadConfig, editConfig, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools, IconStyle } = require('../../hooks/shared_state.js');
+const { loadConfig, editConfig, TriggerCategory, GitAddPattern, GitCommitStyle, UserOS, UserShell, CCTools, IconStyle } = require('../hooks/shared_state.js');
 
 //-#
 

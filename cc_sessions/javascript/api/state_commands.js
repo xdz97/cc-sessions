@@ -158,11 +158,24 @@ function formatStateHelp() {
         "  /sessions state task <action>   - Manage task (clear, show, restore <file>)",
         "  /sessions state todos <action>  - Manage todos (clear)",
         "  /sessions state flags <action>  - Manage flags (clear, clear-context)",
+        "  /sessions state update ...      - Manage update notifications (see update help)",
         "",
         "Mode Aliases:",
         "  no   → discussion mode",
         "  off  → bypass mode toggle",
         "  go   → implementation mode (use trigger phrases, not slash commands)",
+        "",
+        "Security Boundaries:",
+        "  Mode switching:",
+        "    • User can switch between modes freely via slash commands",
+        "    • API can only switch implementation → discussion (one-way safety)",
+        "    • Use trigger phrases for discussion → implementation transitions",
+        "  Bypass mode:",
+        "    • Deactivation: Available anytime (return to normal DAIC enforcement)",
+        "    • Activation: Requires user-initiated slash command (safety mechanism)",
+        "  Permission-based operations:",
+        "    • 'todos clear' requires special permission flag (api.todos_clear)",
+        "    • Only available immediately after session restoration",
         "",
         "Examples:",
         "  /sessions state show task       - Show current task",
@@ -707,10 +720,11 @@ function handleUpdateCommand(args, jsonOutput = false, fromSlash = false) {
      *     update status    - Show current update status
      */
     if (!args || args.length === 0) {
-        if (fromSlash) {
-            return "Usage: /sessions state update <subcommand>\n\nSubcommands:\n  suppress  - Suppress update notifications\n  check     - Force re-check for updates\n  status    - Show current update status";
-        }
         throw new Error("update command requires a subcommand. Valid: suppress, check, status");
+    }
+
+    if (args[0].toLowerCase() === 'help') {
+        return formatUpdateHelp();
     }
 
     const subcommand = args[0].toLowerCase();
@@ -776,10 +790,31 @@ function handleUpdateCommand(args, jsonOutput = false, fromSlash = false) {
 
     } else {
         if (fromSlash) {
-            return `Unknown subcommand: ${subcommand}\n\nAvailable subcommands: suppress, check, status`;
+            return `Unknown subcommand: ${subcommand}\n\n${formatUpdateHelp()}`;
         }
         throw new Error(`Unknown update subcommand: ${subcommand}. Valid: suppress, check, status`);
     }
+}
+
+function formatUpdateHelp() {
+    /**Format update help for slash command.*/
+    const lines = [
+        "Update Management Commands:",
+        "",
+        "  /sessions state update status    - Show current update status",
+        "  /sessions state update suppress  - Suppress update notifications",
+        "  /sessions state update check     - Force re-check for updates",
+        "",
+        "Details:",
+        "  status    - Display current and latest versions with update availability",
+        "  suppress  - Silence update notifications until next actual update",
+        "  check     - Clear cached update flags and re-check on next session start",
+        "",
+        "Examples:",
+        "  /sessions state update status",
+        "  /sessions state update suppress"
+    ];
+    return lines.join('\n');
 }
 //!<
 

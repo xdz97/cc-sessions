@@ -96,6 +96,10 @@ Configuration-driven protocol system that auto-adapts based on user preferences:
 
 ## Installation
 
+### Prerequisites
+- **Claude Code v2.0.8** - Versions 2.0.9+ have an upstream bug affecting parallel tool execution (see Known Issues below)
+- Python 3.8+ OR Node.js 16+ (not both)
+
 ### Python (No Node.js required)
 ```bash
 pipx install cc-sessions          # Recommended
@@ -248,6 +252,24 @@ sessions tasks start @<task-name>           # Start task with validation
 - **Native Scripts**: daic.cmd and daic.ps1 for shell compatibility
 - **Path Handling**: Windows-style paths with %CLAUDE_PROJECT_DIR%
 
+## Known Issues
+
+### Claude Code Version Compatibility
+**Issue**: Claude Code versions 2.0.9+ have a bug in stderr aggregation that causes 400 API errors during parallel tool execution.
+
+**Symptoms**:
+- "400 API Error: tool use concurrency issues" when multiple tools execute in parallel
+- Occurs when commands generate stderr output (e.g., curl progress) AND PostToolUse hooks send stderr feedback (exit code 2)
+
+**Affected Operations**:
+- PostToolUse hooks that provide directory navigation confirmations (cd command)
+- DAIC mode transitions
+- Any parallel tool calls with mixed stderr sources
+
+**Workaround**: Use Claude Code v2.0.8 until Anthropic fixes the upstream bug
+
+**Details**: See README.md Current Events section or upstream issue
+
 ## Architecture Notes
 
 ### Language Variants
@@ -287,7 +309,7 @@ sessions tasks start @<task-name>           # Start task with validation
 ## Integration Points
 
 ### Consumes
-- Claude Code hooks system
+- Claude Code hooks system (requires v2.0.8 due to upstream bug in 2.0.9+)
 - Git (optional, can disable branch enforcement)
 - Python 3.8+ OR Node.js 16+ (not both)
 - File system locks for atomic operations

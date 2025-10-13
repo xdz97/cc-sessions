@@ -20,6 +20,45 @@
 
 <br>
 
+## ⚠️ current events
+
+### Claude Code Version Requirement
+
+**IMPORTANT**: cc-sessions requires Claude Code version **2.0.8** due to an upstream bug in newer versions.
+
+**The Issue**: Claude Code versions after 2.0.8 have a bug in their stderr aggregation system that causes 400 API errors when:
+- Multiple tool calls execute in parallel (batched in one Claude response)
+- Commands generate their own stderr output (e.g., curl progress meters)
+- PostToolUse hooks also send stderr feedback (exit code 2)
+
+This breaks cc-sessions' PostToolUse hooks that provide essential feedback like directory navigation confirmations and DAIC mode transitions.
+
+**Install the correct version**:
+```bash
+npm install -g @anthropic-ai/claude-code@2.0.8
+```
+
+**Related**: [Claude Code Issue #53](https://github.com/anthropics-ai/claude-code/issues/53)
+
+**Reproduction**: Parallel bash commands with `cd` (triggers PostToolUse exit code 2) combined with commands that generate stderr (like curl).
+
+### Latest Release - v0.3.0
+
+**Major highlights:**
+- **Dual Language Support**: Now available as both Python and Node.js packages with complete feature parity
+- **Unified Sessions API**: Single `sessions` command replaces multiple slash commands
+- **Natural Language Protocols**: Full workflow automation through trigger phrases (mek:, start^:, finito, squish)
+- **Todo Validation System**: Approved todo lists are locked and tracked to prevent scope creep
+- **Directory Tasks**: Multi-phase projects with subtasks on shared feature branches
+- **Kickstart Tutorial**: Interactive onboarding teaches cc-sessions by using it
+- **CI Environment Detection**: Auto-bypass DAIC in GitHub Actions (thanks @oppianmatt)
+- **Enhanced Statusline**: Nerd Fonts + git tracking with ahead/behind indicators (thanks @dnviti)
+- **Safe Uninstaller**: Interactive removal with automatic backups (thanks @gabelul)
+
+See [CHANGELOG.md](CHANGELOG.md) for complete details.
+
+<br>
+
 ## installing the extension
 
 You install cc-sessions into a repo from the project root:

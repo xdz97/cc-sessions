@@ -114,7 +114,6 @@ def format_config_human(config) -> str:
                             f"  Task Detection: {config.features.task_detection}",
                             f"  Auto Ultrathink: {config.features.auto_ultrathink}",
                             f"  Use Nerd Fonts: {config.features.use_nerd_fonts}",
-                            f"  Auto Update: {config.features.auto_update}",
                             f"  Context Warnings (85%): {config.features.context_warnings.warn_85}",
                             f"  Context Warnings (90%): {config.features.context_warnings.warn_90}", ])
 
@@ -579,7 +578,6 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
                     "task_detection": features.task_detection,
                     "auto_ultrathink": features.auto_ultrathink,
                     "use_nerd_fonts": features.use_nerd_fonts,
-                    "auto_update": features.auto_update,
                     "warn_85": features.context_warnings.warn_85,
                     "warn_90": features.context_warnings.warn_90,
                 }
@@ -591,7 +589,6 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
             f"  task_detection: {features.task_detection}",
             f"  auto_ultrathink: {features.auto_ultrathink}",
             f"  use_nerd_fonts: {features.use_nerd_fonts}",
-            f"  auto_update: {features.auto_update}",
             f"  warn_85: {features.context_warnings.warn_85}",
             f"  warn_90: {features.context_warnings.warn_90}",
         ]
@@ -606,7 +603,7 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
         bool_value = value.lower() in ['true', '1', 'yes', 'on']
         
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
                 # Safe features
                 setattr(config.features, key, bool_value)
 
@@ -629,7 +626,7 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
 
         # Get current value
         config = load_config()
-        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update']:
+        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
             current_value = getattr(config.features, key)
         elif key in ['warn_85', 'warn_90']:
             current_value = getattr(config.features.context_warnings, key)
@@ -641,7 +638,7 @@ def handle_features_command(args: List[str], json_output: bool = False, from_sla
 
         # Save the toggled value
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
                 setattr(config.features, key, new_value)
             elif key in ['warn_85', 'warn_90']:
                 setattr(config.features.context_warnings, key, new_value)
@@ -669,13 +666,12 @@ def format_features_help() -> str:
         "  task_detection      - Task-based workflow automation (default: true)",
         "  auto_ultrathink     - Enhanced AI reasoning (default: true)",
         "  use_nerd_fonts      - Nerd Fonts icons in statusline (default: true)",
-        "  auto_update         - Automatic package updates (default: false)",
         "  warn_85             - Context warning at 85% (default: true)",
         "  warn_90             - Context warning at 90% (default: true)",
         "",
         "Examples:",
         "  /sessions config features toggle use_nerd_fonts",
-        "  /sessions config features set auto_update true",
+        "  /sessions config features set auto_ultrathink false",
         "  /sessions config features toggle branch_enforcement"
     ]
     return "\n".join(lines)

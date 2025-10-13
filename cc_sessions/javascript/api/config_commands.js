@@ -135,7 +135,6 @@ function formatConfigHuman(config) {
         `  Task Detection: ${config.features.task_detection}`,
         `  Auto Ultrathink: ${config.features.auto_ultrathink}`,
         `  Use Nerd Fonts: ${config.features.use_nerd_fonts}`,
-        `  Auto Update: ${config.features.auto_update}`,
         `  Context Warnings (85%): ${config.features.context_warnings.warn_85}`,
         `  Context Warnings (90%): ${config.features.context_warnings.warn_90}`,
     ]);
@@ -760,7 +759,6 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
                     task_detection: features.task_detection,
                     auto_ultrathink: features.auto_ultrathink,
                     use_nerd_fonts: features.use_nerd_fonts,
-                    auto_update: features.auto_update,
                     warn_85: features.context_warnings.warn_85,
                     warn_90: features.context_warnings.warn_90,
                 }
@@ -773,7 +771,6 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
             `  task_detection: ${features.task_detection}`,
             `  auto_ultrathink: ${features.auto_ultrathink}`,
             `  use_nerd_fonts: ${features.use_nerd_fonts}`,
-            `  auto_update: ${features.auto_update}`,
             `  warn_85: ${features.context_warnings.warn_85}`,
             `  warn_90: ${features.context_warnings.warn_90}`,
         ];
@@ -790,7 +787,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
 
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update'].includes(key)) {
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
                 // Safe features
                 config.features[key] = boolValue;
 
@@ -818,7 +815,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         // Get current value
         const config = loadConfig();
         let currentValue;
-        if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update'].includes(key)) {
+        if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
             currentValue = config.features[key];
         } else if (['warn_85', 'warn_90'].includes(key)) {
             currentValue = config.features.context_warnings[key];
@@ -831,7 +828,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
 
         // Save the toggled value
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts', 'auto_update'].includes(key)) {
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
                 config.features[key] = newValue;
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 config.features.context_warnings[key] = newValue;
@@ -865,13 +862,12 @@ function formatFeaturesHelp() {
         "  task_detection      - Task-based workflow automation (default: true)",
         "  auto_ultrathink     - Enhanced AI reasoning (default: true)",
         "  use_nerd_fonts      - Nerd Fonts icons in statusline (default: true)",
-        "  auto_update         - Automatic package updates (default: false)",
         "  warn_85             - Context warning at 85% (default: true)",
         "  warn_90             - Context warning at 90% (default: true)",
         "",
         "Examples:",
         "  /sessions config features toggle use_nerd_fonts",
-        "  /sessions config features set auto_update true",
+        "  /sessions config features set auto_ultrathink false",
         "  /sessions config features toggle branch_enforcement"
     ];
     return lines.join('\n');

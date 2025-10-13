@@ -301,7 +301,6 @@ class EnabledFeatures:
     task_detection: bool = True
     auto_ultrathink: bool = True
     use_nerd_fonts: bool = True
-    auto_update: bool = False
     context_warnings: ContextWarnings = field(default_factory=ContextWarnings)
 
     @classmethod
@@ -314,7 +313,6 @@ class EnabledFeatures:
             task_detection=d.get("task_detection", True),
             auto_ultrathink=d.get("auto_ultrathink", True),
             use_nerd_fonts=d.get("use_nerd_fonts", True),
-            auto_update=d.get("auto_update", False),
             context_warnings=cw
         )
 #!<

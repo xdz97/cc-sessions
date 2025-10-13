@@ -384,63 +384,62 @@ if update_flag is None and current_version:
 
 # Display update notification if flag is True
 if update_flag and latest_version and current_version:
-    # Check if auto-update is enabled
-    if CONFIG.features.auto_update:
-        # Attempt auto-update (blocking)
-        context += f"\nAuto-update enabled. Updating cc-sessions: {current_version} → {latest_version}...\n"
-        try:
-            result = subprocess.run(
-                [sys.executable, '-m', 'pip', 'install', '--upgrade', 'cc-sessions'],
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
-            if result.returncode == 0:
-                # Clear update flag on success
-                with edit_state() as s:
-                    s.metadata.pop('update_available', None)
-                    s.metadata.pop('latest_version', None)
-                    s.metadata.pop('current_version', None)
-                context += f"✓ Updated to {latest_version}\n\n"
-            else:
-                # Fall back to manual update message
-                context += f"✗ Auto-update failed. Please update manually:\n"
-                context += f"  pip install --upgrade cc-sessions\n\n"
-        except (subprocess.TimeoutExpired, Exception) as e:
-            context += f"✗ Auto-update failed ({e}). Please update manually:\n"
-            context += f"  pip install --upgrade cc-sessions\n\n"
-    else:
-        # Show manual update message
-        # Extract first few lines from CHANGELOG for the latest version
-        try:
-            changelog_path = PROJECT_ROOT.parent / 'CHANGELOG.md'
-            if changelog_path.exists():
-                with open(changelog_path, 'r') as f:
-                    content = f.read()
-                    # Find the latest version section
-                    import re
-                    version_pattern = rf'##\s*\[{re.escape(latest_version)}\]'
-                    match = re.search(version_pattern, content)
-                    if match:
-                        # Extract until next ## or end
-                        start = match.end()
-                        next_heading = content.find('\n## ', start)
-                        section = content[start:next_heading if next_heading != -1 else start+500].strip()
-                        # Take first 3 lines of changes
-                        lines = [l.strip() for l in section.split('\n') if l.strip() and l.strip().startswith('-')][:3]
-                        changelog_excerpt = '\n'.join(f"  {l}" for l in lines)
-                    else:
-                        changelog_excerpt = None
-            else:
-                changelog_excerpt = None
-        except:
+    # Show manual update message
+    # Extract first few lines from CHANGELOG for the latest version
+    try:
+        changelog_path = PROJECT_ROOT.parent / 'CHANGELOG.md'
+        if changelog_path.exists():
+            with open(changelog_path, 'r') as f:
+                content = f.read()
+                # Find the latest version section
+                import re
+                version_pattern = rf'##\s*\[{re.escape(latest_version)}\]'
+                match = re.search(version_pattern, content)
+                if match:
+                    # Extract until next ## or end
+                    start = match.end()
+                    next_heading = content.find('\n## ', start)
+                    section = content[start:next_heading if next_heading != -1 else start+500].strip()
+                    # Get all lines of changes
+                    lines = [l.strip() for l in section.split('\n') if l.strip() and l.strip().startswith('-')]
+                    changelog_excerpt = '\n'.join(f"  {l}" for l in lines)
+                else:
+                    changelog_excerpt = None
+        else:
             changelog_excerpt = None
+    except:
+        changelog_excerpt = None
 
-        context += f"\nUpdate available: {current_version} → {latest_version}\n"
-        if changelog_excerpt:
-            context += f"What's new:\n{changelog_excerpt}\n\n"
-        context += f"Run: pip install --upgrade cc-sessions\n"
-        context += f"To suppress this warning: sessions update suppress\n\n"
+    context += f"""
+[IMPORTANT: Update Available]
+
+A new version of cc-sessions is available: {current_version} → {latest_version}
+
+"""
+    if changelog_excerpt:
+        context += f"""What's new in this version:
+{changelog_excerpt}
+
+"""
+
+    context += f"""**BEFORE STARTING ANY WORK:**
+You must stop and ask the user about this update first.
+
+First, ask the user: "I see there's a new version of cc-sessions available ({latest_version}) with several new features. Would you like to update now? The installer will guide you through any new configuration options."
+
+If YES:
+  1. Tell them to run in their terminal: pip install --upgrade cc-sessions
+  2. Wait for them to complete the installation
+  3. Remind them they'll need to start a new session after updating
+
+If NO:
+  - Continue with the session normally
+  - They can suppress this notification: sessions state update suppress
+  - They can check update status anytime: sessions state update status
+
+This notification will appear on every session start until they update or suppress it.
+
+"""
 #!<
 
 #-#

@@ -19,7 +19,7 @@
 
 <br>
 
-## current events
+## latest updates
 
 <details>
 <summary>

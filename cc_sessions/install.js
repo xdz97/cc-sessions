@@ -999,12 +999,703 @@ function copy_files(script_dir, project_root) {
   copy_file(path.join(tdir, 'INDEX_TEMPLATE.md'), path.join(project_root, 'sessions', 'tasks', 'indexes', 'INDEX_TEMPLATE.md'));
 }
 
+// v0.2.6/v0.2.7 Migration Functions
+// Detection patterns for v0.2.6 and v0.2.7 installations (identical versions)
+const V026_PATTERNS = {
+  version: '0.2.6',
+
+  hooks: {
+    // Python hooks in .claude/hooks/ with hyphenated names
+    'sessions-enforce.py': {
+      imports: [
+        'from shared_state import check_daic_mode_bool',
+        'from shared_state import get_task_state',
+        'from shared_state import get_project_root',
+      ],
+      unique_patterns: [
+        'def load_config():',
+        'DEFAULT_CONFIG = {',
+        'CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"',
+      ]
+    },
+    'session-start.py': {
+      imports: [
+        'from shared_state import get_project_root',
+        'from shared_state import ensure_state_dir',
+        'from shared_state import get_task_state',
+      ],
+      unique_patterns: [
+        'developer_name = config.get(\'developer_name\', \'the developer\')',
+        'You are beginning a new context window',
+        'quick_checks = []',
+      ]
+    },
+    'user-messages.py': {
+      imports: [
+        'from shared_state import check_daic_mode_bool',
+        'from shared_state import set_daic_mode',
+      ],
+      unique_patterns: [
+        'DEFAULT_TRIGGER_PHRASES = ["make it so", "run that", "yert"]',
+        'is_add_trigger_command = prompt.strip().startswith(\'/add-trigger\')',
+        'get_context_length_from_transcript',
+      ]
+    },
+    'post-tool-use.py': {
+      imports: [
+        'from shared_state import check_daic_mode_bool',
+        'from shared_state import get_project_root',
+      ],
+      unique_patterns: [
+        'subagent_flag = project_root / \'.claude\' / \'state\' / \'in_subagent_context.flag\'',
+        '[DAIC Reminder] When you\'re done implementing, run: daic',
+        'implementation_tools = ["Edit", "Write", "MultiEdit", "NotebookEdit"]',
+      ]
+    },
+    'task-transcript-link.py': {
+      imports: [
+        'import tiktoken',
+        'import json',
+      ],
+      unique_patterns: [
+        'tool_name = input_data.get("tool_name", "")',
+        'if tool_name != "Task":',
+        'Clean the transcript',
+      ]
+    },
+    'shared_state.py': {
+      imports: [
+        'import json',
+        'from pathlib import Path',
+        'from datetime import datetime',
+      ],
+      unique_patterns: [
+        'def get_project_root():',
+        'STATE_DIR = PROJECT_ROOT / ".claude" / "state"',
+        'DAIC_STATE_FILE = STATE_DIR / "daic-mode.json"',
+        'TASK_STATE_FILE = STATE_DIR / "current_task.json"',
+        'DISCUSSION_MODE_MSG = "You are now in Discussion Mode',
+        'def check_daic_mode_bool() -> bool:',
+        'def toggle_daic_mode() -> str:',
+      ]
+    },
+  },
+
+  state_files: {
+    'daic-mode.json': {
+      location: '.claude/state/',
+      schema: {
+        type: 'object',
+        required_keys: ['mode'],
+        properties: {
+          mode: { enum: ['discussion', 'implementation'] }
+        }
+      },
+      example: { mode: 'discussion' }
+    },
+    'current_task.json': {
+      location: '.claude/state/',
+      schema: {
+        type: 'object',
+        required_keys: ['task', 'branch', 'services', 'updated'],
+        properties: {
+          task: { type: ['string', 'null'] },
+          branch: { type: ['string', 'null'] },
+          services: { type: 'array' },
+          updated: { type: 'string', format: 'date' }
+        }
+      },
+      example: {
+        task: null,
+        branch: null,
+        services: [],
+        updated: '2025-10-13'
+      }
+    },
+    'in_subagent_context.flag': {
+      location: '.claude/state/',
+      schema: { type: 'flag_file' },
+      note: 'Presence indicates subagent context; no content validation needed'
+    }
+  },
+
+  statusline: {
+    location: '.claude/statusline-script.sh',
+    unique_patterns: [
+      '#!/bin/bash',
+      '# Claude Code StatusLine Script',
+      'calculate_context() {',
+      'context_limit=800000',
+      'if [[ "$model_name" == *"Sonnet"* ]]; then',
+    ],
+    note: 'Optional installation - may not be present'
+  },
+
+  settings_paths: {
+    unix: {
+      hooks_dir: '.claude/hooks',
+      command_pattern: '$CLAUDE_PROJECT_DIR/.claude/hooks/{hookname}.py',
+      example: '$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py'
+    },
+    windows: {
+      hooks_dir: '.claude\\hooks',
+      command_pattern: 'python "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\{hookname}.py"',
+      example: 'python "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py"'
+    },
+    hook_names: [
+      'user-messages',
+      'sessions-enforce',
+      'task-transcript-link',
+      'post-tool-use',
+      'session-start',
+    ]
+  },
+
+  directory_structure: {
+    directories: [
+      '.claude/hooks/',
+      '.claude/state/',
+    ],
+    note: 'Both directories should be created by v0.2.6 installer'
+  }
+};
+
+function is_v026_hook(file_path) {
+  /**
+   * Verify if a file is a v0.2.6/v0.2.7 cc-sessions hook using content-based detection.
+   * Returns true if file contains v0.2.6-specific patterns (minimum 2 matches required).
+   */
+  if (!fs.existsSync(file_path)) {
+    return false;
+  }
+
+  const hook_name = path.basename(file_path);
+  if (!(hook_name in V026_PATTERNS.hooks)) {
+    return false;
+  }
+
+  const patterns = V026_PATTERNS.hooks[hook_name];
+
+  try {
+    const content = fs.readFileSync(file_path, 'utf8').split('\n').slice(0, 80).join('\n');
+
+    let matches = 0;
+    for (const import_pattern of patterns.imports) {
+      if (content.includes(import_pattern)) {
+        matches += 1;
+      }
+    }
+
+    for (const unique_pattern of patterns.unique_patterns) {
+      if (content.includes(unique_pattern)) {
+        matches += 1;
+      }
+    }
+
+    return matches >= 2;
+
+  } catch (e) {
+    return false;
+  }
+}
+
+function is_v026_state_file(file_path, file_type) {
+  /**
+   * Validate if a state file matches v0.2.6/v0.2.7 schema.
+   * Returns true if file matches v0.2.6 schema.
+   */
+  if (!fs.existsSync(file_path)) {
+    return false;
+  }
+
+  if (!(file_type in V026_PATTERNS.state_files)) {
+    return false;
+  }
+
+  // Special case: flag file, just check existence
+  if (file_type === 'in_subagent_context.flag') {
+    return true;
+  }
+
+  // Validate JSON files
+  try {
+    const data = JSON.parse(fs.readFileSync(file_path, 'utf8'));
+    const schema = V026_PATTERNS.state_files[file_type].schema;
+    const required_keys = schema.required_keys || [];
+
+    if (!required_keys.every(key => key in data)) {
+      return false;
+    }
+
+    if (file_type === 'daic-mode.json') {
+      return ['discussion', 'implementation'].includes(data.mode);
+    }
+
+    if (file_type === 'current_task.json') {
+      return (
+        Array.isArray(data.services) &&
+        (typeof data.task === 'string' || data.task === null) &&
+        (typeof data.branch === 'string' || data.branch === null) &&
+        typeof data.updated === 'string'
+      );
+    }
+
+    return true;
+
+  } catch (e) {
+    return false;
+  }
+}
+
+function find_v026_hook_commands(settings) {
+  /**
+   * Extract hook commands from settings.json that reference v0.2.6/v0.2.7 paths.
+   * Returns array of objects with event, matcher, command, and hook_name fields.
+   */
+  const v026_commands = [];
+  const hooks = settings.hooks || {};
+
+  if (typeof hooks !== 'object') {
+    return v026_commands;
+  }
+
+  for (const [event_name, event_configs] of Object.entries(hooks)) {
+    if (!Array.isArray(event_configs)) {
+      continue;
+    }
+
+    for (const config of event_configs) {
+      if (typeof config !== 'object') {
+        continue;
+      }
+
+      const hook_list = config.hooks || [];
+      const matcher = config.matcher;
+
+      for (const hook of hook_list) {
+        const command = hook.command || '';
+        let is_v026 = false;
+        let hook_name = null;
+
+        // Unix pattern: $CLAUDE_PROJECT_DIR/.claude/hooks/{name}.py
+        if (command.includes('/.claude/hooks/')) {
+          is_v026 = true;
+          const parts = command.split('/.claude/hooks/');
+          if (parts.length > 1) {
+            const hook_file = parts[1].split(' ')[0];
+            hook_name = hook_file.replace('.py', '').replace('.js', '');
+          }
+        }
+
+        // Windows pattern: %.claude\hooks\{name}.py
+        else if (command.includes('\\.claude\\hooks\\') || command.includes('\\.claude\\\\hooks\\\\')) {
+          is_v026 = true;
+          const parts = command.split('\\hooks\\');
+          if (parts.length > 1) {
+            const hook_file = parts[1].split('"')[0];
+            hook_name = hook_file.replace('.py', '').replace('.js', '');
+          }
+        }
+
+        // Verify known cc-sessions hook name
+        if (is_v026 && hook_name) {
+          const known_hooks = V026_PATTERNS.settings_paths.hook_names;
+          if (known_hooks.includes(hook_name)) {
+            v026_commands.push({
+              event: event_name,
+              matcher: matcher,
+              command: command,
+              hook_name: hook_name
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return v026_commands;
+}
+
+function detect_v026_artifacts(project_root) {
+  /**
+   * Comprehensive detection of all v0.2.6/v0.2.7 artifacts.
+   * Returns object with hooks, state_files, statusline, settings_commands, and directories.
+   */
+  const artifacts = {
+    hooks: [],
+    state_files: [],
+    statusline: false,
+    settings_commands: [],
+    directories: []
+  };
+
+  // Check hooks directory
+  const hooks_dir = path.join(project_root, '.claude', 'hooks');
+  if (fs.existsSync(hooks_dir)) {
+    artifacts.directories.push('.claude/hooks/');
+    for (const hook_name of Object.keys(V026_PATTERNS.hooks)) {
+      const hook_path = path.join(hooks_dir, hook_name);
+      if (is_v026_hook(hook_path)) {
+        artifacts.hooks.push(hook_name);
+      }
+    }
+  }
+
+  // Check state directory
+  const state_dir = path.join(project_root, '.claude', 'state');
+  if (fs.existsSync(state_dir)) {
+    artifacts.directories.push('.claude/state/');
+
+    const daic_file = path.join(state_dir, 'daic-mode.json');
+    if (is_v026_state_file(daic_file, 'daic-mode.json')) {
+      artifacts.state_files.push('daic-mode.json');
+    }
+
+    const task_file = path.join(state_dir, 'current_task.json');
+    if (is_v026_state_file(task_file, 'current_task.json')) {
+      artifacts.state_files.push('current_task.json');
+    }
+
+    const subagent_flag = path.join(state_dir, 'in_subagent_context.flag');
+    if (is_v026_state_file(subagent_flag, 'in_subagent_context.flag')) {
+      artifacts.state_files.push('in_subagent_context.flag');
+    }
+  }
+
+  // Check statusline
+  const statusline_path = path.join(project_root, '.claude', 'statusline-script.sh');
+  if (fs.existsSync(statusline_path)) {
+    try {
+      const header = fs.readFileSync(statusline_path, 'utf8').slice(0, 200);
+      if (header.includes('# Claude Code StatusLine Script')) {
+        artifacts.statusline = true;
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  // Check settings.json
+  try {
+    const settings = get_settings(project_root);
+    artifacts.settings_commands = find_v026_hook_commands(settings);
+  } catch (e) {
+    // Ignore errors
+  }
+
+  return artifacts;
+}
+
+async function prompt_migration_confirmation(artifacts) {
+  /**
+   * Show user what will be migrated and ask for confirmation.
+   * Returns true if user confirms migration, false otherwise.
+   */
+  console.log(color('\n🔄 v0.2.6/v0.2.7 Installation Detected', Colors.CYAN));
+  console.log();
+  console.log(color('Found the following artifacts from previous installation:', Colors.CYAN));
+
+  if (artifacts.hooks.length > 0) {
+    console.log(color(`  • Hooks: ${artifacts.hooks.length} files`, Colors.CYAN));
+    for (const hook of artifacts.hooks) {
+      console.log(color(`    - ${hook}`, Colors.CYAN));
+    }
+  }
+
+  if (artifacts.state_files.length > 0) {
+    console.log(color(`  • State files: ${artifacts.state_files.length} files`, Colors.CYAN));
+    for (const state_file of artifacts.state_files) {
+      console.log(color(`    - ${state_file}`, Colors.CYAN));
+    }
+  }
+
+  if (artifacts.statusline) {
+    console.log(color('  • Statusline script: statusline-script.sh', Colors.CYAN));
+  }
+
+  if (artifacts.settings_commands.length > 0) {
+    console.log(color(`  • Settings.json: ${artifacts.settings_commands.length} hook commands`, Colors.CYAN));
+  }
+
+  console.log();
+  console.log(color('These old files will be removed:', Colors.CYAN));
+  console.log(color('  • Old hook files deleted', Colors.CYAN));
+  console.log(color('  • Old state files deleted', Colors.CYAN));
+  console.log(color('  • Settings.json cleaned', Colors.CYAN));
+  console.log(color('  • You will start fresh with v0.3.0 defaults', Colors.CYAN));
+  console.log();
+
+  const response = await inquirer.prompt([{
+    type: 'list',
+    name: 'choice',
+    message: 'Proceed with migration?',
+    choices: ['Yes - Migrate and clean up', 'No - Skip migration (not recommended)']
+  }]);
+
+  return response.choice.startsWith('Yes');
+}
+
+function clean_v026_settings(project_root, settings, commands) {
+  /**
+   * Remove v0.2.6/v0.2.7 hook commands from settings.json.
+   * Returns true on success, false on failure.
+   */
+  if (commands.length === 0) {
+    return true;
+  }
+
+  try {
+    const modified = JSON.parse(JSON.stringify(settings));  // Deep copy
+
+    if (!modified.hooks) {
+      return true;
+    }
+
+    // Group commands by event for efficient removal
+    const by_event = {};
+    for (const cmd of commands) {
+      const event = cmd.event;
+      if (!(event in by_event)) {
+        by_event[event] = [];
+      }
+      by_event[event].push(cmd);
+    }
+
+    // Process each event
+    for (const [event_name, event_commands] of Object.entries(by_event)) {
+      if (!(event_name in modified.hooks)) {
+        continue;
+      }
+
+      const event_configs = modified.hooks[event_name];
+      const new_configs = [];
+
+      for (const config of event_configs) {
+        if (typeof config !== 'object') {
+          new_configs.push(config);
+          continue;
+        }
+
+        const hook_list = config.hooks || [];
+        const new_hooks = [];
+
+        for (const hook of hook_list) {
+          const command = hook.command || '';
+          // Check if this command should be removed
+          const should_remove = event_commands.some(cmd => cmd.command === command);
+          if (!should_remove) {
+            new_hooks.push(hook);
+          }
+        }
+
+        // Keep config if it has remaining hooks
+        if (new_hooks.length > 0) {
+          config.hooks = new_hooks;
+          new_configs.push(config);
+        }
+      }
+
+      // Update or remove event
+      if (new_configs.length > 0) {
+        modified.hooks[event_name] = new_configs;
+      } else {
+        delete modified.hooks[event_name];
+      }
+    }
+
+    // Write back
+    return write_settings(project_root, modified);
+
+  } catch (e) {
+    console.log(color(`✗ Failed to clean settings.json: ${e}`, Colors.RED));
+    return false;
+  }
+}
+
+function archive_v026_files(project_root, artifacts) {
+  /**
+   * Archive v0.2.6/v0.2.7 files before deletion.
+   * Returns object with archive info: {archived: bool, path: string, file_count: number}
+   */
+  const now = new Date();
+  const timestamp = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+  const archive_root = path.join(project_root, 'sessions', '.archived', `v026-migration-${timestamp}`);
+  const archive_hooks_dir = path.join(archive_root, 'hooks');
+  const archive_state_dir = path.join(archive_root, 'state');
+
+  try {
+    fs.mkdirSync(archive_hooks_dir, { recursive: true });
+    fs.mkdirSync(archive_state_dir, { recursive: true });
+  } catch (e) {
+    console.log(color(`⚠️  Could not create archive directory: ${e}`, Colors.YELLOW));
+    return { archived: false, path: '', file_count: 0 };
+  }
+
+  let file_count = 0;
+
+  // Archive hooks
+  for (const hook_name of artifacts.hooks) {
+    try {
+      const src = path.join(project_root, '.claude', 'hooks', hook_name);
+      const dst = path.join(archive_hooks_dir, hook_name);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dst);
+        // Preserve timestamps
+        const stats = fs.statSync(src);
+        fs.utimesSync(dst, stats.atime, stats.mtime);
+        file_count += 1;
+      }
+    } catch (e) {
+      console.log(color(`⚠️  Could not archive ${hook_name}: ${e}`, Colors.YELLOW));
+    }
+  }
+
+  // Archive state files
+  for (const state_file of artifacts.state_files) {
+    try {
+      const src = path.join(project_root, '.claude', 'state', state_file);
+      const dst = path.join(archive_state_dir, state_file);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dst);
+        // Preserve timestamps
+        const stats = fs.statSync(src);
+        fs.utimesSync(dst, stats.atime, stats.mtime);
+        file_count += 1;
+      }
+    } catch (e) {
+      console.log(color(`⚠️  Could not archive ${state_file}: ${e}`, Colors.YELLOW));
+    }
+  }
+
+  // Archive statusline
+  if (artifacts.statusline) {
+    try {
+      const src = path.join(project_root, '.claude', 'statusline-script.sh');
+      const dst = path.join(archive_root, 'statusline-script.sh');
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dst);
+        // Preserve timestamps
+        const stats = fs.statSync(src);
+        fs.utimesSync(dst, stats.atime, stats.mtime);
+        file_count += 1;
+      }
+    } catch (e) {
+      console.log(color(`⚠️  Could not archive statusline-script.sh: ${e}`, Colors.YELLOW));
+    }
+  }
+
+  // Return archive info
+  const relative_path = path.relative(project_root, archive_root);
+  return {
+    archived: file_count > 0,
+    path: relative_path,
+    file_count: file_count
+  };
+}
+
+function clean_v026_files(project_root, artifacts) {
+  /**
+   * Delete verified v0.2.6/v0.2.7 files after successful migration.
+   */
+  console.log(color('\n🗑️  Cleaning up old files...', Colors.CYAN));
+
+  // Remove hooks
+  for (const hook_name of artifacts.hooks) {
+    try {
+      const hook_path = path.join(project_root, '.claude', 'hooks', hook_name);
+      fs.unlinkSync(hook_path);
+      console.log(color(`  ✓ Removed ${hook_name}`, Colors.CYAN));
+    } catch (e) {
+      console.log(color(`  ⚠ Could not remove ${hook_name}: ${e}`, Colors.YELLOW));
+    }
+  }
+
+  // Remove state files
+  for (const state_file of artifacts.state_files) {
+    try {
+      const state_path = path.join(project_root, '.claude', 'state', state_file);
+      fs.unlinkSync(state_path);
+      console.log(color(`  ✓ Removed ${state_file}`, Colors.CYAN));
+    } catch (e) {
+      console.log(color(`  ⚠ Could not remove ${state_file}: ${e}`, Colors.YELLOW));
+    }
+  }
+
+  // Remove statusline
+  if (artifacts.statusline) {
+    try {
+      const statusline_path = path.join(project_root, '.claude', 'statusline-script.sh');
+      fs.unlinkSync(statusline_path);
+      console.log(color('  ✓ Removed statusline-script.sh', Colors.CYAN));
+    } catch (e) {
+      console.log(color(`  ⚠ Could not remove statusline: ${e}`, Colors.YELLOW));
+    }
+  }
+
+  // Try to remove empty .claude/state/ directory (silent)
+  try {
+    fs.rmdirSync(path.join(project_root, '.claude', 'state'));
+  } catch (e) {
+    // Ignore
+  }
+}
+
+async function run_v026_migration(project_root) {
+  /**
+   * Orchestrate v0.2.6/v0.2.7 migration process.
+   * Returns object with archive info: {archived: bool, path: string, file_count: number, detected: bool}
+   */
+  // Detect old artifacts
+  const artifacts = detect_v026_artifacts(project_root);
+
+  // Skip if no artifacts found
+  if (artifacts.hooks.length === 0 && artifacts.state_files.length === 0) {
+    return { archived: false, path: '', file_count: 0, detected: false };
+  }
+
+  // Prompt user
+  if (!(await prompt_migration_confirmation(artifacts))) {
+    console.log(color('⚠️  Skipping cleanup. Old artifacts will remain.', Colors.YELLOW));
+    console.log(color('   You may experience hook conflicts or unexpected behavior.', Colors.YELLOW));
+    return { archived: false, path: '', file_count: 0, detected: true };
+  }
+
+  // Archive files before cleanup
+  console.log(color('\n📁 Archiving old files...', Colors.CYAN));
+  const archive_info = archive_v026_files(project_root, artifacts);
+  if (archive_info.archived) {
+    console.log(color(`  ✓ Archived ${archive_info.file_count} files to ${archive_info.path}`, Colors.CYAN));
+  }
+
+  // Clean settings.json
+  console.log(color('\n⚙️  Updating settings.json...', Colors.CYAN));
+  const settings = get_settings(project_root);
+  if (clean_v026_settings(project_root, settings, artifacts.settings_commands)) {
+    console.log(color(`  ✓ Removed ${artifacts.settings_commands.length} old hook commands`, Colors.CYAN));
+  } else {
+    console.log(color('  ⚠ Could not update settings.json completely', Colors.YELLOW));
+  }
+
+  // Clean files
+  clean_v026_files(project_root, artifacts);
+
+  // Add detected flag and return archive info
+  archive_info.detected = true;
+  return archive_info;
+}
+
 // Settings helpers
 function write_settings(project_root, settings) {
   try {
     const settings_path = path.join(project_root, '.claude', 'settings.json');
     fs.mkdirSync(path.dirname(settings_path), { recursive: true });
-    fs.writeFileSync(settings_path, JSON.stringify(settings, null, 2), 'utf8');
+
+    // Write to temporary file first
+    const next_path = settings_path.replace('.json', '.json.next');
+    fs.writeFileSync(next_path, JSON.stringify(settings, null, 2), 'utf8');
+
+    // Atomic rename (only reached if write succeeded)
+    fs.renameSync(next_path, settings_path);
     return true;
   } catch (e) {
     console.log(color(`✗ Failed writing settings.json: ${e}`, Colors.RED));
@@ -1086,7 +1777,7 @@ function configure_claude_md(project_root) {
 function configure_gitignore(project_root) {
   console.log(color('Configuring .gitignore...', Colors.CYAN));
   const gitignore_path = path.join(project_root, '.gitignore');
-  const entries = ['','# cc-sessions runtime files','sessions/sessions-state.json','sessions/transcripts/',''];
+  const entries = ['','# cc-sessions runtime files','sessions/sessions-state.json','sessions/transcripts/','sessions/.archived/',''];
   if (fs.existsSync(gitignore_path)) {
     let content = fs.readFileSync(gitignore_path, 'utf8');
     if (!content.includes('sessions/sessions-state.json')) {
@@ -2122,6 +2813,9 @@ async function main() {
     else { console.log(color('🔍 Detected existing cc-sessions installation', Colors.CYAN)); backup_dir = create_backup(PROJECT_ROOT); }
   }
 
+  // Check for and handle v0.2.6/v0.2.7 migration
+  const v026_archive_info = await run_v026_migration(PROJECT_ROOT);
+
   console.log(color(`\n⚙️  Installing cc-sessions to: ${PROJECT_ROOT}`, Colors.CYAN));
   console.log();
 
@@ -2141,7 +2835,7 @@ async function main() {
     await session.enter();
     let kickstart_mode = 'skip';
     try {
-      const did_import = await installer_decision_flow(PROJECT_ROOT);
+      const did_import = await installer_decision_flow(PROJECT_ROOT, v026_archive_info.detected);
       if (did_import) await run_config_editor(PROJECT_ROOT);
       else await run_full_configuration();
       kickstart_mode = await kickstart_decision(PROJECT_ROOT);
@@ -2156,6 +2850,14 @@ async function main() {
       console.log(color('   (Agents backed up for manual restoration if needed)', Colors.CYAN));
     }
     console.log(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN));
+
+    // Show v0.2.6/v0.2.7 archive message if applicable
+    if (v026_archive_info.archived) {
+      console.log(color('📁 Old v0.2.6/v0.2.7 files archived', Colors.CYAN));
+      console.log(color(`   Location: ${v026_archive_info.path}`, Colors.CYAN));
+      console.log(color(`   Files: ${v026_archive_info.file_count} archived for safekeeping\n`, Colors.CYAN));
+    }
+
     console.log(color('Next steps:', Colors.BOLD));
 
     // Read trigger phrases from current config for onboarding
@@ -2183,10 +2885,18 @@ async function main() {
   }
 }
 
-async function installer_decision_flow(project_root) {
+async function installer_decision_flow(project_root, had_v026_artifacts = false) {
   show_header(print_installer_header);
   let did_import = false;
-  const first_time = await inquirer.list_input({ message: 'Is this your first time using cc-sessions?', choices: ['Yes', 'No'] });
+
+  // Skip first-time question if we detected v0.2.6/v0.2.7 artifacts
+  let first_time;
+  if (had_v026_artifacts) {
+    first_time = 'No';
+  } else {
+    first_time = await inquirer.list_input({ message: 'Is this your first time using cc-sessions?', choices: ['Yes', 'No'] });
+  }
+
   if (first_time === 'No') {
     const version_check = await inquirer.list_input({ message: 'Have you used cc-sessions v0.3.0 or later (released October 2025)?', choices: ['Yes', 'No'] });
     if (version_check === 'Yes') {

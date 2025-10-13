@@ -1162,16 +1162,630 @@ def copy_files(script_dir, project_root):
     copy_file(templates_dir / 'INDEX_TEMPLATE.md', project_root / 'sessions' / 'tasks' / 'indexes' / 'INDEX_TEMPLATE.md')
 #!<
 
+#!> v0.2.6/v0.2.7 Migration Functions
+# Detection patterns for v0.2.6 and v0.2.7 installations (identical versions)
+V026_PATTERNS = {
+    'version': '0.2.6',
+
+    'hooks': {
+        # Python hooks in .claude/hooks/ with hyphenated names
+        'sessions-enforce.py': {
+            'imports': [
+                'from shared_state import check_daic_mode_bool',
+                'from shared_state import get_task_state',
+                'from shared_state import get_project_root',
+            ],
+            'unique_patterns': [
+                'def load_config():',
+                'DEFAULT_CONFIG = {',
+                'CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"',
+            ]
+        },
+        'session-start.py': {
+            'imports': [
+                'from shared_state import get_project_root',
+                'from shared_state import ensure_state_dir',
+                'from shared_state import get_task_state',
+            ],
+            'unique_patterns': [
+                'developer_name = config.get(\'developer_name\', \'the developer\')',
+                'You are beginning a new context window',
+                'quick_checks = []',
+            ]
+        },
+        'user-messages.py': {
+            'imports': [
+                'from shared_state import check_daic_mode_bool',
+                'from shared_state import set_daic_mode',
+            ],
+            'unique_patterns': [
+                'DEFAULT_TRIGGER_PHRASES = ["make it so", "run that", "yert"]',
+                'is_add_trigger_command = prompt.strip().startswith(\'/add-trigger\')',
+                'get_context_length_from_transcript',
+            ]
+        },
+        'post-tool-use.py': {
+            'imports': [
+                'from shared_state import check_daic_mode_bool',
+                'from shared_state import get_project_root',
+            ],
+            'unique_patterns': [
+                'subagent_flag = project_root / \'.claude\' / \'state\' / \'in_subagent_context.flag\'',
+                '[DAIC Reminder] When you\'re done implementing, run: daic',
+                'implementation_tools = ["Edit", "Write", "MultiEdit", "NotebookEdit"]',
+            ]
+        },
+        'task-transcript-link.py': {
+            'imports': [
+                'import tiktoken',
+                'import json',
+            ],
+            'unique_patterns': [
+                'tool_name = input_data.get("tool_name", "")',
+                'if tool_name != "Task":',
+                'Clean the transcript',
+            ]
+        },
+        'shared_state.py': {
+            'imports': [
+                'import json',
+                'from pathlib import Path',
+                'from datetime import datetime',
+            ],
+            'unique_patterns': [
+                'def get_project_root():',
+                'STATE_DIR = PROJECT_ROOT / ".claude" / "state"',
+                'DAIC_STATE_FILE = STATE_DIR / "daic-mode.json"',
+                'TASK_STATE_FILE = STATE_DIR / "current_task.json"',
+                'DISCUSSION_MODE_MSG = "You are now in Discussion Mode',
+                'def check_daic_mode_bool() -> bool:',
+                'def toggle_daic_mode() -> str:',
+            ]
+        },
+    },
+
+    'state_files': {
+        'daic-mode.json': {
+            'location': '.claude/state/',
+            'schema': {
+                'type': 'object',
+                'required_keys': ['mode'],
+                'properties': {
+                    'mode': {'enum': ['discussion', 'implementation']}
+                }
+            },
+            'example': {'mode': 'discussion'}
+        },
+        'current_task.json': {
+            'location': '.claude/state/',
+            'schema': {
+                'type': 'object',
+                'required_keys': ['task', 'branch', 'services', 'updated'],
+                'properties': {
+                    'task': {'type': ['string', 'null']},
+                    'branch': {'type': ['string', 'null']},
+                    'services': {'type': 'array'},
+                    'updated': {'type': 'string', 'format': 'date'}
+                }
+            },
+            'example': {
+                'task': None,
+                'branch': None,
+                'services': [],
+                'updated': '2025-10-13'
+            }
+        },
+        'in_subagent_context.flag': {
+            'location': '.claude/state/',
+            'schema': {'type': 'flag_file'},
+            'note': 'Presence indicates subagent context; no content validation needed'
+        }
+    },
+
+    'statusline': {
+        'location': '.claude/statusline-script.sh',
+        'unique_patterns': [
+            '#!/bin/bash',
+            '# Claude Code StatusLine Script',
+            'calculate_context() {',
+            'context_limit=800000',
+            'if [[ "$model_name" == *"Sonnet"* ]]; then',
+        ],
+        'note': 'Optional installation - may not be present'
+    },
+
+    'settings_paths': {
+        'unix': {
+            'hooks_dir': '.claude/hooks',
+            'command_pattern': '$CLAUDE_PROJECT_DIR/.claude/hooks/{hookname}.py',
+            'example': '$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py'
+        },
+        'windows': {
+            'hooks_dir': '.claude\\hooks',
+            'command_pattern': 'python "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\{hookname}.py"',
+            'example': 'python "%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py"'
+        },
+        'hook_names': [
+            'user-messages',
+            'sessions-enforce',
+            'task-transcript-link',
+            'post-tool-use',
+            'session-start',
+        ]
+    },
+
+    'directory_structure': {
+        'directories': [
+            '.claude/hooks/',
+            '.claude/state/',
+        ],
+        'note': 'Both directories should be created by v0.2.6 installer'
+    }
+}
+
+def is_v026_hook(file_path: Path) -> bool:
+    """Verify if a file is a v0.2.6/v0.2.7 cc-sessions hook using content-based detection.
+
+    Returns True if file contains v0.2.6-specific patterns (minimum 2 matches required).
+    """
+    if not file_path.exists():
+        return False
+
+    hook_name = file_path.name
+    if hook_name not in V026_PATTERNS['hooks']:
+        return False
+
+    patterns = V026_PATTERNS['hooks'][hook_name]
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = ''.join(f.readline() for _ in range(80))
+
+        matches = 0
+        for import_pattern in patterns['imports']:
+            if import_pattern in content:
+                matches += 1
+
+        for unique_pattern in patterns['unique_patterns']:
+            if unique_pattern in content:
+                matches += 1
+
+        return matches >= 2
+
+    except Exception:
+        return False
+
+def is_v026_state_file(file_path: Path, file_type: str) -> bool:
+    """Validate if a state file matches v0.2.6/v0.2.7 schema.
+
+    Args:
+        file_path: Path to the state file
+        file_type: One of 'daic-mode.json', 'current_task.json', 'in_subagent_context.flag'
+
+    Returns True if file matches v0.2.6 schema.
+    """
+    if not file_path.exists():
+        return False
+
+    if file_type not in V026_PATTERNS['state_files']:
+        return False
+
+    # Special case: flag file, just check existence
+    if file_type == 'in_subagent_context.flag':
+        return True
+
+    # Validate JSON files
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        schema = V026_PATTERNS['state_files'][file_type]['schema']
+        required_keys = schema.get('required_keys', [])
+
+        if not all(key in data for key in required_keys):
+            return False
+
+        if file_type == 'daic-mode.json':
+            return data.get('mode') in ['discussion', 'implementation']
+
+        if file_type == 'current_task.json':
+            return (
+                isinstance(data.get('services'), list) and
+                (isinstance(data.get('task'), (str, type(None)))) and
+                (isinstance(data.get('branch'), (str, type(None)))) and
+                isinstance(data.get('updated'), str)
+            )
+
+        return True
+
+    except (json.JSONDecodeError, Exception):
+        return False
+
+def find_v026_hook_commands(settings: dict) -> list:
+    """Extract hook commands from settings.json that reference v0.2.6/v0.2.7 paths.
+
+    Returns list of dicts with event, matcher, command, and hook_name fields.
+    """
+    v026_commands = []
+    hooks = settings.get('hooks', {})
+
+    if not isinstance(hooks, dict):
+        return v026_commands
+
+    for event_name, event_configs in hooks.items():
+        if not isinstance(event_configs, list):
+            continue
+
+        for config in event_configs:
+            if not isinstance(config, dict):
+                continue
+
+            hook_list = config.get('hooks', [])
+            matcher = config.get('matcher')
+
+            for hook in hook_list:
+                command = hook.get('command', '')
+                is_v026 = False
+                hook_name = None
+
+                # Unix pattern: $CLAUDE_PROJECT_DIR/.claude/hooks/{name}.py
+                if '/.claude/hooks/' in command:
+                    is_v026 = True
+                    parts = command.split('/.claude/hooks/')
+                    if len(parts) > 1:
+                        hook_file = parts[1].split()[0]
+                        hook_name = hook_file.replace('.py', '').replace('.js', '')
+
+                # Windows pattern: %.claude\hooks\{name}.py
+                elif '\\.claude\\hooks\\' in command or '\\.claude\\\\hooks\\\\' in command:
+                    is_v026 = True
+                    parts = command.split('\\hooks\\')
+                    if len(parts) > 1:
+                        hook_file = parts[1].split('"')[0]
+                        hook_name = hook_file.replace('.py', '').replace('.js', '')
+
+                # Verify known cc-sessions hook name
+                if is_v026 and hook_name:
+                    known_hooks = V026_PATTERNS['settings_paths']['hook_names']
+                    if hook_name in known_hooks:
+                        v026_commands.append({
+                            'event': event_name,
+                            'matcher': matcher,
+                            'command': command,
+                            'hook_name': hook_name
+                        })
+
+    return v026_commands
+
+def detect_v026_artifacts(project_root: Path) -> dict:
+    """Comprehensive detection of all v0.2.6/v0.2.7 artifacts.
+
+    Returns dict with hooks, state_files, statusline, settings_commands, and directories.
+    """
+    artifacts = {
+        'hooks': [],
+        'state_files': [],
+        'statusline': False,
+        'settings_commands': [],
+        'directories': []
+    }
+
+    # Check hooks directory
+    hooks_dir = project_root / '.claude' / 'hooks'
+    if hooks_dir.exists():
+        artifacts['directories'].append('.claude/hooks/')
+        for hook_name in V026_PATTERNS['hooks'].keys():
+            hook_path = hooks_dir / hook_name
+            if is_v026_hook(hook_path):
+                artifacts['hooks'].append(hook_name)
+
+    # Check state directory
+    state_dir = project_root / '.claude' / 'state'
+    if state_dir.exists():
+        artifacts['directories'].append('.claude/state/')
+
+        daic_file = state_dir / 'daic-mode.json'
+        if is_v026_state_file(daic_file, 'daic-mode.json'):
+            artifacts['state_files'].append('daic-mode.json')
+
+        task_file = state_dir / 'current_task.json'
+        if is_v026_state_file(task_file, 'current_task.json'):
+            artifacts['state_files'].append('current_task.json')
+
+        subagent_flag = state_dir / 'in_subagent_context.flag'
+        if is_v026_state_file(subagent_flag, 'in_subagent_context.flag'):
+            artifacts['state_files'].append('in_subagent_context.flag')
+
+    # Check statusline
+    statusline_path = project_root / '.claude' / 'statusline-script.sh'
+    if statusline_path.exists():
+        try:
+            with open(statusline_path, 'r', encoding='utf-8') as f:
+                header = f.read(200)
+                if '# Claude Code StatusLine Script' in header:
+                    artifacts['statusline'] = True
+        except Exception:
+            pass
+
+    # Check settings.json
+    try:
+        settings = get_settings(project_root)
+        artifacts['settings_commands'] = find_v026_hook_commands(settings)
+    except Exception:
+        pass
+
+    return artifacts
+
+def prompt_migration_confirmation(artifacts: dict) -> bool:
+    """Show user what will be migrated and ask for confirmation.
+
+    Returns True if user confirms migration, False otherwise.
+    """
+    print(color('\n🔄 v0.2.6/v0.2.7 Installation Detected', Colors.CYAN))
+    print()
+    print(color('Found the following artifacts from previous installation:', Colors.CYAN))
+
+    if artifacts['hooks']:
+        print(color(f'  • Hooks: {len(artifacts["hooks"])} files', Colors.CYAN))
+        for hook in artifacts['hooks']:
+            print(color(f'    - {hook}', Colors.CYAN))
+
+    if artifacts['state_files']:
+        print(color(f'  • State files: {len(artifacts["state_files"])} files', Colors.CYAN))
+        for state_file in artifacts['state_files']:
+            print(color(f'    - {state_file}', Colors.CYAN))
+
+    if artifacts['statusline']:
+        print(color('  • Statusline script: statusline-script.sh', Colors.CYAN))
+
+    if artifacts['settings_commands']:
+        print(color(f'  • Settings.json: {len(artifacts["settings_commands"])} hook commands', Colors.CYAN))
+
+    print()
+    print(color('These old files will be removed:', Colors.CYAN))
+    print(color('  • Old hook files deleted', Colors.CYAN))
+    print(color('  • Old state files deleted', Colors.CYAN))
+    print(color('  • Settings.json cleaned', Colors.CYAN))
+    print(color('  • You will start fresh with v0.3.0 defaults', Colors.CYAN))
+    print()
+
+    choice = inquirer.list_input(
+        message='Proceed with migration?',
+        choices=['Yes - Migrate and clean up', 'No - Skip migration (not recommended)']
+    )
+
+    return choice.startswith('Yes')
+
+
+def clean_v026_settings(project_root: Path, settings: dict, commands: list) -> bool:
+    """Remove v0.2.6/v0.2.7 hook commands from settings.json.
+
+    Args:
+        project_root: Project root path
+        settings: Current settings dict
+        commands: List of v0.2.6 commands to remove
+
+    Returns True on success, False on failure.
+    """
+    if not commands:
+        return True
+
+    try:
+        import copy
+        modified = copy.deepcopy(settings)
+
+        if 'hooks' not in modified:
+            return True
+
+        # Group commands by event for efficient removal
+        by_event = {}
+        for cmd in commands:
+            event = cmd['event']
+            if event not in by_event:
+                by_event[event] = []
+            by_event[event].append(cmd)
+
+        # Process each event
+        for event_name, event_commands in by_event.items():
+            if event_name not in modified['hooks']:
+                continue
+
+            event_configs = modified['hooks'][event_name]
+            new_configs = []
+
+            for config in event_configs:
+                if not isinstance(config, dict):
+                    new_configs.append(config)
+                    continue
+
+                hook_list = config.get('hooks', [])
+                new_hooks = []
+
+                for hook in hook_list:
+                    command = hook.get('command', '')
+                    # Check if this command should be removed
+                    should_remove = any(
+                        cmd['command'] == command
+                        for cmd in event_commands
+                    )
+                    if not should_remove:
+                        new_hooks.append(hook)
+
+                # Keep config if it has remaining hooks
+                if new_hooks:
+                    config['hooks'] = new_hooks
+                    new_configs.append(config)
+
+            # Update or remove event
+            if new_configs:
+                modified['hooks'][event_name] = new_configs
+            else:
+                del modified['hooks'][event_name]
+
+        # Write back
+        return write_settings(project_root, modified)
+
+    except Exception as e:
+        print(color(f'✗ Failed to clean settings.json: {e}', Colors.RED))
+        return False
+
+def archive_v026_files(project_root: Path, artifacts: dict) -> dict:
+    """Archive v0.2.6/v0.2.7 files before deletion.
+
+    Returns dict with archive info: {'archived': bool, 'path': str, 'file_count': int}
+    """
+    from datetime import datetime
+    import shutil
+
+    # Create archive directory with timestamp
+    timestamp = datetime.now().strftime('%Y-%m-%d')
+    archive_root = project_root / 'sessions' / '.archived' / f'v026-migration-{timestamp}'
+    archive_hooks_dir = archive_root / 'hooks'
+    archive_state_dir = archive_root / 'state'
+
+    try:
+        archive_hooks_dir.mkdir(parents=True, exist_ok=True)
+        archive_state_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        print(color(f'⚠️  Could not create archive directory: {e}', Colors.YELLOW))
+        return {'archived': False, 'path': '', 'file_count': 0}
+
+    file_count = 0
+
+    # Archive hooks
+    for hook_name in artifacts['hooks']:
+        try:
+            src = project_root / '.claude' / 'hooks' / hook_name
+            dst = archive_hooks_dir / hook_name
+            if src.exists():
+                shutil.copy2(src, dst)
+                file_count += 1
+        except Exception as e:
+            print(color(f'⚠️  Could not archive {hook_name}: {e}', Colors.YELLOW))
+
+    # Archive state files
+    for state_file in artifacts['state_files']:
+        try:
+            src = project_root / '.claude' / 'state' / state_file
+            dst = archive_state_dir / state_file
+            if src.exists():
+                shutil.copy2(src, dst)
+                file_count += 1
+        except Exception as e:
+            print(color(f'⚠️  Could not archive {state_file}: {e}', Colors.YELLOW))
+
+    # Archive statusline
+    if artifacts['statusline']:
+        try:
+            src = project_root / '.claude' / 'statusline-script.sh'
+            dst = archive_root / 'statusline-script.sh'
+            if src.exists():
+                shutil.copy2(src, dst)
+                file_count += 1
+        except Exception as e:
+            print(color(f'⚠️  Could not archive statusline-script.sh: {e}', Colors.YELLOW))
+
+    # Return archive info
+    relative_path = archive_root.relative_to(project_root)
+    return {
+        'archived': file_count > 0,
+        'path': str(relative_path),
+        'file_count': file_count
+    }
+
+def clean_v026_files(project_root: Path, artifacts: dict) -> None:
+    """Delete verified v0.2.6/v0.2.7 files after successful migration."""
+    print(color('\n🗑️  Cleaning up old files...', Colors.CYAN))
+
+    # Remove hooks
+    for hook_name in artifacts['hooks']:
+        try:
+            hook_path = project_root / '.claude' / 'hooks' / hook_name
+            hook_path.unlink()
+            print(color(f'  ✓ Removed {hook_name}', Colors.CYAN))
+        except Exception as e:
+            print(color(f'  ⚠ Could not remove {hook_name}: {e}', Colors.YELLOW))
+
+    # Remove state files
+    for state_file in artifacts['state_files']:
+        try:
+            state_path = project_root / '.claude' / 'state' / state_file
+            state_path.unlink()
+            print(color(f'  ✓ Removed {state_file}', Colors.CYAN))
+        except Exception as e:
+            print(color(f'  ⚠ Could not remove {state_file}: {e}', Colors.YELLOW))
+
+    # Remove statusline
+    if artifacts['statusline']:
+        try:
+            statusline_path = project_root / '.claude' / 'statusline-script.sh'
+            statusline_path.unlink()
+            print(color('  ✓ Removed statusline-script.sh', Colors.CYAN))
+        except Exception as e:
+            print(color(f'  ⚠ Could not remove statusline: {e}', Colors.YELLOW))
+
+    # Try to remove empty .claude/state/ directory (silent)
+    try:
+        (project_root / '.claude' / 'state').rmdir()
+    except:
+        pass
+
+def run_v026_migration(project_root: Path) -> dict:
+    """Orchestrate v0.2.6/v0.2.7 migration process.
+
+    Returns dict with archive info: {'archived': bool, 'path': str, 'file_count': int, 'detected': bool}
+    """
+    # Detect old artifacts
+    artifacts = detect_v026_artifacts(project_root)
+
+    # Skip if no artifacts found
+    if not artifacts['hooks'] and not artifacts['state_files']:
+        return {'archived': False, 'path': '', 'file_count': 0, 'detected': False}
+
+    # Prompt user
+    if not prompt_migration_confirmation(artifacts):
+        print(color('⚠️  Skipping cleanup. Old artifacts will remain.', Colors.YELLOW))
+        print(color('   You may experience hook conflicts or unexpected behavior.', Colors.YELLOW))
+        return {'archived': False, 'path': '', 'file_count': 0, 'detected': True}
+
+    # Archive files before cleanup
+    print(color('\n📁 Archiving old files...', Colors.CYAN))
+    archive_info = archive_v026_files(project_root, artifacts)
+    if archive_info['archived']:
+        print(color(f'  ✓ Archived {archive_info["file_count"]} files to {archive_info["path"]}', Colors.CYAN))
+
+    # Clean settings.json
+    print(color('\n⚙️  Updating settings.json...', Colors.CYAN))
+    settings = get_settings(project_root)
+    if clean_v026_settings(project_root, settings, artifacts['settings_commands']):
+        print(color(f'  ✓ Removed {len(artifacts["settings_commands"])} old hook commands', Colors.CYAN))
+    else:
+        print(color('  ⚠ Could not update settings.json completely', Colors.YELLOW))
+
+    # Clean files
+    clean_v026_files(project_root, artifacts)
+
+    # Add detected flag and return archive info
+    archive_info['detected'] = True
+    return archive_info
+#!<
+
 #!> Configure settings.json
 def write_settings(project_root: Path, settings: dict) -> bool:
-    """Persist settings.json with pretty formatting.
+    """Persist settings.json with pretty formatting using atomic write.
     Returns True on success.
     """
     try:
         settings_path = project_root / '.claude' / 'settings.json'
         settings_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(settings_path, 'w', encoding='utf-8') as f:
+
+        # Write to temporary file first
+        next_path = settings_path.with_suffix('.json.next')
+        with open(next_path, 'w', encoding='utf-8') as f:
             json.dump(settings, f, indent=2)
+
+        # Atomic rename (only reached if write succeeded)
+        next_path.replace(settings_path)
         return True
     except Exception as e:
         print(color(f'✗ Failed writing settings.json: {e}', Colors.RED))
@@ -1333,6 +1947,7 @@ def configure_gitignore(project_root):
         '# cc-sessions runtime files',
         'sessions/sessions-state.json',
         'sessions/transcripts/',
+        'sessions/.archived/',
         ''
     ]
 
@@ -2396,6 +3011,10 @@ def main():
         else: print(color('🔍 Detected existing cc-sessions installation', Colors.CYAN)); backup_dir = create_backup(PROJECT_ROOT)
     #!<
 
+    #!> Check for and handle v0.2.6/v0.2.7 migration
+    v026_archive_info = run_v026_migration(PROJECT_ROOT)
+    #!<
+
     print(color(f'\n⚙️  Installing cc-sessions to: {PROJECT_ROOT}', Colors.CYAN))
     print()
 
@@ -2413,7 +3032,7 @@ def main():
         # Phase: interactive portions under TUI
         with tui_session():
             # Decision point (import vs full config)
-            did_import = installer_decision_flow(PROJECT_ROOT)
+            did_import = installer_decision_flow(PROJECT_ROOT, v026_archive_info['detected'])
 
             # Configuration
             if did_import: run_config_editor(PROJECT_ROOT) # tweak imported settings
@@ -2430,6 +3049,13 @@ def main():
 
         # Output final message
         print(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN))
+
+        # Show v0.2.6/v0.2.7 archive message if applicable
+        if v026_archive_info.get('archived'):
+            print(color('📁 Old v0.2.6/v0.2.7 files archived', Colors.CYAN))
+            print(color(f'   Location: {v026_archive_info["path"]}', Colors.CYAN))
+            print(color(f'   Files: {v026_archive_info["file_count"]} archived for safekeeping\n', Colors.CYAN))
+
         print(color('Next steps:', Colors.BOLD))
         # Read current trigger phrases from config for helpful onboarding
         try:
@@ -2463,15 +3089,24 @@ def main():
         sys.exit(1)
 
 
-def installer_decision_flow(project_root):
+def installer_decision_flow(project_root, had_v026_artifacts=False):
     """
     Decision point: detect returning users and optionally import config/agents.
     Returns True if a config import occurred and succeeded.
+
+    Args:
+        project_root: Path to project root
+        had_v026_artifacts: If True, skip first-time question (user definitely not new)
     """
     show_header(print_installer_header)
 
     did_import = False
-    first_time = inquirer.list_input(message="Is this your first time using cc-sessions?", choices=['Yes', 'No'])
+
+    # Skip first-time question if we detected v0.2.6/v0.2.7 artifacts
+    if had_v026_artifacts:
+        first_time = 'No'
+    else:
+        first_time = inquirer.list_input(message="Is this your first time using cc-sessions?", choices=['Yes', 'No'])
 
     if first_time == 'No':
         version_check = inquirer.list_input(message="Have you used cc-sessions v0.3.0 or later (released October 2025)?", choices=['Yes', 'No'])

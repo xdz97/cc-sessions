@@ -2372,12 +2372,12 @@ def _customize_triggers() -> bool:
                 color("phrases that automatically activate the 4 protocols and 2 driving modes in",Colors.CYAN),
                 color("cc-sessions:",Colors.CYAN),
                 color("╔══════════════════════════════════════════════════════╗", Colors.YELLOW),
-                f"{color('║',Colors.YELLOW)}  • Switch to implementation mode {color('(default: \"yert\")',Colors.GREEN)}   {color('║',Colors.YELLOW)}",
-                f"{color('║',Colors.YELLOW)}  • Switch to discussion mode {color('(default: \"SILENCE\")',Colors.GREEN)}    {color('║',Colors.YELLOW)}",
-                f"{color('║',Colors.YELLOW)}  • Create a new task/task file {color('(default: \"mek:\")',Colors.GREEN)}     {color('║',Colors.YELLOW)}",
-                f"{color('║',Colors.YELLOW)}  • Start a task/task file {color('(default: \"start^:\")',Colors.GREEN)}       {color('║',Colors.YELLOW)}",
-                f"{color('║',Colors.YELLOW)}  • Close/complete current task {color('(default: \"finito\")',Colors.GREEN)}   {color('║',Colors.YELLOW)}",
-                f"{color('║',Colors.YELLOW)}  • Compact context mid-task {color('(default: \"squish\")',Colors.GREEN)}      {color('║',Colors.YELLOW)}",
+                f"{color('║',Colors.YELLOW)}  • Switch to implementation mode {color('(default: \\\"yert\\\")',Colors.GREEN)}   {color('║',Colors.YELLOW)}",
+                f"{color('║',Colors.YELLOW)}  • Switch to discussion mode {color('(default: \\\"SILENCE\\\")',Colors.GREEN)}    {color('║',Colors.YELLOW)}",
+                f"{color('║',Colors.YELLOW)}  • Create a new task/task file {color('(default: \\\"mek:\\\")',Colors.GREEN)}     {color('║',Colors.YELLOW)}",
+                f"{color('║',Colors.YELLOW)}  • Start a task/task file {color('(default: \\\"start^:\\\")',Colors.GREEN)}       {color('║',Colors.YELLOW)}",
+                f"{color('║',Colors.YELLOW)}  • Close/complete current task {color('(default: \\\"finito\\\")',Colors.GREEN)}   {color('║',Colors.YELLOW)}",
+                f"{color('║',Colors.YELLOW)}  • Compact context mid-task {color('(default: \\\"squish\\\")',Colors.GREEN)}      {color('║',Colors.YELLOW)}",
                 color("╚══════════════════════════════════════════════════════╝", Colors.YELLOW), ""])
     customize_triggers = inquirer.list_input(message="Would you like to add any of your own custom trigger phrases?", choices=['Use defaults', 'Customize'])
     clear_info()

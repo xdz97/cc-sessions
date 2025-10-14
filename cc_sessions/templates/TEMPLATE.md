@@ -1,9 +1,9 @@
 ---
-task: [prefix]-[descriptive-name]
+name: [prefix]-[descriptive-name]
 branch: feature/[name]|fix/[name]|experiment/[name]|none
 status: pending|in-progress|completed|blocked
 created: YYYY-MM-DD
-modules: [list of services/modules involved]
+submodules: [list of git submodules affected (delete if not super-repo)]
 ---
 
 # [Human-Readable Title]
@@ -15,11 +15,8 @@ modules: [list of services/modules involved]
 - [ ] Specific, measurable outcome
 - [ ] Another concrete goal
 
-## Context Files
-<!-- Added by context-gathering agent or manually -->
-- @service/file.py:123-145  # Specific lines
-- @other/module.py          # Whole file  
-- patterns/auth-flow        # Pattern reference
+## Context Manifest
+<!-- Added by context-gathering agent -->
 
 ## User Notes
 <!-- Any specific notes or requirements from the developer -->

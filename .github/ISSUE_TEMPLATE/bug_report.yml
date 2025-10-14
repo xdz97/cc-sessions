@@ -1,0 +1,121 @@
+name: Bug Report
+description: Report a bug or issue with cc-sessions
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+        Thank you for reporting a bug! Please fill out the required fields below to help us diagnose and fix the issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: cc-sessions Version
+      description: |
+        **Python:** Run `pip show cc-sessions | grep Version`
+        **JavaScript:** Run `npm list -g cc-sessions` or `npx cc-sessions --version`
+      placeholder: "e.g., 0.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation Method
+      description: How did you install cc-sessions?
+      options:
+        - pip (Python)
+        - npm/npx (JavaScript)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS
+        - Linux (Ubuntu/Debian)
+        - Linux (Other)
+        - WSL (Windows Subsystem for Linux)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: shell
+    attributes:
+      label: Shell/Terminal
+      description: What shell are you using to run Claude Code?
+      options:
+        - PowerShell
+        - Git Bash
+        - Bash
+        - Zsh
+        - Fish
+        - CMD
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ide
+    attributes:
+      label: IDE/Environment
+      description: Where are you running Claude Code?
+      options:
+        - VS Code
+        - Cursor
+        - Terminal/CLI only
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: What happened? Please be as specific as possible.
+      placeholder: "When I try to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Install cc-sessions
+        2. Run `claude` in project directory
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: false
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error Messages
+      description: If you see any error messages, please paste them here
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or relevant information
+    validations:
+      required: false

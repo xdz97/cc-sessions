@@ -1,628 +1,281 @@
-```
-███████╗███████╗███████╗███████╗██╗ ██████╗ ███╗   ██╗███████╗
-██╔════╝██╔════╝██╔════╝██╔════╝██║██╔═══██╗████╗  ██║██╔════╝
-███████╗█████╗  ███████╗███████╗██║██║   ██║██╔██╗ ██║███████╗
-╚════██║██╔══╝  ╚════██║╚════██║██║██║   ██║██║╚██╗██║╚════██║
-███████║███████╗███████║███████║██║╚██████╔╝██║ ╚████║███████║
-╚══════╝╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝
-```
-
-<sub>_A public good brought to you by GWUDCAP and Three AIrrows Capital_</sub>
-
----
-
+<p align="center"><img src="sessions.png" alt="cc-sessions"></p>
+<div align="center">An opinionated approach to productive development with Claude Code</div>
+<div align="center"><sub><em>Public good brought to you by GWUDCAP and Three AIrrows Capital</em></sub></div>
+<br>
 <br>
 <div align="center">
 
-##### ⚡ SHOCKING REPORT REVEALS ⚡
-
-# **Vibe coding is shitty and confusing and produces garbage software that sucks to work on.**<br>
-
-### _Claude Code makes it less shitty, but not by enough._
-
----
+[![npm version](https://badge.fury.io/js/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)
+[![npm downloads](https://img.shields.io/npm/dm/cc-sessions.svg)](https://www.npmjs.com/package/cc-sessions)
+[![PyPI version](https://badge.fury.io/py/cc-sessions.svg)](https://pypi.org/project/cc-sessions/)
+[![PyPI downloads](https://pepy.tech/badge/cc-sessions)](https://pepy.tech/project/cc-sessions)
 </div>
-explainer: coming soon...
-<br>
-working demo: https://www.youtube.com/watch?v=B-sIBb-XvO4
+<div align="center">
 
-## 🔥 The Problem
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Follow Dev](https://img.shields.io/twitter/follow/AgentofToastX?style=social)](https://x.com/AgentofToastX)
+[![Donate](https://img.shields.io/badge/Donate-Solana-14F195?logo=solana&logoColor=white)](https://dexscreener.com/solana/oy5mbertfqdytu8atyonycvcvu62fpmz3nkqoztrflq)
+</div>
+
+<br>
+
+## latest updates
 
 <details>
-<summary><strong>How you got here</strong> <em>(click to read the painful journey)</em></summary>
+<summary>
 
-<br>
-
-I'm going to guess how you got here and you can tell me if I get it right:
-
-- 💭 The LLM programmer hype gave you a nerd chub  
-- 😬 The people hyping LLM programming made your nerd chub crawl back into your body <br> <sup>_(are you ready to 'scale your impact', dog?)_</sup> 
-- 🤮 You held your nose and downloaded Cursor/added Cline or Roo Code/npm installed Claude Code
-
-At first this was obviously novel and interesting. Some things were shitty but mostly you were enjoying not having to write a context manager or even recognize that you needed one for your dumb client wrapper.
-
-**You were _scaling_ your _impact_** _(whew)_.
-
-But then Claude started doing some concerning things. 
-
-You asked it to add error handling to **one** function. It added error handling to **_every function in the file_**. And changed your error types. And your logging format. And somehow your indentation is different now?
-
-The context window thing started getting annoying. You're explaining the same architecture for the fifth time today. Claude's like _'let me look for the database'_ **Brother. We've been using Postgres for six hours. You were just in there.**
-
-Your CLAUDE.md is now longer than your actual code. 
-- `'NEVER use class components.'` 
-- `'ALWAYS use the existing auth middleware.'` 
-- `'DO NOT refactor unrelated code.'` 
-- `'REMEMBER we use PostgreSQL.'` 
-
-Claude reads the first line and then macrodoses window pane LSD for the rest.
-
-You tried the subagents, but quickly realized that **you can't even talk to these things.** 10 minutes into a "code review" and the agent hits some kind of API error and returns to your main thread with no explanation of what it did or what it discovered. 
-
-Run it again, I guess? 
-
-_This fucking sucks_.
-
-Now you're here. Your codebase is 'done' but you couldn't, in a million years, explain what that means or how it satisfies the definition. 
-
-There's three different global clients for the same database connection and two of them use hallucinated environment variables (the other just yeets your client secret into the service code). 
-
-You've got utility functions that are duplicated in four files because Claude kept forgetting they exist.
-
-20% of your code lines are comments explaining why something *isn't* there and *is* somewhere else.
-
-You don't even know exactly what's wrong and fixing it means understanding code you didn't write in patterns you don't recognize using approaches you wouldn't choose.
-
-### **Are you scaling your impact yet?**
-
-</details>
-
-## 💊 The Solution
-
-<details>
-<summary><strong>What We Fixed</strong> <em>(what you get when you use cc-sessions)</em></summary>
-
-<br>
-
-So, now you're here. Since this is exclusively about Claude Code I'm going to assume that you are a CC user and you are looking to make that better. **Lit.**
-
-Let's talk about Claude Code.
-
-Of the major AI programming IDEs/scaffolds, Claude Code is probably the best and Claude models are probably the best _(though Google is kinda coming for that ass)_.
-
-But, Claude Code is not without its **major faults, flaws, and flaccidity-inducing frustrations**.
-
-For instance, **it would be nice if**:
-
-- Claude had to talk to you before writing code so you didn't end up with 500 lines of implementation for a one-line change.
-
-- you didn't lose everything when the context window died and Claude actually remembered what you were working on tomorrow.
-
-- you didn't have to explain your entire architecture every. single. session. and Claude actually inherited understanding from previous work.
-
-- Claude couldn't randomly refactor working code while you're trying to add a button.
-
-- you didn't have to manually check which branch you're on in five different repos and Claude actually stopped you before you edited the wrong one.
-
-- Claude followed the patterns in your codebase instead of inventing new ones every time it touches a file.
-
-- you didn't have to write increasingly desperate rules in CLAUDE.md and Claude was actually forced to follow consistent behavior.
-
-### **This is what Sessions does.**
-
-It makes all of these nice things happen. Not through more rules or documentation or prompting techniques, but through **brute authoritarian rule over the agentic loop**.
-
-</details>
-
-## ⚙️ How It Works
-
-**Sessions enforces discussion before implementation through hooks that Claude can't bypass.**
-
-You install Sessions. Five minutes, one script. It sets up hooks that Claude can't bypass, state management that persists, and a task system that actually remembers things.
-
-If you want to get acquainted you can read about individual features below:
-
-<details>
-<summary><strong>Claude waits for alignment</strong></summary>
-<br>
-
-Before Sessions, this was your life:
-
-```
-You: Add error handling to the auth flow
-
-Claude: I'll add comprehensive error handling!
-[IMMEDIATELY STARTS EDITING 15 FILES]
-[ADDS TRY-CATCH TO EVERY FUNCTION]
-[CHANGES YOUR ERROR MESSAGE FORMAT]
-[REFACTORS YOUR LOGGING LIBRARY]
-
-You: wait no stop STOP
-
-Claude: I've updated the error handling across your entire codebase!
-
-You: [muffled screaming]
-```
-
-With Sessions:
-
-```
-You: Add error handling to the auth flow
-
-Claude: Let me analyze your current error patterns first...
-
-[Claude reads auth code, examines existing error handling]
-
-Claude: I found your error handling pattern:
-- You're using custom AppError classes
-- Errors bubble to middleware/errorHandler.ts  
-- Auth errors specifically use 401/403 status codes
-- You log errors to Sentry in production
-
-I'll add error handling to the login and refresh token endpoints
-following your existing AppError pattern. Ready?
-
-You: perfect, go ahead
-
-Claude: [NOW edits exactly 2 files with correct patterns]
-```
-
-The hooks literally block Write/Edit tools until you approve. Claude HAS to discuss first. No exceptions. No workarounds. No surprise refactors.
-
-</details>
-
-<details>
-<summary><strong>OP automatic compaction</strong></summary>
-<br>
-
-When Claude's context window hits 75%, a hook will tell Claude to start wrapping shid up. At 90%, the hook will be more aggressive about it. 
-
-When you okay (i.e. "let's compact"), Claude will use a protocol and several sub-agents to record all important info from your session to the current task file, along with next steps to begin immediately after you clear context.
-
-You just type `/clear` and another hook will automatically yeet the current task file into Claude's context window and you can continue as if you never left.
-
-```
-[Friday, 4pm - deep in implementing a payment system]
-
-Claude: ⚠️ Context at 75% - Consider wrapping up soon
-
-You: I gotta run, lets compact and come back to this later.
-
-Claude: Cool, running context-compaction.md protocol - first, let me call the logging agent to write our task log for the session...
-
-You: [Close laptop, weekend happens]
-
-[Monday, 9am]
-
-You: /clear
-
-You: lets continue
-
-Claude: Welcome back! Resuming work on m-payment-integration.
-Last session we:
-- Integrated Stripe checkout flow
-- Added webhook handlers for payment events  
-- Created payment status tracking
-
-Current state: Testing webhook signatures
-Next: Add retry logic for failed webhooks
-
-Let's continue with the retry logic implementation.
-```
-
-Zero context rebuilding. Claude knows exactly where you left off.
-
-</details>
-
-<details>
-<summary><strong>Better subagents</strong></summary>
-<br>
-
-There's no obvious way to get Claude to call subagents with all of the necessary context. There's also not great visiblity into how Claude prompts them, or even what the subagents do (or why they fail when they fail).
-
-To deal with this, we've designated specific agents for specific tasks in the sessions system.
-
-These are (currently):
-  - Context Gathering Agent | Digs through whole files at a time in your codebase to get all the right context for a task, then writes it to a context manifest in the task file so Claude doesn't have to re-learn it.
-  - Code Review Agent | Reviews code changes before they are committed to ensure they follow your patterns
-  - Logging Agent | Writes a log of what was done in a session to the task file
-
-To make this a lot easier, the logging agent gets the entire conversation history - instead of relying on Claude to re-output everything important that happened in this session, the logging agent just branches off from your conversation, writes the logs, and passes it back to the main thread.
-
-In the background, any call to a subagent copies the current conversation into a set of conversation history logs in a dedicated directory for the agent. If you ever want an agent to load the full conversation context before following their prompt, you can just adjust their agent prompt to tell them to read all of the files in .claude/state/{agent-name}/.
+### Claude Code version issue
+</summary
   
-```
-You: Lets start the caching upgrades                                                                                                                                                                                                                                                                  e
+**'ere meh now**: the recommended Claude Code version is **2.0.8** due to an upstream bug in newer versions of Claude Code.
 
-Claude: No problem! Let me update current-task.json and then I'll use the context-gathering agent to analyze your caching system.
+Claude Code versions after 2.0.8 have a bug in their stderr aggregation system that causes 400 API errors when:
+- Multiple tool calls execute in parallel (batched in one Claude response)
+- Commands generate their own stderr output (e.g., curl progress meters)
+- PostToolUse hooks also send stderr feedback (exit code 2)
 
-[Agent runs in separate context - doesn't pollute your main thread]
+This breaks cc-sessions' PostToolUse hooks that provide essential feedback like directory navigation confirmations and DAIC mode transitions.
 
-Agent results: I've created a comprehensive context manifest:
-
-CACHING ARCHITECTURE:
-- Redis for session cache (30min TTL)
-- PostgreSQL materialized views for reports  
-- React Query for client-side caching (5min stale time)
-- CDN caching for static assets
-
-KEY PATTERNS:
-- Cache keys use format: {service}:{entity}:{id}:{version}
-- Invalidation happens through CacheManager.invalidate()
-- All cache operations logged to cache_operations table
-
-IMPLEMENTATION LOCATIONS:
-- Server cache: /lib/cache/redis-cache.ts
-- Client cache: /hooks/useQueryWithCache.ts
-- Cache invalidation: /api/middleware/cache-invalidator.ts
-
-[Full context manifest saved to task file - available forever]
+**install the correct version**:
+```bash
+npm install -g @anthropic-ai/claude-code@2.0.8
 ```
 
-The agent understood your patterns because it could analyze everything without worrying about preserving the context window.
-
+**related**: [cc-sessions Issue #53](https://github.com/GWUDCAP/cc-sessions/issues/53)
 </details>
 
 <details>
-<summary><strong>Tasks and Branches Is All You Need</strong></summary>
+<summary>
+
+### latest release - v0.3.0
+</summary>
+
+i'm happy to present cc-sessions v0.3.0
+<em>it's basically autopilot</em>
+
+**major highlights:**
+- **Dual Language Support**: Now available as both Python and Node.js packages with complete feature parity
+- **Unified Sessions API**: Single `sessions` command replaces multiple slash commands
+- **Natural Language Protocols**: Full workflow automation through trigger phrases (mek:, start^:, finito, squish)
+- **Todo Validation System**: Approved todo lists are locked and tracked to prevent scope creep
+- **Directory Tasks**: Multi-phase projects with subtasks on shared feature branches
+- **Kickstart Tutorial**: Interactive onboarding teaches cc-sessions by using it
+- **CI Environment Detection**: Auto-bypass DAIC in GitHub Actions (thanks @oppianmatt)
+- **Enhanced Statusline**: Nerd Fonts + git tracking with ahead/behind indicators (thanks @dnviti)
+- **Safe Uninstaller**: Interactive removal with automatic backups (thanks @gabelul)
+
+See [CHANGELOG.md](CHANGELOG.md) for complete details.
+</details>
+
+## installing the extension
+
+You install cc-sessions into a repo from the project root:
+
+```bash
+cd ~/my-git-repo && [npx|pipx run] cc-sessions
+```
+
+There are Python and Node packages - use whichever you have:
+
+### Python
+
+```bash
+# Navigate to the repo you want to 
+# use cc-sessions in, then...
+pipx run cc-sessions
+```
+
+### Node
+
+```bash
+# Navigate to the repo you want to 
+# use cc-sessions in, then...
+npx cc-sessions
+```
+
+<details>
+<summary>
+
+### what gets installed
+</summary>
+
+The installer sets up:
+- Hook files in `sessions/hooks/` for DAIC enforcement
+- API commands in `sessions/api/` for state/config management
+- Protocol templates in `sessions/protocols/` for workflow automation
+- Specialized agents in `.claude/agents/` for heavy operations
+- Sessions API wrapper slash command in `.claude/commands`
+- Initial state in `sessions/sessions-state.json`
+- Configuration in `sessions/sessions-config.json`
+- Automatic `.gitignore` entries for runtime files
+</details>
+
+### updates and uninstalls/reinstalls
+
+The system automatically preserves your work:
+- Creates timestamped backups in `.claude/.backup-YYYYMMDD-HHMMSS/`
+- Preserves all task files and agent customizations
+- Preserves sessions-config.json
+- Restores everything after installation completes
+- State file regenerates fresh
+
 <br>
 
-Every piece of work is a task. Every task has its own branch. Sessions enforces both.
+## kickstart: interactive tutorial
 
-```
-You: Let's fix the payment webhooks
+You can select whether to take the interactive tutorial at the end of the installer. Its pretty quick and it will fully onboard you if you're new, using cc-sessions to teach you cc-sessions.
 
-Claude: I'll create a task for that. What priority?
-- h- (high): Critical/blocking issues
-- m- (medium): Normal features/fixes  
-- l- (low): Nice-to-haves
-- ?- (investigate): Not sure if needed
+The system teaches itself through index-based progression, then cleans up its own onboarding files on graduation.
 
-You: high priority
-
-Claude: Creating h-fix-payment-webhooks
-[Creates task file]
-[Runs context-gathering agent]
-[Sets up feature/fix-payment-webhooks branch]
-
-Context manifest created:
-- Stripe webhooks configured in /api/webhooks/stripe.ts
-- Events: payment_intent.succeeded, charge.failed
-- Current issue: signature verification failing
-- Webhook secret in STRIPE_WEBHOOK_SECRET env var
-
-Ready to start work on feature/fix-payment-webhooks?
-```
-
-Now your task has:
-- **Permanent context** that survives session restarts
-- **Its own branch** that Sessions enforces
-- **Work logs** tracking everything done
-- **Clear scope** preventing scope creep
-
-When you come back tomorrow:
-
-```
-You: /clear
-
-SessionStart: Loading task h-fix-payment-webhooks
-Branch: feature/fix-payment-webhooks
-Last work: Fixed signature verification
-Next: Add retry logic for failed events
-
-You: continue
-
-Claude: Picking up where we left off - implementing retry logic for failed webhook events...
-```
-
-No context rebuilding. No confusion about what branch. No losing work.
-
-</details>
-
-<details>
-<summary><strong>Ultrathink & API Mode</strong></summary>
 <br>
 
-Sessions automatically enables Claude's deep thinking mode on every message. But if you're paying per token, that gets expensive fast.
+## quick start
 
-**Max Mode (Default):**
-```
-You: [any message]
-
-[Claude automatically uses maximum thinking budget]
-[2-3x more tokens but better reasoning]
-[$20-200/month flat rate - use all you want]
-```
-
-**API Mode (Token Saver):**
-```bash
-# During installation:
-"Enable API mode to save tokens? (y/n)"
-
-# Or toggle later:
-/api-mode
-```
-
-In API mode:
-- Ultrathink disabled by default (saves ~50-67% tokens)
-- You control when to use it: `[[ ultrathink ]] solve this hard problem`
-- All other Sessions features still save tokens through context preservation
-
-The truth? Sessions **saves** tokens for API users:
-- Context persistence: -2000 tokens/task (no re-explaining)
-- Auto-loading: -500 tokens/session (no "what are we doing?")
-- DAIC enforcement: -1000 tokens/task (no failed attempts)
-- Specialized agents: -3000 tokens (work in minimal contexts)
-
-You lose ultrathink but gain token efficiency everywhere else.
-
-</details>
-
-<details>
-<summary><strong>Branch Enforcement</strong></summary>
-
-```
-[Working on task m-fix-auth, supposed to be on feature/fix-auth branch]
-
-You: update the login validation
-
-Claude: I'll update the login validation. Let me look at the current implementation.
-
-[Claude tries to edit src/auth/login.ts]
-
-❌ BLOCKED: Branch mismatch!
-- Task requires: feature/fix-auth  
-- You're on: main
-
-Run this command:
-git checkout feature/fix-auth
-
-Claude: git checkout feature/fix-auth
-
-Claude: [NOW can edit the file safely on the correct branch]
-```
-
-</details>
-
-<details>
-<summary><strong>Code Not Claude</strong></summary>
+<details><summary><em>Best way to get started is kickstart, but...</em></summary>
 <br>
 
-Before Sessions, your CLAUDE.md looked like this:
+**After installation (and, optionally, kickstart), use trigger phrases to control workflows:**
 
-```markdown
-# CLAUDE.md (1,247 lines)
+```
+You: "mek: add user authentication"
+Claude: [Creates task with interactive prompts]
 
-## CRITICAL RULES (PLEASE FOLLOW)
+You: "start^: @sessions/tasks/h-implement-user-auth.md"
+Claude: [Loads context, proposes implementation plan with specific todos]
 
-### NEVER DO THESE THINGS
-- NEVER use require() we use import
-- NEVER use callbacks we use async/await  
-- NEVER use class components
-- NEVER refactor working code
-- NEVER change the database schema
-- NEVER modify the auth middleware
-- NEVER use var, always const/let
-- NEVER commit directly to main
-[... 200 more NEVER rules ...]
+You: "yert"
+Claude: [Implements only the approved todos]
 
-### ALWAYS DO THESE THINGS  
-- ALWAYS use the existing error handler
-- ALWAYS follow our naming conventions
-- ALWAYS use PostgreSQL not MySQL
-- ALWAYS check if a utility exists first
-[... 200 more ALWAYS rules ...]
-
-### REMEMBER
-- We use Tailwind not CSS modules
-- The database is PostgreSQL
-- Yes, still PostgreSQL
-- I SAID POSTGRESQL
-[... 500 lines of context ...]
+You: "finito"
+Claude: [Completes task: commits, merges, cleans up]
 ```
 
-Claude reads line 1 and forgets the rest.
+**These trigger phrases are the defaults.** Add any trigger phrases you like:
 
-With Sessions:
+```bash
+# See current triggers
+/sessions config triggers list
 
-```markdown
-# CLAUDE.md (< 100 lines)
+# Add your own phrase to any category
+/sessions config triggers add go lets do this
 
-## Project Overview
-AI waifu platform. Node + React + PostgreSQL.
-
-## Behavioral Rules
-@CLAUDE.sessions.md
-
-That's it. The rest is enforced by hooks.
+# Categories: go, no, create, start, complete, compact
+# Slash command API syntax: /sessions [subsystem] [command] [arguments]
+# Context-aware help on failed commands - fail away
 ```
 
-Rules aren't suggestions anymore. They're **enforced by code**:
-- Can't edit without permission? Hook blocks the tools
-- Wrong branch? Hook blocks the edit
-- Need to follow patterns? Context manifest has them documented
-- Must remember PostgreSQL? It's in the task context that auto-loads
-
-Your documentation describes your project. The hooks enforce behavior. Claude can't ignore hooks.
-
+Check `sessions/sessions-config.json` to see all configuration options.
 </details>
 
+<br>
 
-<details>
-<summary><strong>Statusline keeping you informed</strong></summary>
+## why I made cc-sessions
 
-```
-[Bottom of your Claude Code window - two lines]
+<details><summary><em>I made cc-sessions to solve what I don't like about AI pair programming...</em></summary>
+<br>
+If you ask Claude a question he may just start writing code, especially if you are in the middle of a task.
 
-██████░░░░ 45.2% (72k/160k) | Task: m-payment-integration
-DAIC: Discussion | ✎ 3 files | [4 open]
+Without additional scaffolding, you are often manually adding files to context for 20% of the context window and being perennially terrified of having to compact context.
 
-[After you say "go ahead"]
+The list of things you have to remember can get quite large: 
 
-██████░░░░ 47.1% (75k/160k) | Task: m-payment-integration  
-DAIC: Implementation | ✎ 5 files | [4 open]
+  - compact before you run out of tokens 
+  - read every diff before approving
+  - write task files
+  - commit changes
+  - merge branches
+  - push to remote
+  - manage which tools Claude can use
+  - remember to run the right slash commands 
 
-[When approaching context limit - bar turns red]
+The cognitive overhead balloons quickly.
 
-████████░░ 78.3% (125k/160k) | Task: m-payment-integration
-DAIC: Discussion | ✎ 12 files | [4 open]
+Tasks don't survive restarts. Close Claude Code, reopen it, and you're explaining everything from scratch. No confidence that work will continue cleanly and no structure to how to handle working across context windows.
 
-[When no task is active]
+**You discover problems faster than you can solve them.** Without a standardized, friction-free way to capture tasks, these insights vanish.
 
-██░░░░░░░░ 12.1% (19k/160k) | Task: None
-DAIC: Discussion | ✎ 0 files | [4 open]
-```
+When context does get compacted automatically, it doesn't preserve enough detail to inspire confidence. 
 
-Progress bar changes color: green < 50%, orange < 80%, red >= 80%.
+Most have a CLAUDE.md file stuffed with behavioral rules, some of which are simple where others are complex branching conditional logic. 
 
+LLMs are terrible at following long instruction lists throughout an entire conversation. The guidance degrades as the conversation progresses.
+
+Git workflow adds constant friction: creating branches, crafting commit messages, merging when complete, pushing to remote. More cognitive overhead.
+
+**So, cc-sessions fixes all of this.**
 </details>
 
-This isn't complex. It's not heavy process. It's invisible rails that keep Claude from going off the cliff. You still describe what you want in natural language. Claude still writes code. But now it happens in a way that doesn't produce garbage.
+<br>
 
-You code at the same speed. You just don't spend the next three hours unfucking what Claude just did.
+## features summary
 
-## 🚀 Installation
+<details><summary><em>click to learn about features...</em></summary>
+<br>
 
-Alright, you're convinced. **Let's unfuck your workflow.**
+### Discussion-Alignment-Implementation-Check (DAIC)
 
-### ✅ Requirements
+Claude earns the right to write code. By default, Edit, Write, and MultiEdit tools are completely blocked. Before Claude can touch your codebase, he has to discuss his approach, explain his reasoning, and propose specific todos you explicitly approve with trigger phrases like "go ahead" or "make it so" (fully customizable).
 
-You need:
-- **Claude Code** _(you have this or you wouldn't be here)_
-- **Python 3 + pip** _(for the hooks)_
-- **Git** _(probably)_
-- **5 minutes**
+Once you approve the plan, Claude loads those exact todos and can only work on what you agreed to. Try to change the plan mid-stream? The system detects it and throws him back to discussion mode. No scope creep. No surprise rewrites. Just the work you approved.
 
-### 📦 Install
+### Task Management That Survives Restarts
 
-Pick your poison:
+Tasks are markdown files with frontmatter that tracks status, branches, and success criteria. The system automatically creates matching git branches, enforces branch discipline (no committing to wrong branches or editing files off branch), and loads complete context when you restart a task days later.
 
-**NPM/NPX** (TypeScript Andys):
-```bash
-cd your-broken-project
-npx cc-sessions                  # One-time install
-# or
-npm install -g cc-sessions       # Global install
-cc-sessions                      # Run in your project
-```
+Directory-based tasks support complex multi-phase work with subtask workflows. File-based tasks handle focused objectives. Task indexes let you filter by service area. Everything persists through session restarts.
 
-**Pip/Pipx/UV** (Pythonistas):
-```bash
-pipx install cc-sessions         # Isolated install (recommended)
-cd your-broken-project
-cc-sessions                      # Run the installer
-# or
-pip install cc-sessions          # Regular pip
-# or  
-uv pip install cc-sessions       # UV package manager
-```
+### Specialized Agents for Heavy Lifting
 
-**Direct Bash** ('build from source' gigachads):
-```bash
-git clone https://github.com/GWUDCAP/cc-sessions
-cd your-broken-project
-/path/to/cc-sessions/install.sh
-```
+Five specialized agents run in separate context windows to handle operations that would otherwise burn your main thread:
 
-The installer asks you:
-- Your name (so Claude knows who it's disappointing)
-- If you want the statusline (you do)
-- What triggers implementation mode ('go ahead', 'ship it', whatever)
-- Some other config shit (just hit enter)
+- **context-gathering** - Analyzes your codebase and creates comprehensive context manifests for each task you create
+- **logging** - Consolidates work logs chronologically
+- **code-review** - Reviews implementations for quality and patterns
+- **context-refinement** - Updates task context based on session discoveries
+- **service-documentation** - Maintains CLAUDE.md files for services
 
-That's it. Restart Claude Code. You're done.
+Each agent receives the full conversation transcript and returns structured results to your main session.
 
-### ✨ What Just Happened
+### Protocols That Automate Workflows
 
-You now have:
-- Hooks that enforce discussion before implementation
-- State that persists between sessions
-- Task management that actually works
-- Agents that aren't completely useless
-- Git branch enforcement
-- Token warnings before death
-- A chance at maintaining this code in 6 months
+Pre-built protocol templates guide task creation, startup, completion, and context compaction. They adapt automatically based on your configuration—no manual decisions about submodules, commit styles, or git workflows. The protocols just know what you prefer and act accordingly.
 
-### 🎯 Your First Task
+All protocols use structured output formats (`[PROPOSAL]`, `[STATUS]`, `[PLAN]`) so you always know when Claude needs your input.
 
-Tell Claude:
-```
-Create a task for: 
-[EXPLAIN THE TASK]
-```
+### Sessions API & Slash Commands
 
-Claude will:
-- Create the task file with proper structure
-- Use the context-gathering agent to gather everything they need to know to complete the task based on your existing codebase
-- Build a context manifest so it never forgets what it learned
-- Set up the task as your current focus
+Unified `sessions` command provides programmatic access to state, configuration, and task management. Slash commands (`/sessions`) give you quick access through Claude Code's command palette.
 
-Then just say 'let's work on [task-name]' and watch Claude actually discuss before implementing.
+Configure trigger phrases, manage git preferences, toggle features, inspect state—everything through a clean API with JSON output support for scripting.
 
-### **Welcome to software development with guardrails.**
+### Interactive Kickstart Onboarding
 
----
+First install drops you into interactive onboarding with two modes: Full (15-30 min walkthrough of every feature with hands-on exercises) or Subagents-only (5 min agent customization crash course). You learn by doing, not by reading docs.
 
-## 🔧 Customizing Sessions
+The system teaches itself, then cleans up after graduation.
 
-Sessions is built to be modified. You can use Claude Code itself to improve Sessions or adapt it to your workflow.
+### Complete Configuration Control
 
-<details>
-<summary>How to customize Sessions</summary>
+Every behavior is configurable through `sessions/sessions-config.json`. Customize trigger phrases, blocked tools, git workflows (commit styles, auto-merge, auto-push), environment settings, feature toggles. The system respects your preferences automatically—protocols adapt, enforcement rules adjust, everything just works your way.
 
-### Understanding the Structure
+### Automatic State Preservation
 
-Sessions comes with knowledge files that explain its own architecture:
-```
-sessions/knowledge/claude-code/
-├── hooks-reference.md     # How hooks work and can be modified
-├── subagents.md          # Agent capabilities and customization
-├── tool-permissions.md   # Tool blocking configuration
-└── slash-commands.md     # Command system reference
-```
-
-### Modifying Behaviors
-
-Tell Claude:
-```
-Using the hooks reference at @sessions/knowledge/claude-code/hooks-reference.md, 
-modify the DAIC enforcement to allow Bash commands in discussion mode
-```
-
-Claude can:
-- Adjust trigger phrases in `sessions/sessions-config.json`
-- Modify hook behaviors in `.claude/hooks/`
-- Update protocols in `sessions/protocols/`
-- Create new agents in `.claude/agents/`
-- Customize task templates
-
-### Common Customizations
-
-**Change what tools are blocked:**
-```json
-// sessions/sessions-config.json
-"blocked_tools": ["Edit", "Write"]  // Remove MultiEdit to allow it
-```
-
-**Add your own trigger phrases:**
-```json
-"trigger_phrases": ["make it so", "ship it", "do the thing"]
-```
-
-**Modify agent prompts:**
-Edit files in `.claude/agents/` to change how agents behave.
-
-**Update workflows:**
-Protocols in `sessions/protocols/` are just markdown - edit them to match your process.
-
-### Pro Tips
-
-1. Sessions has its own CLAUDE.md at `sessions/CLAUDE.md` for meta work
-2. Use the knowledge files to understand the system deeply
-3. Test changes in a separate branch first
-4. The hooks are just Python - add logging if needed
-5. Keep your customizations documented
-
-Remember: You're not just using Sessions, you're evolving it. Make it yours.
-
+The system backs up your work before updates, preserves task files and agent customizations during reinstalls, and maintains state across session restarts. Your `.gitignore` gets configured automatically to keep runtime state out of version control. Everything persists, nothing gets lost.
 </details>
+
+<br>
+
+## contributing
+
+We mostly inline contributions unless your PR is exceptionally solid - there are a lot of concerns to manage when updating this repo. 
+
+If your suggestion or PR is good and used, we'll credit you even if inlined.
+
+<br>
+
+## license
+
+MIT License. It's a public good - use it, fork it, make it better.
+
+See the [LICENSE](LICENSE) file for the legal details.
+

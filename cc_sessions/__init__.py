@@ -1,11 +1,3 @@
-"""
-Claude Code Sessions Framework
-Enforced methodology for AI pair programming
-"""
+"""cc-sessions: an opinionated approach to productive work in Claude Code."""
 
-__version__ = "0.1.0"
-__author__ = "toast"
-
-from .install import main, install
-
-__all__ = ["main", "install"]
+__version__ = "0.2.9"

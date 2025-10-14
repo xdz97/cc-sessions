@@ -1,11 +1,9 @@
 include README.md
 include LICENSE
-include install.sh
-recursive-include hooks *.py
-recursive-include protocols *.md
-recursive-include agents *.md
-recursive-include commands *.md
-recursive-include templates *.md *.py
-recursive-include scripts *
-recursive-include knowledge *
+recursive-include cc_sessions/python *
+recursive-include cc_sessions/protocols *.md
+recursive-include cc_sessions/agents *.md
+recursive-include cc_sessions/commands *.md
+recursive-include cc_sessions/templates *.md *.py
+recursive-include cc_sessions/knowledge *
 recursive-include docs *.md

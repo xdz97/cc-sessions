@@ -1,6 +1,6 @@
 {
   "name": "cc-sessions",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "an opinionated approach to productive development with Claude Code",
   "main": "cc_sessions/install.js",
   "bin": {

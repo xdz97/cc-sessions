@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-sessions"
-version = "0.3.1"
+version = "0.3.2"
 description = "an opinionated approach to productive development with Claude Code"
 readme = "README.md"
 license = {text = "MIT"}

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2] - 2025-10-14
+
+### Fixed
+
+- Python 3.9 installer hotfix
+
 ## [0.3.1] - 2025-10-14
 
 ### Fixed

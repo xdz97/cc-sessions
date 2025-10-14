@@ -1869,7 +1869,7 @@ def configure_settings(project_root: Path):
         ],
         'PreToolUse': [
             {
-                'matcher': 'Write|Edit|MultiEdit|Task|Bash',
+                'matcher': 'Write|Edit|MultiEdit|Task|Bash|TodoWrite|NotebookEdit',
                 'hooks': [
                     {
                         'type': 'command',

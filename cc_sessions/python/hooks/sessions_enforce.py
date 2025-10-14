@@ -318,11 +318,61 @@ if tool_name == "TodoWrite" and not STATE.flags.bypass_mode:
 
         if active_names != incoming_names:
             # Todo names changed - safety violation
-            with edit_state() as s: s.todos.clear_active(); s.mode = Mode.NO; STATE = s
-            print("[DAIC: Blocked] Todo list changed - this violates agreed execution boundaries. "
-                  "Previous todos cleared and returned to discussion mode. "
-                  "If you need to change the task list, propose the updated version. "
-                  "If this was an error, re-propose your previously planned todos.", file=sys.stderr)
+            # Prepare detailed diff for Claude before clearing state
+            original_count = len(active_names)
+            proposed_count = len(incoming_names)
+
+            # Format original todos
+            original_display = "\n".join(f"  {i+1}. {name}" for i, name in enumerate(active_names))
+
+            # Format proposed todos
+            proposed_display = "\n".join(f"  {i+1}. {name}" for i, name in enumerate(incoming_names))
+
+            # Get user's implementation trigger phrases
+            trigger_phrases = CONFIG.trigger_phrases.implementation_mode
+            trigger_list = ", ".join(f'"{phrase}"' for phrase in trigger_phrases)
+
+            # Clear todos and revert to discussion mode (preparing for re-approval)
+            with edit_state() as s:
+                s.todos.clear_active()
+                s.mode = Mode.NO
+                STATE = s
+
+            # Construct message directed at Claude with prescribed format
+            message = f"""[DAIC: Todo Change Blocked]
+
+You attempted to modify the agreed-upon todo list without user approval.
+
+ORIGINAL TODOS ({original_count} items):
+{original_display}
+
+PROPOSED TODOS ({proposed_count} items):
+{proposed_display}
+
+The original todos have been cleared and you have been returned to discussion mode.
+
+YOUR NEXT MESSAGE MUST use this exact format:
+
+---
+[SHAME RITUAL]
+I made a boo boo. I just tried to change the plan.
+
+The todos you approved were:
+{original_display}
+
+I tried to change them by [adding/removing/modifying] them:
+[Show the changes - use + for added items, - for removed items, -> for modifications]
+
+This [seems fine/is unimportant | was a violation of the execution boundary].
+
+If you approve of the change, you can let me cook by saying: {trigger_list}
+
+Or, feel free to yell at me or redirect me like I'm a 5 year old child.
+---
+
+After the user approves with a trigger phrase, you may re-submit the updated todo list using TodoWrite."""
+
+            print(message, file=sys.stderr)
             sys.exit(2)
 
     with edit_state() as s: 

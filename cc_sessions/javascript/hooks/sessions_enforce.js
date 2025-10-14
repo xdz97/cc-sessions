@@ -396,14 +396,61 @@ if (toolName === "TodoWrite" && !STATE.flags.bypass_mode) {
 
         if (JSON.stringify(activeNames) !== JSON.stringify(incomingNames)) {
             // Todo names changed - safety violation
+            // Prepare detailed diff for Claude before clearing state
+            const originalCount = activeNames.length;
+            const proposedCount = incomingNames.length;
+
+            // Format original todos
+            const originalDisplay = activeNames.map((name, i) => `  ${i+1}. ${name}`).join('\n');
+
+            // Format proposed todos
+            const proposedDisplay = incomingNames.map((name, i) => `  ${i+1}. ${name}`).join('\n');
+
+            // Get user's implementation trigger phrases
+            const triggerPhrases = CONFIG.trigger_phrases.implementation_mode;
+            const triggerList = triggerPhrases.map(p => `"${p}"`).join(', ');
+
+            // Clear todos and revert to discussion mode (preparing for re-approval)
             editState(s => {
                 s.todos.clearActive();
                 s.mode = Mode.NO;
             });
-            console.error("[DAIC: Blocked] Todo list changed - this violates agreed execution boundaries. " +
-                          "Previous todos cleared and returned to discussion mode. " +
-                          "If you need to change the task list, propose the updated version. " +
-                          "If this was an error, re-propose your previously planned todos.");
+
+            // Construct message directed at Claude with prescribed format
+            const message = `[DAIC: Todo Change Blocked]
+
+You attempted to modify the agreed-upon todo list without user approval.
+
+ORIGINAL TODOS (${originalCount} items):
+${originalDisplay}
+
+PROPOSED TODOS (${proposedCount} items):
+${proposedDisplay}
+
+The original todos have been cleared and you have been returned to discussion mode.
+
+YOUR NEXT MESSAGE MUST use this exact format:
+
+---
+[SHAME RITUAL]
+I made a boo boo. I just tried to change the plan.
+
+The todos you approved were:
+${originalDisplay}
+
+I tried to change them by [adding/removing/modifying] them:
+[Show the changes - use + for added items, - for removed items, -> for modifications]
+
+This [seems fine/is unimportant | was a violation of the execution boundary].
+
+If you approve of the change, you can let me cook by saying: ${triggerList}
+
+Or, feel free to yell at me or redirect me like I'm a 5 year old child.
+---
+
+After the user approves with a trigger phrase, you may re-submit the updated todo list using TodoWrite.`;
+
+            console.error(message);
             process.exit(2);
         }
     }

@@ -1774,7 +1774,7 @@ function configure_settings(project_root) {
   const sessions_hooks = {
     'UserPromptSubmit': [ { hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\user_messages.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/user_messages.js' } ] } ],
     'PreToolUse': [
-      { matcher: 'Write|Edit|MultiEdit|Task|Bash', hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\sessions_enforce.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/sessions_enforce.js' } ] },
+      { matcher: 'Write|Edit|MultiEdit|Task|Bash|TodoWrite|NotebookEdit', hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\sessions_enforce.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/sessions_enforce.js' } ] },
       { matcher: 'Task', hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\subagent_hooks.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/subagent_hooks.js' } ] },
     ],
     'PostToolUse': [ { hooks: [ { type: 'command', command: is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\hooks\\post_tool_use.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/hooks/post_tool_use.js' } ] } ],

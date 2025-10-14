@@ -12,6 +12,7 @@ cc-sessions transforms Claude Code into a disciplined workflow system where Clau
 - **Discussion Mode**: Default state. Edit/Write/MultiEdit tools blocked until explicit approval
 - **Implementation Mode**: Activated by trigger phrases ("yert", "make it so", "run that")
 - **Todo-Based Boundaries**: Approved TodoWrite lists define exact implementation scope
+- **Todo Change Detection**: Blocks unauthorized todo modifications with detailed diff and required "SHAME RITUAL" response format
 - **Automatic Return**: Returns to discussion mode when all todos complete
 - **Configurable**: Customize trigger phrases, blocked tools, and enforcement patterns
 
@@ -57,6 +58,7 @@ Configuration-driven protocol system that auto-adapts based on user preferences:
 
 ### Hook System
 - `cc_sessions/hooks/sessions_enforce.py|.js` - Pre-tool DAIC enforcement with command analysis
+- `cc_sessions/hooks/sessions_enforce.py:319-376|.js:397-454` - Todo change blocking with diff display and "SHAME RITUAL" format
 - `cc_sessions/hooks/session_start.py|.js` - Session initialization and update detection
 - `cc_sessions/hooks/user_messages.py|.js` - Trigger phrase detection and protocol loading
 - `cc_sessions/hooks/post_tool_use.py|.js` - Todo completion detection and mode transitions
@@ -178,6 +180,13 @@ sessions tasks start @<task-name>           # Start task with validation
 - **UTF-8 Encoding**: Explicit encoding prevents platform-specific issues
 - **Dual-Context Import**: Works in both package and symlinked development
 
+### Todo Change Detection
+- **Diff Display**: Shows original vs proposed todos with counts and numbered lists
+- **Dynamic Injection**: User's trigger phrases from config automatically included in prompt
+- **Prescribed Format**: Claude must respond with "SHAME RITUAL" message explaining violation
+- **State Clearing**: Clears active todos and returns to discussion mode for re-approval
+- **Natural Gate**: Next TodoWrite attempt succeeds after user approval since no existing todos to compare
+
 ### Directory Task Support
 - **Helper Functions**: `is_directory_task()`, `get_task_file_path()` in shared_state
 - **Subtask Detection**: `is_subtask()`, `is_parent_task()` for workflow control
@@ -296,6 +305,7 @@ sessions tasks start @<task-name>           # Start task with validation
 - **Intelligent Argument Detection**: Finds write operations in complex commands
 - **Improved Pipeline Handling**: Proper splitting and per-segment analysis
 - **Redirection Detection**: Comprehensive stderr and file descriptor handling
+- **Todo Change Blocking**: Enhanced feedback with diff display and prescribed response format
 
 ## Related Documentation
 

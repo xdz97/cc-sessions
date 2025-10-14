@@ -1,6 +1,6 @@
 {
   "name": "cc-sessions",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Claude Code Sessions Framework - Enforced methodology for AI pair programming",
   "main": "cc_sessions/install.js",
   "bin": {

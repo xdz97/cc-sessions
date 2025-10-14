@@ -1319,13 +1319,14 @@ function find_v026_hook_commands(settings) {
 function detect_v026_artifacts(project_root) {
   /**
    * Comprehensive detection of all v0.2.6/v0.2.7 artifacts.
-   * Returns object with hooks, state_files, statusline, settings_commands, and directories.
+   * Returns object with hooks, state_files, statusline, settings_commands, command_files, and directories.
    */
   const artifacts = {
     hooks: [],
     state_files: [],
     statusline: false,
     settings_commands: [],
+    command_files: [],
     directories: []
   };
 
@@ -1383,6 +1384,18 @@ function detect_v026_artifacts(project_root) {
     // Ignore errors
   }
 
+  // Check for old command files
+  const commands_dir = path.join(project_root, '.claude', 'commands');
+  if (fs.existsSync(commands_dir)) {
+    const old_commands = ['add-trigger.md', 'api-mode.md'];
+    for (const cmd_file of old_commands) {
+      const cmd_path = path.join(commands_dir, cmd_file);
+      if (fs.existsSync(cmd_path)) {
+        artifacts.command_files.push(cmd_file);
+      }
+    }
+  }
+
   return artifacts;
 }
 
@@ -1391,48 +1404,59 @@ async function prompt_migration_confirmation(artifacts) {
    * Show user what will be migrated and ask for confirmation.
    * Returns true if user confirms migration, false otherwise.
    */
-  console.log(color('\n🔄 v0.2.6/v0.2.7 Installation Detected', Colors.CYAN));
-  console.log();
-  console.log(color('Found the following artifacts from previous installation:', Colors.CYAN));
+  show_header(print_installer_header);
+
+  const info = [
+    color('🔄 v0.2.6/v0.2.7 Installation Detected', Colors.CYAN),
+    '',
+    color('Found the following artifacts from previous installation:', Colors.CYAN)
+  ];
 
   if (artifacts.hooks.length > 0) {
-    console.log(color(`  • Hooks: ${artifacts.hooks.length} files`, Colors.CYAN));
+    info.push(color(`  • Hooks: ${artifacts.hooks.length} files`, Colors.CYAN));
     for (const hook of artifacts.hooks) {
-      console.log(color(`    - ${hook}`, Colors.CYAN));
+      info.push(color(`    - ${hook}`, Colors.CYAN));
     }
   }
 
   if (artifacts.state_files.length > 0) {
-    console.log(color(`  • State files: ${artifacts.state_files.length} files`, Colors.CYAN));
+    info.push(color(`  • State files: ${artifacts.state_files.length} files`, Colors.CYAN));
     for (const state_file of artifacts.state_files) {
-      console.log(color(`    - ${state_file}`, Colors.CYAN));
+      info.push(color(`    - ${state_file}`, Colors.CYAN));
     }
   }
 
   if (artifacts.statusline) {
-    console.log(color('  • Statusline script: statusline-script.sh', Colors.CYAN));
+    info.push(color('  • Statusline script: statusline-script.sh', Colors.CYAN));
   }
 
   if (artifacts.settings_commands.length > 0) {
-    console.log(color(`  • Settings.json: ${artifacts.settings_commands.length} hook commands`, Colors.CYAN));
+    info.push(color(`  • Settings.json: ${artifacts.settings_commands.length} hook commands`, Colors.CYAN));
   }
 
-  console.log();
-  console.log(color('These old files will be removed:', Colors.CYAN));
-  console.log(color('  • Old hook files deleted', Colors.CYAN));
-  console.log(color('  • Old state files deleted', Colors.CYAN));
-  console.log(color('  • Settings.json cleaned', Colors.CYAN));
-  console.log(color('  • You will start fresh with v0.3.0 defaults', Colors.CYAN));
-  console.log();
+  if (artifacts.command_files.length > 0) {
+    info.push(color(`  • Command files: ${artifacts.command_files.length} files`, Colors.CYAN));
+    for (const cmd_file of artifacts.command_files) {
+      info.push(color(`    - ${cmd_file}`, Colors.CYAN));
+    }
+  }
 
-  const response = await inquirer.prompt([{
-    type: 'list',
-    name: 'choice',
+  info.push('');
+  info.push(color('These old files will be removed:', Colors.CYAN));
+  info.push(color('  • Old hook files deleted', Colors.CYAN));
+  info.push(color('  • Old state files deleted', Colors.CYAN));
+  info.push(color('  • Settings.json cleaned', Colors.CYAN));
+  info.push(color('  • You will start fresh with v0.3.0 defaults', Colors.CYAN));
+  info.push('');
+
+  set_info(info);
+
+  const choice = await inquirer.list_input({
     message: 'Proceed with migration?',
     choices: ['Yes - Migrate and clean up', 'No - Skip migration (not recommended)']
-  }]);
+  });
 
-  return response.choice.startsWith('Yes');
+  return choice.startsWith('Yes');
 }
 
 function clean_v026_settings(project_root, settings, commands) {
@@ -1522,10 +1546,12 @@ function archive_v026_files(project_root, artifacts) {
   const archive_root = path.join(project_root, 'sessions', '.archived', `v026-migration-${timestamp}`);
   const archive_hooks_dir = path.join(archive_root, 'hooks');
   const archive_state_dir = path.join(archive_root, 'state');
+  const archive_commands_dir = path.join(archive_root, 'commands');
 
   try {
     fs.mkdirSync(archive_hooks_dir, { recursive: true });
     fs.mkdirSync(archive_state_dir, { recursive: true });
+    fs.mkdirSync(archive_commands_dir, { recursive: true });
   } catch (e) {
     console.log(color(`⚠️  Could not create archive directory: ${e}`, Colors.YELLOW));
     return { archived: false, path: '', file_count: 0 };
@@ -1584,6 +1610,23 @@ function archive_v026_files(project_root, artifacts) {
     }
   }
 
+  // Archive command files
+  for (const cmd_file of artifacts.command_files) {
+    try {
+      const src = path.join(project_root, '.claude', 'commands', cmd_file);
+      const dst = path.join(archive_commands_dir, cmd_file);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dst);
+        // Preserve timestamps
+        const stats = fs.statSync(src);
+        fs.utimesSync(dst, stats.atime, stats.mtime);
+        file_count += 1;
+      }
+    } catch (e) {
+      console.log(color(`⚠️  Could not archive ${cmd_file}: ${e}`, Colors.YELLOW));
+    }
+  }
+
   // Return archive info
   const relative_path = path.relative(project_root, archive_root);
   return {
@@ -1629,6 +1672,17 @@ function clean_v026_files(project_root, artifacts) {
       console.log(color('  ✓ Removed statusline-script.sh', Colors.CYAN));
     } catch (e) {
       console.log(color(`  ⚠ Could not remove statusline: ${e}`, Colors.YELLOW));
+    }
+  }
+
+  // Remove command files
+  for (const cmd_file of artifacts.command_files) {
+    try {
+      const cmd_path = path.join(project_root, '.claude', 'commands', cmd_file);
+      fs.unlinkSync(cmd_path);
+      console.log(color(`  ✓ Removed ${cmd_file}`, Colors.CYAN));
+    } catch (e) {
+      console.log(color(`  ⚠ Could not remove ${cmd_file}: ${e}`, Colors.YELLOW));
     }
   }
 
@@ -2762,6 +2816,57 @@ async function import_config(project_root, source, source_type, info) {
   }
 }
 
+function check_sessions_on_path() {
+  /**
+   * Check if sessions command is accessible on PATH (Windows only).
+   * Displays a warning with instructions if sessions.cmd is not on PATH.
+   */
+  // Only check on Windows
+  if (process.platform !== 'win32') {
+    return;
+  }
+
+  // Try to find sessions command
+  let sessions_found = false;
+  try {
+    cp.execSync('where sessions', { stdio: 'ignore' });
+    sessions_found = true;
+  } catch (e) {
+    sessions_found = false;
+  }
+
+  if (!sessions_found) {
+    // Not on PATH - find where npm global bin is
+    let npm_bin = '';
+    try {
+      npm_bin = cp.execSync('npm bin -g', { encoding: 'utf8' }).trim();
+    } catch (e) {
+      // Fallback to common npm global paths
+      const userProfile = process.env.USERPROFILE || process.env.HOME;
+      npm_bin = path.join(userProfile, 'AppData', 'Roaming', 'npm');
+    }
+
+    // Check if sessions.cmd exists at that location
+    const sessions_cmd = path.join(npm_bin, 'sessions.cmd');
+    if (fs.existsSync(sessions_cmd) || npm_bin) {
+      console.log(color('\n⚠️  WARNING: sessions command not found on PATH\n', Colors.YELLOW));
+      console.log(color('The installer created sessions.cmd but it\'s not accessible from the command line.', Colors.YELLOW));
+      console.log(color('This will cause issues during kickstart and normal usage.\n', Colors.YELLOW));
+      console.log(color('To fix this, add the npm global bin directory to your PATH:\n', Colors.YELLOW));
+      console.log(color('Directory to add:', Colors.BOLD));
+      console.log(`  ${npm_bin}\n`);
+      console.log(color('Steps:', Colors.BOLD));
+      console.log('  1. Open System Properties → Environment Variables');
+      console.log('  2. Edit your user PATH variable');
+      console.log('  3. Add the directory above');
+      console.log('  4. Restart PowerShell');
+      console.log('  5. Test: sessions --help\n');
+      console.log(color('Or run this PowerShell command (current session only):', Colors.BOLD));
+      console.log(`  $env:Path += ";${npm_bin}"\n`);
+    }
+  }
+}
+
 async function kickstart_decision(project_root) {
   show_header(print_kickstart_header);
   set_info([
@@ -2813,8 +2918,15 @@ async function main() {
     else { console.log(color('🔍 Detected existing cc-sessions installation', Colors.CYAN)); backup_dir = create_backup(PROJECT_ROOT); }
   }
 
-  // Check for and handle v0.2.6/v0.2.7 migration
-  const v026_archive_info = await run_v026_migration(PROJECT_ROOT);
+  // Check for and handle v0.2.6/v0.2.7 migration (with TUI for interactive prompt)
+  const migration_session = tui_session();
+  await migration_session.enter();
+  let v026_archive_info;
+  try {
+    v026_archive_info = await run_v026_migration(PROJECT_ROOT);
+  } finally {
+    await migration_session.exit();
+  }
 
   console.log(color(`\n⚙️  Installing cc-sessions to: ${PROJECT_ROOT}`, Colors.CYAN));
   console.log();
@@ -2850,6 +2962,9 @@ async function main() {
       console.log(color('   (Agents backed up for manual restoration if needed)', Colors.CYAN));
     }
     console.log(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN));
+
+    // Check if sessions command is on PATH (Windows only)
+    check_sessions_on_path();
 
     // Show v0.2.6/v0.2.7 archive message if applicable
     if (v026_archive_info.archived) {

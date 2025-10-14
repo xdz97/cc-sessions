@@ -1460,13 +1460,14 @@ def find_v026_hook_commands(settings: dict) -> list:
 def detect_v026_artifacts(project_root: Path) -> dict:
     """Comprehensive detection of all v0.2.6/v0.2.7 artifacts.
 
-    Returns dict with hooks, state_files, statusline, settings_commands, and directories.
+    Returns dict with hooks, state_files, statusline, settings_commands, command_files, and directories.
     """
     artifacts = {
         'hooks': [],
         'state_files': [],
         'statusline': False,
         'settings_commands': [],
+        'command_files': [],
         'directories': []
     }
 
@@ -1514,6 +1515,15 @@ def detect_v026_artifacts(project_root: Path) -> dict:
     except Exception:
         pass
 
+    # Check for old command files
+    commands_dir = project_root / '.claude' / 'commands'
+    if commands_dir.exists():
+        old_commands = ['add-trigger.md', 'api-mode.md']
+        for cmd_file in old_commands:
+            cmd_path = commands_dir / cmd_file
+            if cmd_path.exists():
+                artifacts['command_files'].append(cmd_file)
+
     return artifacts
 
 def prompt_migration_confirmation(artifacts: dict) -> bool:
@@ -1521,33 +1531,44 @@ def prompt_migration_confirmation(artifacts: dict) -> bool:
 
     Returns True if user confirms migration, False otherwise.
     """
-    print(color('\n🔄 v0.2.6/v0.2.7 Installation Detected', Colors.CYAN))
-    print()
-    print(color('Found the following artifacts from previous installation:', Colors.CYAN))
+    show_header(print_installer_header)
+
+    info = [
+        color('🔄 v0.2.6/v0.2.7 Installation Detected', Colors.CYAN),
+        '',
+        color('Found the following artifacts from previous installation:', Colors.CYAN)
+    ]
 
     if artifacts['hooks']:
-        print(color(f'  • Hooks: {len(artifacts["hooks"])} files', Colors.CYAN))
+        info.append(color(f'  • Hooks: {len(artifacts["hooks"])} files', Colors.CYAN))
         for hook in artifacts['hooks']:
-            print(color(f'    - {hook}', Colors.CYAN))
+            info.append(color(f'    - {hook}', Colors.CYAN))
 
     if artifacts['state_files']:
-        print(color(f'  • State files: {len(artifacts["state_files"])} files', Colors.CYAN))
+        info.append(color(f'  • State files: {len(artifacts["state_files"])} files', Colors.CYAN))
         for state_file in artifacts['state_files']:
-            print(color(f'    - {state_file}', Colors.CYAN))
+            info.append(color(f'    - {state_file}', Colors.CYAN))
 
     if artifacts['statusline']:
-        print(color('  • Statusline script: statusline-script.sh', Colors.CYAN))
+        info.append(color('  • Statusline script: statusline-script.sh', Colors.CYAN))
 
     if artifacts['settings_commands']:
-        print(color(f'  • Settings.json: {len(artifacts["settings_commands"])} hook commands', Colors.CYAN))
+        info.append(color(f'  • Settings.json: {len(artifacts["settings_commands"])} hook commands', Colors.CYAN))
 
-    print()
-    print(color('These old files will be removed:', Colors.CYAN))
-    print(color('  • Old hook files deleted', Colors.CYAN))
-    print(color('  • Old state files deleted', Colors.CYAN))
-    print(color('  • Settings.json cleaned', Colors.CYAN))
-    print(color('  • You will start fresh with v0.3.0 defaults', Colors.CYAN))
-    print()
+    if artifacts['command_files']:
+        info.append(color(f'  • Command files: {len(artifacts["command_files"])} files', Colors.CYAN))
+        for cmd_file in artifacts['command_files']:
+            info.append(color(f'    - {cmd_file}', Colors.CYAN))
+
+    info.append('')
+    info.append(color('These old files will be removed:', Colors.CYAN))
+    info.append(color('  • Old hook files deleted', Colors.CYAN))
+    info.append(color('  • Old state files deleted', Colors.CYAN))
+    info.append(color('  • Settings.json cleaned', Colors.CYAN))
+    info.append(color('  • You will start fresh with v0.3.0 defaults', Colors.CYAN))
+    info.append('')
+
+    set_info(info)
 
     choice = inquirer.list_input(
         message='Proceed with migration?',
@@ -1642,10 +1663,12 @@ def archive_v026_files(project_root: Path, artifacts: dict) -> dict:
     archive_root = project_root / 'sessions' / '.archived' / f'v026-migration-{timestamp}'
     archive_hooks_dir = archive_root / 'hooks'
     archive_state_dir = archive_root / 'state'
+    archive_commands_dir = archive_root / 'commands'
 
     try:
         archive_hooks_dir.mkdir(parents=True, exist_ok=True)
         archive_state_dir.mkdir(parents=True, exist_ok=True)
+        archive_commands_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         print(color(f'⚠️  Could not create archive directory: {e}', Colors.YELLOW))
         return {'archived': False, 'path': '', 'file_count': 0}
@@ -1685,6 +1708,17 @@ def archive_v026_files(project_root: Path, artifacts: dict) -> dict:
         except Exception as e:
             print(color(f'⚠️  Could not archive statusline-script.sh: {e}', Colors.YELLOW))
 
+    # Archive command files
+    for cmd_file in artifacts['command_files']:
+        try:
+            src = project_root / '.claude' / 'commands' / cmd_file
+            dst = archive_commands_dir / cmd_file
+            if src.exists():
+                shutil.copy2(src, dst)
+                file_count += 1
+        except Exception as e:
+            print(color(f'⚠️  Could not archive {cmd_file}: {e}', Colors.YELLOW))
+
     # Return archive info
     relative_path = archive_root.relative_to(project_root)
     return {
@@ -1723,6 +1757,15 @@ def clean_v026_files(project_root: Path, artifacts: dict) -> None:
             print(color('  ✓ Removed statusline-script.sh', Colors.CYAN))
         except Exception as e:
             print(color(f'  ⚠ Could not remove statusline: {e}', Colors.YELLOW))
+
+    # Remove command files
+    for cmd_file in artifacts['command_files']:
+        try:
+            cmd_path = project_root / '.claude' / 'commands' / cmd_file
+            cmd_path.unlink()
+            print(color(f'  ✓ Removed {cmd_file}', Colors.CYAN))
+        except Exception as e:
+            print(color(f'  ⚠ Could not remove {cmd_file}: {e}', Colors.YELLOW))
 
     # Try to remove empty .claude/state/ directory (silent)
     try:
@@ -2950,6 +2993,48 @@ def import_config(project_root: Path, source: str, source_type: str, info: list)
         if tmp_to_remove is not None:
             with contextlib.suppress(Exception): shutil.rmtree(tmp_to_remove)
 
+def check_sessions_on_path() -> None:
+    """Check if sessions command is accessible on PATH (Windows only).
+
+    Displays a warning with instructions if sessions.exe is not on PATH.
+    """
+    import shutil
+    import sysconfig
+
+    # Only check on Windows
+    if os.name != 'nt':
+        return
+
+    # Try to find sessions command
+    sessions_path = shutil.which('sessions')
+
+    if sessions_path is None:
+        # Not on PATH - find where it actually is and warn
+        scripts_dir = sysconfig.get_path('scripts', scheme='nt_user')
+        sessions_exe = Path(scripts_dir) / 'sessions.exe'
+
+        # Verify the file actually exists where we think it is
+        if not sessions_exe.exists():
+            # Try alternate location
+            scripts_dir = sysconfig.get_path('scripts')
+            sessions_exe = Path(scripts_dir) / 'sessions.exe'
+
+        if sessions_exe.exists():
+            print(color('\n⚠️  WARNING: sessions command not found on PATH\n', Colors.YELLOW))
+            print(color('The installer created sessions.exe but it\'s not accessible from the command line.', Colors.YELLOW))
+            print(color('This will cause issues during kickstart and normal usage.\n', Colors.YELLOW))
+            print(color('To fix this, add the Scripts directory to your PATH:\n', Colors.YELLOW))
+            print(color('Directory to add:', Colors.BOLD))
+            print(f'  {scripts_dir}\n')
+            print(color('Steps:', Colors.BOLD))
+            print('  1. Open System Properties → Environment Variables')
+            print('  2. Edit your user PATH variable')
+            print('  3. Add the directory above')
+            print('  4. Restart PowerShell')
+            print('  5. Test: sessions --help\n')
+            print(color('Or run this PowerShell command (current session only):', Colors.BOLD))
+            print(f'  $env:Path += ";{scripts_dir}"\n')
+
 def kickstart_decision(project_root: Path) -> str:
     """Prompt user for kickstart onboarding preference and set state/cleanup accordingly.
     Returns one of: 'full', 'subagents', 'skip'.
@@ -3011,8 +3096,9 @@ def main():
         else: print(color('🔍 Detected existing cc-sessions installation', Colors.CYAN)); backup_dir = create_backup(PROJECT_ROOT)
     #!<
 
-    #!> Check for and handle v0.2.6/v0.2.7 migration
-    v026_archive_info = run_v026_migration(PROJECT_ROOT)
+    #!> Check for and handle v0.2.6/v0.2.7 migration (with TUI for interactive prompt)
+    with tui_session():
+        v026_archive_info = run_v026_migration(PROJECT_ROOT)
     #!<
 
     print(color(f'\n⚙️  Installing cc-sessions to: {PROJECT_ROOT}', Colors.CYAN))
@@ -3049,6 +3135,9 @@ def main():
 
         # Output final message
         print(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN))
+
+        # Check if sessions command is on PATH (Windows only)
+        check_sessions_on_path()
 
         # Show v0.2.6/v0.2.7 archive message if applicable
         if v026_archive_info.get('archived'):

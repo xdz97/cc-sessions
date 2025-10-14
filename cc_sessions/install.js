@@ -2460,14 +2460,23 @@ async function _ask_statusline() {
     const settings_file = path.join(ss.PROJECT_ROOT, '.claude', 'settings.json');
     let settings = {};
     if (fs.existsSync(settings_file)) settings = JSON.parse(fs.readFileSync(settings_file, 'utf8'));
-    settings.statusLine = { type: 'command', command: 'node $CLAUDE_PROJECT_DIR/sessions/statusline.js' };
+
+    // Use Windows or Unix path syntax based on platform
+    const is_windows = process.platform === 'win32';
+    const statusline_cmd = is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\statusline.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/statusline.js';
+
+    settings.statusLine = { type: 'command', command: statusline_cmd };
     fs.writeFileSync(settings_file, JSON.stringify(settings, null, 2));
     set_info([color('✓ Statusline configured in .claude/settings.json', Colors.GREEN)]);
   } else {
+    // Show platform-appropriate example
+    const is_windows = process.platform === 'win32';
+    const example_cmd = is_windows ? 'node "%CLAUDE_PROJECT_DIR%\\sessions\\statusline.js"' : 'node $CLAUDE_PROJECT_DIR/sessions/statusline.js';
+
     set_info([
       color('You can add the cc-sessions statusline later by adding this to .claude/settings.json:', Colors.YELLOW),
       color('{', Colors.YELLOW), color('  "statusLine": {', Colors.YELLOW), color('    "type": "command",', Colors.YELLOW),
-      color('    "command": "node $CLAUDE_PROJECT_DIR/sessions/statusline.js"', Colors.YELLOW), color('  }', Colors.YELLOW), color('}', Colors.YELLOW), ''
+      color(`    "command": "${example_cmd}"`, Colors.YELLOW), color('  }', Colors.YELLOW), color('}', Colors.YELLOW), ''
     ]);
     await _input('Press enter to continue...');
   }

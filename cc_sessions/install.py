@@ -2620,17 +2620,26 @@ def _ask_statusline():
     val = inquirer.list_input(message="Would you like to use it?", choices=['Yes, use cc-sessions statusline', 'No, I have my own statusline'])
     if 'Yes' in val:
         settings_file = ss.PROJECT_ROOT / '.claude' / 'settings.json'
-        if settings_file.exists(): 
+        if settings_file.exists():
             with open(settings_file, 'r') as f: settings = json.load(f)
         else: settings = {}
-        settings['statusLine'] = {'type': 'command', 'command': 'python $CLAUDE_PROJECT_DIR/sessions/statusline.py'}
+
+        # Use Windows or Unix path syntax based on platform
+        is_windows = sys.platform == 'win32'
+        statusline_cmd = 'python "%CLAUDE_PROJECT_DIR%\\sessions\\statusline.py"' if is_windows else 'python $CLAUDE_PROJECT_DIR/sessions/statusline.py'
+
+        settings['statusLine'] = {'type': 'command', 'command': statusline_cmd}
         with open(settings_file, 'w') as f: json.dump(settings, f, indent=2)
         set_info([color('✓ Statusline configured in .claude/settings.json', Colors.GREEN)])
         sleep(0.5)
-    else: 
+    else:
+        # Show platform-appropriate example
+        is_windows = sys.platform == 'win32'
+        example_cmd = 'python "%CLAUDE_PROJECT_DIR%\\sessions\\statusline.py"' if is_windows else 'python $CLAUDE_PROJECT_DIR/sessions/statusline.py'
+
         set_info([  color('You can add the cc-sessions statusline later by adding this to .claude/settings.json:', Colors.YELLOW),
                     color('{',Colors.YELLOW), color('  "statusLine": {',Colors.YELLOW), color('    "type": "command",',Colors.YELLOW),
-                    color('    "command": "python $CLAUDE_PROJECT_DIR/sessions/statusline.py"',Colors.YELLOW), color('  }',Colors.YELLOW),
+                    color(f'    "command": "{example_cmd}"',Colors.YELLOW), color('  }',Colors.YELLOW),
                     color('}', Colors.YELLOW),""])
         input('Press enter to continue...')
     return True if 'Yes' in val else False

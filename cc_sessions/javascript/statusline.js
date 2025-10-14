@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+// Windows UTF-8 stdout fix
+// Windows uses cp1252 by default, which can't encode Unicode block characters (█, ░)
+// Force UTF-8 encoding for stdout to prevent encoding errors
+if (process.platform === 'win32') {
+    process.stdout.setDefaultEncoding('utf8');
+}
+
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');

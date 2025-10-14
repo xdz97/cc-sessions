@@ -6,6 +6,15 @@ from pathlib import Path
 from datetime import datetime, timezone
 ##-##
 
+## ===== WINDOWS UTF-8 STDOUT FIX ===== ##
+# Windows uses cp1252 by default, which can't encode Unicode block characters (█, ░)
+# Force UTF-8 encoding for stdout to prevent UnicodeEncodeError
+if sys.platform == 'win32':
+    import io
+    # Reconfigure stdout with UTF-8 encoding
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+##-##
+
 ## ===== 3RD-PARTY ===== ##
 ##-##
 

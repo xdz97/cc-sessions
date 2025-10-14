@@ -1,10 +1,9 @@
 # Changelog
 
-## Unreleased
+## [0.3.1] - 2025-10-14
 
-### Added
-### Changed
 ### Fixed
+- teehee lil python string escaping bug issoke
 
 ## [0.3.0] - 2025-10-14
 

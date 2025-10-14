@@ -51,6 +51,84 @@ if (_HAS_KICKSTART) {
     COMMAND_HANDLERS['kickstart'] = handleKickstartCommand;
 }
 
+// Help dictionary for progressive disclosure
+const HELP_MESSAGES = {
+    "root": `Available subsystems:
+  state    - show, mode, task, todos, flags, update
+  config   - show, phrases, git, env, features, read, write, tools
+  tasks    - idx, start
+  protocol - startup-load
+  uninstall - Remove cc-sessions framework${_HAS_KICKSTART ? `
+  kickstart - full, subagents, next, complete` : ''}`,
+
+    "state": `Available state commands:
+  show [section]   - Display state (task, todos, flags, mode)
+  mode <mode>      - Switch mode (discussion/no, bypass/off, implementation/go)
+  task <action>    - Manage task (clear, show, restore <file>)
+  todos <action>   - Manage todos (clear)
+  flags <action>   - Manage flags (clear, clear-context)
+  update <action>  - Manage updates (status, suppress, check)`,
+
+    "config": `Available config commands:
+  show             - Display current configuration
+  phrases <action> - Manage trigger phrases (list, add, remove)
+  git <action>     - Manage git preferences (show, add, branch, commit, merge, push, repo)
+  env <action>     - Manage environment (show, os, shell, name)
+  features <action> - Manage features (show, set, toggle)
+  read <action>    - Manage bash read patterns (list, add, remove)
+  write <action>   - Manage bash write patterns (list, add, remove)
+  tools <action>   - Manage blocked tools (list, block, unblock)`,
+
+    "config.phrases": `Available phrases commands:
+  list [category]             - List trigger phrases
+  add <category> "<phrase>"   - Add trigger phrase
+  remove <category> "<phrase>" - Remove trigger phrase
+
+Valid categories: go, no, create, start, complete, compact`,
+
+    "config.git": `Available git commands:
+  show                - Display git preferences
+  add <ask|all>       - Set staging behavior
+  branch <name>       - Set default branch
+  commit <style>      - Set commit style (conventional, simple, detailed)
+  merge <auto|ask>    - Set merge behavior
+  push <auto|ask>     - Set push behavior
+  repo <super|mono>   - Set repository type`,
+
+    "config.env": `Available env commands:
+  show            - Display environment settings
+  os <os>         - Set operating system (linux, macos, windows)
+  shell <shell>   - Set shell (bash, zsh, fish, powershell, cmd)
+  name <name>     - Set developer name`,
+
+    "config.features": `Available features commands:
+  show              - Display all feature flags
+  set <key> <value> - Set feature value
+  toggle <key>      - Toggle feature boolean or cycle enum
+
+Features: branch_enforcement, task_detection, auto_ultrathink, icon_style, warn_85, warn_90`,
+
+    "config.read": `Available read commands:
+  list              - List all bash read patterns
+  add <pattern>     - Add pattern to read list
+  remove <pattern>  - Remove pattern from read list`,
+
+    "config.write": `Available write commands:
+  list              - List all bash write patterns
+  add <pattern>     - Add pattern to write list
+  remove <pattern>  - Remove pattern from write list`,
+
+    "config.tools": `Available tools commands:
+  list                - List all blocked tools
+  block <ToolName>    - Block tool in discussion mode
+  unblock <ToolName>  - Unblock tool`,
+
+    "tasks": `Available tasks commands:
+  idx list        - List all task indexes
+  idx <name>      - Show tasks in specific index
+  start @<task>   - Start working on a task`,
+};
+
 //-#
 
 // ==== DECLARATIONS ===== //
@@ -60,6 +138,25 @@ if (_HAS_KICKSTART) {
 //-#
 
 // ==== FUNCTIONS ===== //
+
+function resolveHelp(commandPath) {
+    /**
+     * Resolve help text for failed command parsing.
+     *
+     * Args:
+     *     commandPath: Array of successfully parsed command tokens before failure
+     *                 Example: [] for root, ['config'] for config subsystem,
+     *                          ['config', 'phrases'] for phrases commands
+     *
+     * Returns:
+     *     Appropriate help text for the command level
+     */
+    // Build key from command path
+    const key = commandPath.length > 0 ? commandPath.join('.') : 'root';
+
+    // Return help for this level, or root help if not found
+    return HELP_MESSAGES[key] || HELP_MESSAGES['root'];
+}
 
 function routeCommand(command, args, jsonOutput = false, fromSlash = false) {
     /**
@@ -102,20 +199,43 @@ function routeCommand(command, args, jsonOutput = false, fromSlash = false) {
     }
 
     if (!(command in COMMAND_HANDLERS)) {
+        if (fromSlash) {
+            return resolveHelp([]);
+        }
         throw new Error(`Unknown command: ${command}. Available commands: ${Object.keys(COMMAND_HANDLERS).join(', ')}`);
     }
 
     const handler = COMMAND_HANDLERS[command];
 
-    // Pass fromSlash to commands that support it
-    if (['config', 'state', 'tasks', 'uninstall'].includes(command)) {
-        return handler(args, jsonOutput, fromSlash);
-    } else {
-        // For commands that don't support fromSlash, add it to args for backward compatibility
-        if (fromSlash && !args.includes('--from-slash')) {
-            args = [...args, '--from-slash'];
+    // Wrap handler calls with error recovery when called from slash
+    if (fromSlash) {
+        try {
+            // Pass fromSlash to commands that support it
+            if (['config', 'state', 'tasks', 'uninstall'].includes(command)) {
+                return handler(args, jsonOutput, fromSlash);
+            } else {
+                // For commands that don't support fromSlash, add it to args for backward compatibility
+                if (!args.includes('--from-slash')) {
+                    args = [...args, '--from-slash'];
+                }
+                return handler(args, jsonOutput);
+            }
+        } catch (e) {
+            // Return contextual help instead of throwing
+            // Try to determine where in the command tree we are
+            return resolveHelp([command]);
         }
-        return handler(args, jsonOutput);
+    } else {
+        // Normal API calls - let exceptions propagate
+        if (['config', 'state', 'tasks', 'uninstall'].includes(command)) {
+            return handler(args, jsonOutput, fromSlash);
+        } else {
+            // For commands that don't support fromSlash, add it to args for backward compatibility
+            if (!args.includes('--from-slash')) {
+                args = [...args, '--from-slash'];
+            }
+            return handler(args, jsonOutput);
+        }
     }
 }
 

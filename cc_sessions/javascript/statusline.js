@@ -5,15 +5,68 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { loadState, editState, loadConfig, Mode, Model, IconStyle, PROJECT_ROOT } = require(path.join(process.env.CLAUDE_PROJECT_DIR, 'sessions', 'hooks', 'shared_state.js'));
 
-// Colors/styles
-const green = '\033[38;5;114m';
-const orange = '\033[38;5;215m';
-const red = '\033[38;5;203m';
-const gray = '\033[38;5;242m';
-const lGray = '\033[38;5;250m';
-const cyan = '\033[38;5;111m';
-const purple = '\033[38;5;183m';
-const reset = '\033[0m';
+// ANSI color detection for Windows
+function supportsAnsi() {
+    /**
+     * Check if the current environment supports ANSI color codes.
+     * @returns {boolean} True if ANSI is supported
+     */
+    // Windows detection
+    if (process.platform === 'win32') {
+        // Windows Terminal and PowerShell 7+ support ANSI
+        const wtSession = process.env.WT_SESSION;
+        const pwshVersion = process.env.POWERSHELL_DISTRIBUTION_CHANNEL;
+
+        // Windows Terminal always supports ANSI
+        if (wtSession) {
+            return true;
+        }
+
+        // PowerShell 7+ supports ANSI
+        if (pwshVersion && pwshVersion.includes('PSCore')) {
+            return true;
+        }
+
+        // Windows 10+ with VT100 support
+        // Try to enable it, if it fails, no ANSI support
+        try {
+            // On Windows 10+, ANSI is typically supported
+            const winVer = require('os').release();
+            const majorVer = parseInt(winVer.split('.')[0]);
+            if (majorVer >= 10) {
+                // Windows 10+ has built-in ANSI support
+                return true;
+            }
+        } catch {
+            // Fall through to return false
+        }
+
+        // Fallback: no ANSI support on old Windows
+        return false;
+    }
+
+    // Unix-like systems support ANSI
+    return true;
+}
+
+// Determine if ANSI is supported
+const ansiSupported = supportsAnsi();
+
+// Colors/styles - conditional based on ANSI support
+let green, orange, red, gray, lGray, cyan, purple, reset;
+if (ansiSupported) {
+    green = '\033[38;5;114m';
+    orange = '\033[38;5;215m';
+    red = '\033[38;5;203m';
+    gray = '\033[38;5;242m';
+    lGray = '\033[38;5;250m';
+    cyan = '\033[38;5;111m';
+    purple = '\033[38;5;183m';
+    reset = '\033[0m';
+} else {
+    // No color support - use empty strings
+    green = orange = red = gray = lGray = cyan = purple = reset = '';
+}
 
 function findGitRepo(startPath) {
     let current = startPath;

@@ -110,15 +110,66 @@ session_id = data.get("session_id", "unknown")
 task_dir = PROJECT_ROOT / "sessions" / "tasks"
 #!<
 
-#!> Colors/styles
-green = "\033[38;5;114m"
-orange = "\033[38;5;215m"
-red = "\033[38;5;203m"
-gray = "\033[38;5;242m"
-l_gray = "\033[38;5;250m"
-cyan = "\033[38;5;111m"
-purple = "\033[38;5;183m"
-reset = "\033[0m"
+#!> Colors/styles - with Windows ANSI detection
+def supports_ansi():
+    """Check if the current environment supports ANSI color codes."""
+    # Windows detection
+    if sys.platform == 'win32':
+        # Windows Terminal and PowerShell 7+ support ANSI
+        wt_session = os.environ.get('WT_SESSION')
+        pwsh_version = os.environ.get('POWERSHELL_DISTRIBUTION_CHANNEL')
+
+        # Windows Terminal always supports ANSI
+        if wt_session:
+            return True
+
+        # PowerShell 7+ supports ANSI
+        if pwsh_version and 'PSCore' in pwsh_version:
+            return True
+
+        # Try to enable ANSI on Windows 10+
+        try:
+            import platform
+            win_ver = platform.version()
+            # Windows 10 build 14393+ supports ANSI with VT100 mode
+            if int(win_ver.split('.')[2]) >= 14393:
+                # Enable VT100 processing
+                import ctypes
+                kernel32 = ctypes.windll.kernel32
+                # Get stdout handle
+                stdout_handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+                # Get current mode
+                mode = ctypes.c_ulong()
+                kernel32.GetConsoleMode(stdout_handle, ctypes.byref(mode))
+                # Enable ENABLE_VIRTUAL_TERMINAL_PROCESSING (0x0004)
+                mode.value |= 0x0004
+                kernel32.SetConsoleMode(stdout_handle, mode.value)
+                return True
+        except:
+            pass
+
+        # Fallback: no ANSI support on old Windows
+        return False
+
+    # Unix-like systems support ANSI
+    return True
+
+# Determine if ANSI is supported
+ansi_supported = supports_ansi()
+
+# Define colors based on ANSI support
+if ansi_supported:
+    green = "\033[38;5;114m"
+    orange = "\033[38;5;215m"
+    red = "\033[38;5;203m"
+    gray = "\033[38;5;242m"
+    l_gray = "\033[38;5;250m"
+    cyan = "\033[38;5;111m"
+    purple = "\033[38;5;183m"
+    reset = "\033[0m"
+else:
+    # No color support - use empty strings
+    green = orange = red = gray = l_gray = cyan = purple = reset = ""
 #!<
 
 #!> Determine model and context limit
@@ -260,8 +311,10 @@ upstream_info = None
 if git_path:
     try:
         # Get current branch
-        branch_cmd = ["git", "-C", str(Path(cwd)), "branch", "--show-current"]
-        branch = subprocess.check_output(branch_cmd, stderr=subprocess.PIPE).decode().strip()
+        # Use absolute paths to avoid Windows path issues
+        cwd_abs = str(Path(cwd).resolve())
+        branch_cmd = ["git", "-C", cwd_abs, "branch", "--show-current"]
+        branch = subprocess.check_output(branch_cmd, stderr=subprocess.PIPE, encoding='utf-8', errors='replace').strip()
 
         if branch:
             if icon_style == IconStyle.NERD_FONTS:
@@ -274,11 +327,11 @@ if git_path:
 
             # Get upstream tracking status
             try:
-                ahead_cmd = ["git", "-C", str(Path(cwd)), "rev-list", "--count", "@{u}..HEAD"]
-                ahead = int(subprocess.check_output(ahead_cmd, stderr=subprocess.PIPE).decode().strip())
+                ahead_cmd = ["git", "-C", cwd_abs, "rev-list", "--count", "@{u}..HEAD"]
+                ahead = int(subprocess.check_output(ahead_cmd, stderr=subprocess.PIPE, encoding='utf-8', errors='replace').strip())
 
-                behind_cmd = ["git", "-C", str(Path(cwd)), "rev-list", "--count", "HEAD..@{u}"]
-                behind = int(subprocess.check_output(behind_cmd, stderr=subprocess.PIPE).decode().strip())
+                behind_cmd = ["git", "-C", cwd_abs, "rev-list", "--count", "HEAD..@{u}"]
+                behind = int(subprocess.check_output(behind_cmd, stderr=subprocess.PIPE, encoding='utf-8', errors='replace').strip())
 
                 upstream_parts = []
                 if ahead > 0:
@@ -292,15 +345,16 @@ if git_path:
                 upstream_info = None
         else:
             # Detached HEAD - show commit hash with detached indicator
-            commit_cmd = ["git", "-C", str(Path(cwd)), "rev-parse", "--short", "HEAD"]
-            commit = subprocess.check_output(commit_cmd, stderr=subprocess.PIPE).decode().strip()
+            commit_cmd = ["git", "-C", cwd_abs, "rev-parse", "--short", "HEAD"]
+            commit = subprocess.check_output(commit_cmd, stderr=subprocess.PIPE, encoding='utf-8', errors='replace').strip()
             if commit:
                 if icon_style == IconStyle.NERD_FONTS:
                     # Broken link icon to indicate detached
                     git_branch_info = f"{l_gray}󰌺 @{commit}{reset}"
                 else:  # EMOJI or ASCII
                     git_branch_info = f"{l_gray}@{commit} [detached]{reset}"
-    except:
+    except (subprocess.CalledProcessError, OSError, ValueError) as e:
+        # Git command failed - common on Windows if git not in PATH or repo issues
         git_branch_info = None
 ##-##
 
@@ -323,18 +377,23 @@ else:  # ASCII
 total_edited = 0
 if git_path:
     try:
+        # Use absolute paths for Windows compatibility
+        cwd_abs = str(Path(cwd).resolve())
+
         # Count unstaged changes
-        unstaged_cmd = ["git", "-C", str(Path(cwd)), "diff", "--name-only"]
-        unstaged_files = subprocess.check_output(unstaged_cmd, stderr=subprocess.PIPE).decode().strip().split('\n')
+        unstaged_cmd = ["git", "-C", cwd_abs, "diff", "--name-only"]
+        unstaged_files = subprocess.check_output(unstaged_cmd, stderr=subprocess.PIPE, encoding='utf-8', errors='replace').strip().split('\n')
         unstaged_count = len([f for f in unstaged_files if f])  # Filter out empty strings
 
         # Count staged changes
-        staged_cmd = ["git", "-C", str(Path(cwd)), "diff", "--cached", "--name-only"]
-        staged_files = subprocess.check_output(staged_cmd, stderr=subprocess.PIPE).decode().strip().split('\n')
+        staged_cmd = ["git", "-C", cwd_abs, "diff", "--cached", "--name-only"]
+        staged_files = subprocess.check_output(staged_cmd, stderr=subprocess.PIPE, encoding='utf-8', errors='replace').strip().split('\n')
         staged_count = len([f for f in staged_files if f])  # Filter out empty strings
 
         total_edited = unstaged_count + staged_count
-    except: total_edited = 0
+    except (subprocess.CalledProcessError, OSError, ValueError):
+        # Git command failed - set to 0 and continue
+        total_edited = 0
 ##-##
 
 ## ===== COUNT OPEN TASKS ===== ##

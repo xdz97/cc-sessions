@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cc-sessions"
-version = "0.3.2"
+version = "0.3.3"
 description = "an opinionated approach to productive development with Claude Code"
 readme = "README.md"
 license = {text = "MIT"}
@@ -48,7 +48,6 @@ Issues = "https://github.com/GWUDCAP/cc-sessions/issues"
 [project.scripts]
 cc-sessions = "cc_sessions.install:main"
 cc-sessions-install = "cc_sessions.install:main"
-sessions = "cc_sessions.python.api.__main__:main"
 
 [tool.setuptools]
 packages = ["cc_sessions"]

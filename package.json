@@ -1,12 +1,12 @@
 {
   "name": "cc-sessions",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "an opinionated approach to productive development with Claude Code",
+  "type": "commonjs",
   "main": "cc_sessions/install.js",
   "bin": {
     "cc-sessions": "cc_sessions/install.js",
-    "cc-sessions-install": "cc_sessions/install.js",
-    "sessions": "cc_sessions/javascript/api/index.js"
+    "cc-sessions-install": "cc_sessions/install.js"
   },
   "scripts": {
     "test": "echo \"No test specified yet\""

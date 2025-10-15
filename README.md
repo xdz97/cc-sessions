@@ -17,9 +17,8 @@
 [![Donate](https://img.shields.io/badge/Donate-Solana-14F195?logo=solana&logoColor=white)](https://dexscreener.com/solana/oy5mbertfqdytu8atyonycvcvu62fpmz3nkqoztrflq)
 </div>
 
-<img src="testimonial-1.png" alt="cc-sessions testimonial" width="60%" align="center">
-<br>
-<img src="testimonial-2.png" alt="cc-sessions testimonial" width="60%" align="center">
+<div align="center"><img src="testimonial-1.png" alt="cc-sessions testimonial" width="60%"></div>
+<div align="center"><img src="testimonial-2.png" alt="cc-sessions testimonial" width="60%" align="center"></div>
 
 <br>
 

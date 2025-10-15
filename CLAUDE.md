@@ -111,8 +111,7 @@ uv pip install cc-sessions         # UV package manager
 
 ### JavaScript (No Python required)
 ```bash
-npm install -g cc-sessions         # Global install
-npx cc-sessions                    # One-time execution
+npx cc-sessions
 ```
 
 ### Development

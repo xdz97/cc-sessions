@@ -988,9 +988,15 @@ function copy_files(script_dir, project_root) {
   const js_root = path.join(script_dir, 'javascript');
   copy_file(path.join(js_root, 'statusline.js'), path.join(project_root, 'sessions', 'statusline.js'));
   copy_directory(path.join(js_root, 'api'), path.join(project_root, 'sessions', 'api'));
+  copy_directory(path.join(js_root, 'bin'), path.join(project_root, 'sessions', 'bin'));
   copy_directory(path.join(js_root, 'hooks'), path.join(project_root, 'sessions', 'hooks'));
   copy_directory(path.join(script_dir, 'protocols'), path.join(project_root, 'sessions', 'protocols'));
   copy_directory(path.join(script_dir, 'commands'), path.join(project_root, '.claude', 'commands'));
+
+  // Create package.json in sessions/ to mark as CommonJS for ESM project compatibility
+  const sessions_pkg = path.join(project_root, 'sessions', 'package.json');
+  fs.writeFileSync(sessions_pkg, JSON.stringify({ type: "commonjs" }, null, 2) + '\n');
+  console.log(color('   ✓ Created sessions/package.json (CommonJS compatibility)', Colors.GREEN));
 
   const tdir = path.join(script_dir, 'templates');
   copy_file(path.join(tdir, 'CLAUDE.sessions.md'), path.join(project_root, 'sessions', 'CLAUDE.sessions.md'));
@@ -1831,7 +1837,7 @@ function configure_claude_md(project_root) {
 function configure_gitignore(project_root) {
   console.log(color('Configuring .gitignore...', Colors.CYAN));
   const gitignore_path = path.join(project_root, '.gitignore');
-  const entries = ['','# cc-sessions runtime files','sessions/sessions-state.json','sessions/transcripts/','sessions/.archived/',''];
+  const entries = ['','# cc-sessions runtime files','sessions/sessions-state.json','sessions/package.json','sessions/transcripts/','sessions/.archived/',''];
   if (fs.existsSync(gitignore_path)) {
     let content = fs.readFileSync(gitignore_path, 'utf8');
     if (!content.includes('sessions/sessions-state.json')) {

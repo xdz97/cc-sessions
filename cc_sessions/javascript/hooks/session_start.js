@@ -532,6 +532,10 @@ After completion of the last task in any todo list:
 
     // Display update notification if flag is True
     if (updateFlag && latestVersion && currentVersion) {
+        // Detect OS for correct sessions command
+        const isWindows = process.platform === "win32";
+        const sessionsCmd = isWindows ? "sessions/bin/sessions.bat" : "sessions/bin/sessions";
+
         // Show manual update message
         // Extract first few lines from CHANGELOG for the latest version
         let changelogExcerpt = null;
@@ -585,8 +589,8 @@ If YES:
 
 If NO:
   - Continue with the session normally
-  - They can suppress this notification: sessions state update suppress
-  - They can check update status anytime: sessions state update status
+  - They can suppress this notification: ${sessionsCmd} state update suppress
+  - They can check update status anytime: ${sessionsCmd} state update status
 
 This notification will appear on every session start until they update or suppress it.
 

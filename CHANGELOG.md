@@ -1,10 +1,17 @@
 # Changelog
 
-## Unreleased
+## [0.3.3] - 2025-10-15
 
-### Added
-### Changed
 ### Fixed
+
+- **ESM Project Compatibility**: JavaScript installer now creates `sessions/package.json` with `{"type": "commonjs"}` to ensure installed hooks, API, and statusline scripts can use `require()` syntax even in projects with `"type": "module"`
+
+- **Sessions Command Installation**: Removed unreliable global bin entries and implemented project-local wrapper approach
+  - Created OS-specific wrapper scripts (`sessions` for Unix, `sessions.bat` for Windows)
+  - Installers copy language-specific wrappers to `sessions/bin/`
+  - All hooks detect OS at runtime and output correct command syntax
+  - Slash command uses project-local wrapper instead of global bin
+  - Works reliably across all environments without requiring `npm install -g`
 
 ## [0.3.2] - 2025-10-14
 

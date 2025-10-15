@@ -4,7 +4,7 @@
 
 ## ===== STDLIB ===== ##
 from pathlib import Path
-import json, sys, os
+import json, sys, os, platform
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -431,9 +431,13 @@ if not is_api_command and task_start_detected:
     ]
 
     # Check if task will be auto-loaded
+    # Detect OS for correct sessions command
+    is_windows = platform.system() == "Windows"
+    sessions_cmd = "sessions/bin/sessions.bat" if is_windows else "sessions/bin/sessions"
+
     context += "[Task Startup Notice]\n**If the user mentioned which task to start, *YOU MUST***:\n"
     context += "1. Return to project root directory\n"
-    context += "2. Run: `sessions protocol startup-load <task-file>`\n"
+    context += f"2. Run: `{sessions_cmd} protocol startup-load <task-file>`\n"
     context += "You must do this *BEFORE* the task startup protocol.\n"
     context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n"
 

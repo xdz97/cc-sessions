@@ -555,9 +555,13 @@ if (!isApiCommand && taskStartDetected) {
     ];
 
     // Check if task will be auto-loaded
+    // Detect OS for correct sessions command
+    const isWindows = process.platform === "win32";
+    const sessionsCmd = isWindows ? "sessions/bin/sessions.bat" : "sessions/bin/sessions";
+
     context += "[Task Startup Notice]\n**If the user mentioned which task to start, *YOU MUST***:\n";
     context += "1. Return to project root directory\n";
-    context += "2. Run: `sessions protocol startup-load <task-file>`\n";
+    context += `2. Run: \`${sessionsCmd} protocol startup-load <task-file>\`\n`;
     context += "You must do this *BEFORE* the task startup protocol.\n";
     context += "Otherwise, ask which task they want to start, then use the command from project root.\n\n";
 

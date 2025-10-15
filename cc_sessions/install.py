@@ -1141,6 +1141,9 @@ def copy_files(script_dir, project_root):
     # Copy API
     copy_directory(py_root / 'api', project_root / 'sessions' / 'api')
 
+    # Copy bin (wrapper scripts for sessions command)
+    copy_directory(py_root / 'bin', project_root / 'sessions' / 'bin')
+
     # Copy hooks
     copy_directory(py_root / 'hooks', project_root / 'sessions' / 'hooks')
 

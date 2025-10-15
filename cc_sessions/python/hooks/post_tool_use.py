@@ -7,6 +7,7 @@ import shutil
 import json
 import sys
 import os
+import platform
 ##-##
 
 ## ===== 3RD-PARTY ===== ##
@@ -123,10 +124,14 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
             STATE = s
             mod = True
         if num_restored:
+            # Detect OS for correct sessions command
+            is_windows = platform.system() == "Windows"
+            sessions_cmd = "sessions/bin/sessions.bat" if is_windows else "sessions/bin/sessions"
+
             print(
                 f"Your previous {num_restored} todos have been restored:\n\n{
                     json.dumps(restored, indent=2)
-                }\n\nIf these todos are no longer relevant, you should clear them using: sessions todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n",
+                }\n\nIf these todos are no longer relevant, you should clear them using: {sessions_cmd} todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n",
                 file=sys.stderr,
             )
     else:
@@ -204,7 +209,8 @@ if STATE.api.todos_clear and tool_name == "Bash":
 
     tool_input = json.loads(os.environ.get("__TOOL_INPUT__", "{}"))
     command = tool_input.get("command", "")
-    if "sessions todos clear" not in command:
+    # Check for either Unix or Windows version of the command
+    if "sessions/bin/sessions todos clear" not in command and "sessions/bin/sessions.bat todos clear" not in command:
         # Not the todos clear command, disable the permission
         with edit_state() as s:
             s.api.todos_clear = False

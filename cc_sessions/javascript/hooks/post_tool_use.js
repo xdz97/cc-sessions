@@ -144,7 +144,11 @@ if (STATE.mode === Mode.GO && toolName === "TodoWrite" && STATE.todos.allComplet
         });
         mod = true;
         if (numRestored > 0) {
-            console.error(`Your previous ${numRestored} todos have been restored:\n\n${JSON.stringify(restored, null, 2)}\n\nIf these todos are no longer relevant, you should clear them using: sessions todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n`);
+            // Detect OS for correct sessions command
+            const isWindows = process.platform === "win32";
+            const sessionsCmd = isWindows ? "sessions/bin/sessions.bat" : "sessions/bin/sessions";
+
+            console.error(`Your previous ${numRestored} todos have been restored:\n\n${JSON.stringify(restored, null, 2)}\n\nIf these todos are no longer relevant, you should clear them using: ${sessionsCmd} todos clear\nNote: You can only use this command immediately - it will be disabled after any other tool use.\n\n`);
         }
     } else {
         editState(s => {
@@ -219,7 +223,8 @@ if (["Edit", "Write", "MultiEdit"].includes(toolName) && STATE.current_task.name
 if (STATE.api.todos_clear && toolName === "Bash") {
     // Check if this is the todos clear command
     const command = toolInput.command || '';
-    if (!command.includes('sessions todos clear')) {
+    // Check for either Unix or Windows version of the command
+    if (!command.includes('sessions/bin/sessions todos clear') && !command.includes('sessions/bin/sessions.bat todos clear')) {
         // Not the todos clear command, disable the permission
         editState(s => {
             s.api.todos_clear = false;

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+### Changed
+### Fixed
+
 ## [0.3.3] - 2025-10-15
 
 ### Fixed

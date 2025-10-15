@@ -17,37 +17,15 @@
 [![Donate](https://img.shields.io/badge/Donate-Solana-14F195?logo=solana&logoColor=white)](https://dexscreener.com/solana/oy5mbertfqdytu8atyonycvcvu62fpmz3nkqoztrflq)
 </div>
 
+<div align="center"><img src="testimonial-1.png" alt="cc-sessions testimonial"><img src="testimonial-2.png" alt="cc-sessions testimonial"></div>
+
 <br>
 
 ## latest updates
 
 <details>
 <summary>
-
-### Claude Code version issue
-</summary
-  
-**'ere meh now**: the recommended Claude Code version is **2.0.8** due to an upstream bug in newer versions of Claude Code.
-
-Claude Code versions after 2.0.8 have a bug in their stderr aggregation system that causes 400 API errors when:
-- Multiple tool calls execute in parallel (batched in one Claude response)
-- Commands generate their own stderr output (e.g., curl progress meters)
-- PostToolUse hooks also send stderr feedback (exit code 2)
-
-This breaks cc-sessions' PostToolUse hooks that provide essential feedback like directory navigation confirmations and DAIC mode transitions.
-
-**install the correct version**:
-```bash
-npm install -g @anthropic-ai/claude-code@2.0.8
-```
-
-**related**: [cc-sessions Issue #53](https://github.com/GWUDCAP/cc-sessions/issues/53)
-</details>
-
-<details>
-<summary>
-
-### latest release - v0.3.0
+latest release - v0.3.0
 </summary>
 
 i'm happy to present cc-sessions v0.3.0
@@ -65,6 +43,28 @@ i'm happy to present cc-sessions v0.3.0
 - **Safe Uninstaller**: Interactive removal with automatic backups (thanks @gabelul)
 
 See [CHANGELOG.md](CHANGELOG.md) for complete details.
+</details>
+
+<details>
+<summary>
+Claude Code version issue
+</summary
+  
+**'ere meh now**: the recommended Claude Code version is **2.0.8** due to an upstream bug in newer versions of Claude Code.
+
+Claude Code versions after 2.0.8 have a bug in their stderr aggregation system that causes 400 API errors when:
+- Multiple tool calls execute in parallel (batched in one Claude response)
+- Commands generate their own stderr output (e.g., curl progress meters)
+- PostToolUse hooks also send stderr feedback (exit code 2)
+
+This breaks cc-sessions' PostToolUse hooks that provide essential feedback like directory navigation confirmations and DAIC mode transitions.
+
+**install the correct version**:
+```bash
+npm install -g @anthropic-ai/claude-code@2.0.8
+```
+
+**related**: [cc-sessions Issue #53](https://github.com/GWUDCAP/cc-sessions/issues/53)
 </details>
 
 ## installing the extension

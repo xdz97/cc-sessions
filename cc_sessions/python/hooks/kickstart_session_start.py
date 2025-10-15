@@ -6,6 +6,7 @@
 import sys
 import json
 import os
+import platform
 from datetime import datetime
 from pathlib import Path
 ##-##
@@ -112,12 +113,16 @@ if not mode:
 #!<
 
 #!> 2. Output deterministic instructions for Claude to begin kickstart via API
-begin_cmd = 'sessions kickstart subagents' if mode == 'subagents' else 'sessions kickstart full'
+# Detect OS for correct sessions command
+is_windows = platform.system() == "Windows"
+sessions_cmd = "sessions/bin/sessions.bat" if is_windows else "sessions/bin/sessions"
+
+begin_cmd = f'{sessions_cmd} kickstart subagents' if mode == 'subagents' else f'{sessions_cmd} kickstart full'
 instructions = (
     "Kickstart onboarding is enabled. Begin immediately by running:\n\n"
     f"  {begin_cmd}\n\n"
     "Then, for each module chunk returned, follow all instructions completely. When finished with a chunk, run:\n\n"
-    "  sessions kickstart next\n\n"
+    f"  {sessions_cmd} kickstart next\n\n"
     "Repeat until kickstart is complete.\n\n"
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     "USER INSTRUCTIONS:\n"

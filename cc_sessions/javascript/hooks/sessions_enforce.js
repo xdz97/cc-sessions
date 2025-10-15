@@ -349,11 +349,15 @@ if (toolName === "Bash" && STATE.mode === Mode.NO && !STATE.flags.bypass_mode) {
     }
 
     if (!isBashReadOnly(command)) {
-        console.error("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n" +
-                      "Note: Both Claude and the user can configure allowed commands:\n" +
-                      "  - View allowed: sessions config read list\n" +
-                      "  - Add command: sessions config read add <command>\n" +
-                      "  - Remove command: sessions config read remove <command>");
+        // Detect OS for correct sessions command
+        const isWindows = process.platform === "win32";
+        const sessionsCmd = isWindows ? "sessions/bin/sessions.bat" : "sessions/bin/sessions";
+
+        console.error(`[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n` +
+                      `Note: Both Claude and the user can configure allowed commands:\n` +
+                      `  - View allowed: ${sessionsCmd} config read list\n` +
+                      `  - Add command: ${sessionsCmd} config read add <command>\n` +
+                      `  - Remove command: ${sessionsCmd} config read remove <command>`);
         process.exit(2);  // Block with feedback
     } else {
         process.exit(0);

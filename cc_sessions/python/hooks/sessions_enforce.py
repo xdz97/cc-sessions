@@ -3,7 +3,7 @@
 # ===== IMPORTS ===== #
 
 ## ===== STDLIB ===== ##
-import subprocess, json, sys, re, shlex, os
+import subprocess, json, sys, re, shlex, os, platform
 from typing import Optional
 from pathlib import Path
 ##-##
@@ -280,11 +280,15 @@ if tool_name == "Bash" and STATE.mode is Mode.NO and not STATE.flags.bypass_mode
         sys.exit(0)
 
     if not is_bash_read_only(command):
-        print("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n"
-              "Note: Both Claude and the user can configure allowed commands:\n"
-              "  - View allowed: sessions config read list\n"
-              "  - Add command: sessions config read add <command>\n"
-              "  - Remove command: sessions config read remove <command>", file=sys.stderr); sys.exit(2)  # Block with feedback
+        # Detect OS for correct sessions command
+        is_windows = platform.system() == "Windows"
+        sessions_cmd = "sessions/bin/sessions.bat" if is_windows else "sessions/bin/sessions"
+
+        print(f"[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n"
+              f"Note: Both Claude and the user can configure allowed commands:\n"
+              f"  - View allowed: {sessions_cmd} config read list\n"
+              f"  - Add command: {sessions_cmd} config read add <command>\n"
+              f"  - Remove command: {sessions_cmd} config read remove <command>", file=sys.stderr); sys.exit(2)  # Block with feedback
     else: sys.exit(0)
 #!<
 

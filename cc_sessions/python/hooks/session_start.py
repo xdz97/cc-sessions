@@ -4,7 +4,7 @@
 
 ## ===== STDLIB ===== ##
 from importlib.metadata import version, PackageNotFoundError
-import requests, json, sys, shutil, os, subprocess
+import requests, json, sys, shutil, os, subprocess, platform
 from typing import Dict, List, Optional, Tuple
 ##-##
 
@@ -384,6 +384,10 @@ if update_flag is None and current_version:
 
 # Display update notification if flag is True
 if update_flag and latest_version and current_version:
+    # Detect OS for correct sessions command
+    is_windows = platform.system() == "Windows"
+    sessions_cmd = "sessions/bin/sessions.bat" if is_windows else "sessions/bin/sessions"
+
     # Show manual update message
     # Extract first few lines from CHANGELOG for the latest version
     try:
@@ -434,8 +438,8 @@ If YES:
 
 If NO:
   - Continue with the session normally
-  - They can suppress this notification: sessions state update suppress
-  - They can check update status anytime: sessions state update status
+  - They can suppress this notification: {sessions_cmd} state update suppress
+  - They can check update status anytime: {sessions_cmd} state update status
 
 This notification will appear on every session start until they update or suppress it.
 

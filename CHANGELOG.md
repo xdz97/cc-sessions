@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.4] - 2025-10-15
+
+### Added
+- rough windows support for new sessions API entrypoint
+
 ## [0.3.3] - 2025-10-15
 
 ### Fixed

@@ -1,4 +1,4 @@
-<p align="center"><img src="sessions.png" alt="cc-sessions"></p>
+<p align="center"><img src="assets/sessions.png" alt="cc-sessions"></p>
 <div align="center">An opinionated approach to productive development with Claude Code</div>
 <div align="center"><sub><em>Public good brought to you by GWUDCAP and Three AIrrows Capital</em></sub></div>
 <br>
@@ -17,8 +17,8 @@
 [![Donate](https://img.shields.io/badge/Donate-Solana-14F195?logo=solana&logoColor=white)](https://dexscreener.com/solana/oy5mbertfqdytu8atyonycvcvu62fpmz3nkqoztrflq)
 </div>
 
-<div align="center"><img src="testimonial-1.png" alt="cc-sessions testimonial" width="60%"></div>
-<div align="center"><img src="testimonial-2.png" alt="cc-sessions testimonial" width="60%" align="center"></div>
+<div align="center"><img src="assets/testimonial-1.png" alt="cc-sessions testimonial" width="60%"></div>
+<div align="center"><img src="assets/testimonial-2.png" alt="cc-sessions testimonial" width="60%" align="center"></div>
 
 <br>
 

@@ -417,7 +417,7 @@ function main() {
             if (stat.isFile() && item !== 'TEMPLATE.md' && item.endsWith('.md')) {
                 openTaskCount++;
             }
-            if (stat.isDirectory() && item !== 'done') {
+            if (stat.isDirectory() && item !== 'done' && item !== 'indexes') {
                 openTaskDirCount++;
             }
         }

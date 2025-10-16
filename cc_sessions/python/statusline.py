@@ -412,7 +412,7 @@ open_task_dir_count = 0
 if task_dir.exists() and task_dir.is_dir():
     for file in task_dir.iterdir():
         if file.is_file() and file.name != "TEMPLATE.md" and file.suffix == ".md": open_task_count += 1
-        if file.is_dir() and file.name != "done": open_task_dir_count += 1
+        if file.is_dir() and file.name not in ("done", "indexes"): open_task_dir_count += 1
 ##-##
 
 ## ===== FINAL OUTPUT ===== ##

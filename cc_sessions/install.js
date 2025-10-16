@@ -995,7 +995,7 @@ function copy_files(script_dir, project_root) {
 
   // Create package.json in sessions/ to mark as CommonJS for ESM project compatibility
   const sessions_pkg = path.join(project_root, 'sessions', 'package.json');
-  fs.writeFileSync(sessions_pkg, JSON.stringify({ type: "commonjs" }, null, 2) + '\n');
+  fs.writeFileSync(sessions_pkg, JSON.stringify({name: "sessions-api", type: "commonjs" }, null, 2) + '\n');
   console.log(color('   ✓ Created sessions/package.json (CommonJS compatibility)', Colors.GREEN));
 
   const tdir = path.join(script_dir, 'templates');

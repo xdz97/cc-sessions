@@ -539,12 +539,17 @@ class APIPerms:
     startup_load: bool = False
     completion: bool = False
     todos_clear: bool = False
+
+def _get_package_version() -> str:
+    """Get the installed cc-sessions package version."""
+    try: return version("cc-sessions")
+    except PackageNotFoundError: return "unknown"
 #!<
 
 #!> State object
 @dataclass
 class SessionsState:
-    version: str = "unknown"
+    version: str = field(default_factory=_get_package_version)
     current_task: TaskState = field(default_factory=TaskState)
     active_protocol: Optional[SessionsProtocol] = None
     api: APIPerms = field(default_factory=APIPerms)

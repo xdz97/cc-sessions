@@ -591,9 +591,23 @@ class APIPerms {
     }
 }
 
+function _getPackageVersion() {
+    /**Get the installed cc-sessions package version.*/
+    try {
+        const packagePath = require('path').join(__dirname, '..', '..', 'package.json');
+        if (require('fs').existsSync(packagePath)) {
+            const packageData = require(packagePath);
+            return packageData.version || 'unknown';
+        }
+    } catch {
+        return 'unknown';
+    }
+    return 'unknown';
+}
+
 class SessionsState {
     constructor(data = {}) {
-        this.version = data.version || 'unknown';
+        this.version = data.version || _getPackageVersion();
         this.current_task = new TaskState(data.current_task || {});
         this.active_protocol = data.active_protocol || null;
         this.api = new APIPerms(data.api || {});
@@ -1200,5 +1214,7 @@ module.exports = {
     editConfig,
     listOpenTasks,
     isDirectoryTask,
-    getTaskFilePath
+    getTaskFilePath,
+    isSubtask,
+    isParentTask
 };

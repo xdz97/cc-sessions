@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.5] - 2025-10-16
+
+### Fixed
+
+- **Nx Monorepo Compatibility**: Fixed nx throwing error about missing package name (#62)
+  - JavaScript installer now creates sessions/package.json with "name" field set to "sessions-api"
+  - Resolves "ProjectsWithNoNameError" when running nx commands
+  - Thanks to @taybin for reporting
+
+- **Statusline Task Counter**: Fixed task counter showing 1 when no tasks exist (#61)
+  - Python and JavaScript statuslines now exclude `indexes/` directory from task count
+  - Only actual task files and task directories are counted
+  - Thanks to @bhayden53 for reporting
+
+- **Package Version Tracking**: Fixed sessions-state.json being initialized with "unknown" version
+  - Python: Added `_get_package_version()` helper as default factory for SessionsState.version field
+  - JavaScript: Added `_getPackageVersion()` helper called during SessionsState construction
+  - New installations now correctly store installed package version in state file
+
+- **Missing Function Exports**: Fixed JavaScript shared_state.js missing exports (#63)
+  - Added `isSubtask` and `isParentTask` to module.exports
+  - Resolves "isSubtask is not a function" error during task completion protocol
+  - Thanks to @harshmoorjani for reporting
+
 ## [0.3.4] - 2025-10-15
 
 ### Added

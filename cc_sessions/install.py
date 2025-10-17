@@ -3011,48 +3011,6 @@ def import_config(project_root: Path, source: str, source_type: str, info: list)
         if tmp_to_remove is not None:
             with contextlib.suppress(Exception): shutil.rmtree(tmp_to_remove)
 
-def check_sessions_on_path() -> None:
-    """Check if sessions command is accessible on PATH (Windows only).
-
-    Displays a warning with instructions if sessions.exe is not on PATH.
-    """
-    import shutil
-    import sysconfig
-
-    # Only check on Windows
-    if os.name != 'nt':
-        return
-
-    # Try to find sessions command
-    sessions_path = shutil.which('sessions')
-
-    if sessions_path is None:
-        # Not on PATH - find where it actually is and warn
-        scripts_dir = sysconfig.get_path('scripts', scheme='nt_user')
-        sessions_exe = Path(scripts_dir) / 'sessions.exe'
-
-        # Verify the file actually exists where we think it is
-        if not sessions_exe.exists():
-            # Try alternate location
-            scripts_dir = sysconfig.get_path('scripts')
-            sessions_exe = Path(scripts_dir) / 'sessions.exe'
-
-        if sessions_exe.exists():
-            print(color('\n⚠️  WARNING: sessions command not found on PATH\n', Colors.YELLOW))
-            print(color('The installer created sessions.exe but it\'s not accessible from the command line.', Colors.YELLOW))
-            print(color('This will cause issues during kickstart and normal usage.\n', Colors.YELLOW))
-            print(color('To fix this, add the Scripts directory to your PATH:\n', Colors.YELLOW))
-            print(color('Directory to add:', Colors.BOLD))
-            print(f'  {scripts_dir}\n')
-            print(color('Steps:', Colors.BOLD))
-            print('  1. Open System Properties → Environment Variables')
-            print('  2. Edit your user PATH variable')
-            print('  3. Add the directory above')
-            print('  4. Restart PowerShell')
-            print('  5. Test: sessions --help\n')
-            print(color('Or run this PowerShell command (current session only):', Colors.BOLD))
-            print(f'  $env:Path += ";{scripts_dir}"\n')
-
 def kickstart_decision(project_root: Path) -> str:
     """Prompt user for kickstart onboarding preference and set state/cleanup accordingly.
     Returns one of: 'full', 'subagents', 'skip'.
@@ -3153,9 +3111,6 @@ def main():
 
         # Output final message
         print(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN))
-
-        # Check if sessions command is on PATH (Windows only)
-        check_sessions_on_path()
 
         # Show v0.2.6/v0.2.7 archive message if applicable
         if v026_archive_info.get('archived'):

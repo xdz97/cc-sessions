@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.6] - 2025-10-17
+
+### Fixed
+- **Installer PATH Warnings**: Removed obsolete Windows PATH checking (#66)
+  - Installers no longer output confusing messages about sessions command not being on PATH
+  - Reflects new architecture where sessions command is project-local by design
+  - Thanks to @Schadenfreund for reporting
+
 ## [0.3.5] - 2025-10-16
 
 ### Fixed

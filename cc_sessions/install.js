@@ -2831,57 +2831,6 @@ async function import_config(project_root, source, source_type, info) {
   }
 }
 
-function check_sessions_on_path() {
-  /**
-   * Check if sessions command is accessible on PATH (Windows only).
-   * Displays a warning with instructions if sessions.cmd is not on PATH.
-   */
-  // Only check on Windows
-  if (process.platform !== 'win32') {
-    return;
-  }
-
-  // Try to find sessions command
-  let sessions_found = false;
-  try {
-    cp.execSync('where sessions', { stdio: 'ignore' });
-    sessions_found = true;
-  } catch (e) {
-    sessions_found = false;
-  }
-
-  if (!sessions_found) {
-    // Not on PATH - find where npm global bin is
-    let npm_bin = '';
-    try {
-      npm_bin = cp.execSync('npm bin -g', { encoding: 'utf8' }).trim();
-    } catch (e) {
-      // Fallback to common npm global paths
-      const userProfile = process.env.USERPROFILE || process.env.HOME;
-      npm_bin = path.join(userProfile, 'AppData', 'Roaming', 'npm');
-    }
-
-    // Check if sessions.cmd exists at that location
-    const sessions_cmd = path.join(npm_bin, 'sessions.cmd');
-    if (fs.existsSync(sessions_cmd) || npm_bin) {
-      console.log(color('\n⚠️  WARNING: sessions command not found on PATH\n', Colors.YELLOW));
-      console.log(color('The installer created sessions.cmd but it\'s not accessible from the command line.', Colors.YELLOW));
-      console.log(color('This will cause issues during kickstart and normal usage.\n', Colors.YELLOW));
-      console.log(color('To fix this, add the npm global bin directory to your PATH:\n', Colors.YELLOW));
-      console.log(color('Directory to add:', Colors.BOLD));
-      console.log(`  ${npm_bin}\n`);
-      console.log(color('Steps:', Colors.BOLD));
-      console.log('  1. Open System Properties → Environment Variables');
-      console.log('  2. Edit your user PATH variable');
-      console.log('  3. Add the directory above');
-      console.log('  4. Restart PowerShell');
-      console.log('  5. Test: sessions --help\n');
-      console.log(color('Or run this PowerShell command (current session only):', Colors.BOLD));
-      console.log(`  $env:Path += ";${npm_bin}"\n`);
-    }
-  }
-}
-
 async function kickstart_decision(project_root) {
   show_header(print_kickstart_header);
   set_info([
@@ -2977,9 +2926,6 @@ async function main() {
       console.log(color('   (Agents backed up for manual restoration if needed)', Colors.CYAN));
     }
     console.log(color('\n✅ cc-sessions installed successfully!\n', Colors.GREEN));
-
-    // Check if sessions command is on PATH (Windows only)
-    check_sessions_on_path();
 
     // Show v0.2.6/v0.2.7 archive message if applicable
     if (v026_archive_info.archived) {

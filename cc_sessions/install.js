@@ -966,6 +966,7 @@ function create_directory_structure(project_root) {
     '.claude', '.claude/agents', '.claude/commands',
     'sessions', 'sessions/tasks', 'sessions/tasks/done', 'sessions/tasks/indexes',
     'sessions/hooks', 'sessions/api', 'sessions/protocols', 'sessions/knowledge',
+    'sessions/learnings', 'sessions/learnings/topics',
   ];
   for (const d of dirs) fs.mkdirSync(path.join(project_root, d), { recursive: true });
 }

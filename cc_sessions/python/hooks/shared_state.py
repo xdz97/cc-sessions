@@ -133,10 +133,24 @@ class SessionsProtocol(str, Enum):
     CREATE = "task-creation"
     START = "task-startup"
     COMPLETE = "task-completion"
+    # Specialized mode protocols
+    CODE_REVIEW = "code-review"
+    REFACTOR = "refactor"
+    DEBUG = "debug"
+    OPTIMIZE = "optimize"
 
 class Mode(str, Enum):
     NO = "discussion"
     GO = "implementation"
+
+class SpecializedMode(str, Enum):
+    """Specialized modes that configure behavior for specific tasks"""
+    NONE = "none"
+    CODE_REVIEW = "code_review"
+    REFACTOR = "refactor"
+    DEBUG = "debug"
+    OPTIMIZE = "optimize"
+    DOCUMENT = "document"
 
 class TodoStatus(str, Enum):
     PENDING = "pending"
@@ -144,8 +158,9 @@ class TodoStatus(str, Enum):
     COMPLETED = "completed"
 
 class Model(str, Enum):
-    OPUS = "opus"
+    HAIKU = "haiku"
     SONNET = "sonnet"
+    OPUS = "opus"  # Kept for backwards compatibility but not recommended due to cost
     UNKNOWN = "unknown"
 #!<
 ##-##
@@ -540,11 +555,130 @@ class APIPerms:
     completion: bool = False
     todos_clear: bool = False
 
+@dataclass
+class SpecializedModeConfig:
+    """Configuration for a specialized mode"""
+    name: str
+    description: str
+    allowed_tools: List[CCTools]
+    blocked_tools: List[CCTools]
+    exit_phrases: List[str]
+    protocol_file: Optional[str] = None  # Path to protocol in sessions/protocols/
+
+@dataclass
+class LoadedPattern:
+    """Tracks a learning pattern that's been loaded into context"""
+    topic: str
+    pattern_id: str
+    loaded_at: str
+
+@dataclass
+class SessionsLearnings:
+    """Learning system state tracking"""
+    enabled: bool = True
+    auto_load: bool = True
+    active_topics: List[str] = field(default_factory=list)
+    loaded_patterns: List[LoadedPattern] = field(default_factory=list)
+
+    def add_active_topic(self, topic: str) -> bool:
+        """Add a topic to active list. Returns True if added, False if already present."""
+        if topic not in self.active_topics:
+            self.active_topics.append(topic)
+            return True
+        return False
+
+    def remove_active_topic(self, topic: str) -> bool:
+        """Remove a topic from active list. Returns True if removed, False if not found."""
+        if topic in self.active_topics:
+            self.active_topics.remove(topic)
+            return True
+        return False
+
+    def load_pattern(self, topic: str, pattern_id: str) -> None:
+        """Record that a pattern has been loaded into context"""
+        from datetime import datetime, timezone
+        self.loaded_patterns.append(LoadedPattern(
+            topic=topic,
+            pattern_id=pattern_id,
+            loaded_at=datetime.now(timezone.utc).isoformat()
+        ))
+
+    def clear_loaded_patterns(self) -> int:
+        """Clear all loaded patterns. Returns count cleared."""
+        count = len(self.loaded_patterns)
+        self.loaded_patterns.clear()
+        return count
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dict for JSON serialization"""
+        return {
+            "enabled": self.enabled,
+            "auto_load": self.auto_load,
+            "active_topics": self.active_topics,
+            "loaded_patterns": [asdict(p) for p in self.loaded_patterns]
+        }
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> "SessionsLearnings":
+        """Create from dict during state load"""
+        patterns_data = d.get("loaded_patterns", [])
+        patterns = [LoadedPattern(**p) for p in patterns_data] if patterns_data else []
+        return cls(
+            enabled=d.get("enabled", True),
+            auto_load=d.get("auto_load", True),
+            active_topics=d.get("active_topics", []),
+            loaded_patterns=patterns
+        )
+
 def _get_package_version() -> str:
     """Get the installed cc-sessions package version."""
     try: return version("cc-sessions")
     except PackageNotFoundError: return "unknown"
 #!<
+
+# Default specialized mode configurations
+SPECIALIZED_MODE_CONFIGS = {
+    SpecializedMode.CODE_REVIEW: SpecializedModeConfig(
+        name="code_review",
+        description="Code review mode - analyze code for issues, no modifications",
+        allowed_tools=[CCTools.READ, CCTools.GREP, CCTools.GLOB, CCTools.BASH, CCTools.TASK],
+        blocked_tools=[CCTools.WRITE, CCTools.EDIT, CCTools.MULTIEDIT, CCTools.NOTEBOOKEDIT],
+        exit_phrases=["review complete", "done reviewing", "exit review"],
+        protocol_file="code-review/code-review-mode.md"
+    ),
+    SpecializedMode.REFACTOR: SpecializedModeConfig(
+        name="refactor",
+        description="Safe refactoring mode - incremental changes with tests",
+        allowed_tools=[CCTools.READ, CCTools.EDIT, CCTools.MULTIEDIT, CCTools.BASH, CCTools.GREP],
+        blocked_tools=[CCTools.WRITE],  # No new files during refactor
+        exit_phrases=["refactor complete", "done refactoring", "exit refactor"],
+        protocol_file="refactor/refactor-mode.md"
+    ),
+    SpecializedMode.DEBUG: SpecializedModeConfig(
+        name="debug",
+        description="Systematic debugging mode - investigate and fix issues",
+        allowed_tools=[CCTools.READ, CCTools.GREP, CCTools.GLOB, CCTools.BASH, CCTools.EDIT],
+        blocked_tools=[],  # Allow most tools for debugging
+        exit_phrases=["debug complete", "issue resolved", "exit debug"],
+        protocol_file="debug/debug-mode.md"
+    ),
+    SpecializedMode.OPTIMIZE: SpecializedModeConfig(
+        name="optimize",
+        description="Performance optimization mode - measure then improve",
+        allowed_tools=[CCTools.READ, CCTools.EDIT, CCTools.BASH, CCTools.GREP],
+        blocked_tools=[CCTools.WRITE],  # Don't add new files during optimization
+        exit_phrases=["optimization complete", "done optimizing", "exit optimize"],
+        protocol_file="optimize/optimize-mode.md"
+    ),
+    SpecializedMode.DOCUMENT: SpecializedModeConfig(
+        name="document",
+        description="Documentation mode - write docs without code changes",
+        allowed_tools=[CCTools.READ, CCTools.WRITE, CCTools.EDIT, CCTools.GREP],
+        blocked_tools=[],  # Allow doc file creation
+        exit_phrases=["documentation complete", "done documenting", "exit document"],
+        protocol_file="document/document-mode.md"
+    )
+}
 
 #!> State object
 @dataclass
@@ -554,8 +688,10 @@ class SessionsState:
     active_protocol: Optional[SessionsProtocol] = None
     api: APIPerms = field(default_factory=APIPerms)
     mode: Mode = Mode.NO
+    specialized_mode: SpecializedMode = SpecializedMode.NONE
     todos: SessionsTodos = field(default_factory=SessionsTodos)
-    model: Model = Model.OPUS
+    learnings: SessionsLearnings = field(default_factory=SessionsLearnings)
+    model: Model = Model.SONNET  # Default to Sonnet for best cost/performance balance
     flags: SessionsFlags = field(default_factory=SessionsFlags)
     # freeform bag for runtime-only / unknown keys:
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -578,17 +714,27 @@ class SessionsState:
         api_data = d.get("api", {})
         if api_data and isinstance(api_data, dict): api_perms = APIPerms(**api_data)
         else: api_perms = APIPerms()
+
+        learnings_data = d.get("learnings", {})
+        if learnings_data and isinstance(learnings_data, dict): learnings = SessionsLearnings.from_dict(learnings_data)
+        else: learnings = SessionsLearnings()
+
+        specialized_mode = d.get("specialized_mode", SpecializedMode.NONE)
+        if isinstance(specialized_mode, str): specialized_mode = SpecializedMode(specialized_mode)
+
         return cls(
             version=d.get("version", pkg_version),
             current_task=TaskState(**d.get("current_task", {})),
             active_protocol=active_protocol,
             api=api_perms,
             mode=Mode(d.get("mode", Mode.NO)),
+            specialized_mode=specialized_mode,
             todos=SessionsTodos(
                 active=[cls._coerce_todo(t) for t in d.get("todos", {}).get("active", [])],
                 stashed=[cls._coerce_todo(t) for t in d.get("todos", {}).get("stashed", [])],
             ),
-            model=Model(d.get("model")) or Model.OPUS,
+            learnings=learnings,
+            model=Model(d.get("model")) or Model.SONNET,  # Default to Sonnet if not specified
             flags=SessionsFlags(
                 context_85=d.get("flags", {}).get("context_85") or d.get("flags", {}).get("context_warnings", {}).get("85%", False),
                 context_90=d.get("flags", {}).get("context_90") or d.get("flags", {}).get("context_warnings", {}).get("90%", False),
@@ -601,11 +747,15 @@ class SessionsState:
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         d["mode"] = self.mode.value
+        d["specialized_mode"] = self.specialized_mode.value
 
         # Normalize enums in nested todos for JSON
         for bucket in ("active", "stashed"):
             for t in d["todos"][bucket]:
                 if isinstance(t.get("status"), Enum): t["status"] = t["status"].value
+
+        # Use custom serialization for learnings
+        d["learnings"] = self.learnings.to_dict()
 
         if self.active_protocol: d["active_protocol"] = self.active_protocol.value
         else: d["active_protocol"] = None

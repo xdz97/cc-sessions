@@ -52,11 +52,22 @@ Your choice:
 
    - Wait for user confirmation before proceeding
    
-2. service-documentation agent - Update CLAUDE.md files 
+2. service-documentation agent - Update CLAUDE.md files
    Include: List of services modified during task
-   
+
 3. logging agent - Finalize task documentation
    Include: Task completion summary, final status
+
+4. learning-recorder agent - Record learnings from this task
+   Include: Task file path, git diff/commit showing changes, files modified
+   **Purpose**: Extract patterns, gotchas, and insights to improve future work
+
+   The agent will:
+   - Identify which learning topics are relevant (sso, security, api, etc.)
+   - Extract successful patterns that worked well
+   - Document any gotchas or issues encountered
+   - Record anti-patterns that were avoided
+   - Update the learning database for future tasks
 ```
 
 ## 5. Update Index Files

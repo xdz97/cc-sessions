@@ -183,11 +183,22 @@ else:
 
 #!> Determine model and context limit
 curr_model = None
-context_limit = 160000
-if "[1m]" in model_name.lower(): context_limit = 800000
-if "sonnet" in model_name.lower(): curr_model = Model.SONNET
-elif "opus" in model_name.lower(): curr_model = Model.OPUS
-else: curr_model = Model.UNKNOWN
+context_limit = 200000  # Default context window for Claude 3.5 models
+if "[1m]" in model_name.lower(): context_limit = 800000  # Extended context for Sonnet
+if "haiku" in model_name.lower():
+    curr_model = Model.HAIKU
+    # Haiku 4.5 context limits (adjust based on actual specs)
+    context_limit = 200000
+elif "sonnet" in model_name.lower():
+    curr_model = Model.SONNET
+    # Sonnet 4.5 has 200k base, 800k with extended context flag
+    if "[1m]" not in model_name.lower():
+        context_limit = 200000
+elif "opus" in model_name.lower():
+    curr_model = Model.OPUS
+    context_limit = 200000  # Kept for backwards compatibility
+else:
+    curr_model = Model.UNKNOWN
 #!<
 
 #!> Update model in shared state

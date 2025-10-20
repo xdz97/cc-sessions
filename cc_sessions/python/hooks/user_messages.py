@@ -20,10 +20,10 @@ if 'CLAUDE_PROJECT_DIR' in os.environ:
 
 try:
     # Try direct import (works with sessions in path or package install)
-    from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task, is_subtask, is_parent_task
+    from shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task, is_subtask, is_parent_task, SpecializedMode, SPECIALIZED_MODE_CONFIGS
 except ImportError:
     # Fallback to package import
-    from cc_sessions.hooks.shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task, is_subtask, is_parent_task
+    from cc_sessions.hooks.shared_state import load_state, edit_state, Mode, PROJECT_ROOT, CCTodo, load_config, SessionsProtocol, is_directory_task, is_subtask, is_parent_task, SpecializedMode, SPECIALIZED_MODE_CONFIGS
 ##-##
 
 #-#
@@ -76,6 +76,13 @@ task_creation_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG
 task_completion_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.task_completion)
 task_start_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.task_startup)
 compaction_detected = any(phrase_matches(phrase, prompt) for phrase in CONFIG.trigger_phrases.context_compaction)
+
+# Check for specialized mode exit phrases
+specialized_mode_exit_detected = False
+if STATE.specialized_mode != SpecializedMode.NONE:
+    mode_config = SPECIALIZED_MODE_CONFIGS.get(STATE.specialized_mode)
+    if mode_config:
+        specialized_mode_exit_detected = any(phrase_matches(phrase, prompt) for phrase in mode_config.exit_phrases)
 #!<
 
 #!> Flags
@@ -159,9 +166,13 @@ if transcript_path and os.path.exists(transcript_path):
     context_length = get_context_length_from_transcript(transcript_path)
 
     if context_length > 0:
-        # Calculate percentage of usable context (opus 160k/sonnet 800k practical limit before auto-compact)
-        usable_tokens = 160000
-        if STATE.model == "sonnet": usable_tokens = 800000
+        # Calculate percentage of usable context before auto-compact
+        # Haiku 4.5: 200k, Sonnet 4.5: 200k (800k with extended context), Opus: 200k
+        usable_tokens = 200000  # Default for Haiku/Opus
+        if STATE.model == "sonnet":
+            usable_tokens = 800000  # Sonnet with extended context
+        elif STATE.model == "haiku":
+            usable_tokens = 200000  # Haiku 4.5
         usable_percentage = (context_length / usable_tokens) * 100
 
         # Token warnings (only show once per session)
@@ -174,6 +185,18 @@ if transcript_path and os.path.exists(transcript_path):
 ##-##
 
 ## ===== TRIGGER DETECTION ===== ##
+
+#!> Specialized mode exit
+if not is_api_command and specialized_mode_exit_detected:
+    previous_mode = STATE.specialized_mode
+    with edit_state() as s:
+        s.specialized_mode = SpecializedMode.NONE
+        # Clear mode arguments from metadata
+        if 'specialized_mode_args' in s.metadata:
+            s.metadata['specialized_mode_args'].pop(previous_mode.value, None)
+        STATE = s
+    context += f"[Specialized Mode: Exited {previous_mode.value}]\nYou have exited {previous_mode.value} mode and returned to normal operation. All tool restrictions from that mode have been lifted.\n"
+#!<
 
 #!> Discussion/Implementation mode toggling
 # Implementation triggers (only work in discussion mode, skip for /add-trigger)
@@ -218,6 +241,9 @@ if not is_api_command and task_creation_detected:
         CCTodo(
             content='Run context-gathering agent to create context manifest',
             activeForm='Running context-gathering agent to create context manifest'),
+        CCTodo(
+            content='Detect relevant learnings and offer to include them in task file or load at startup',
+            activeForm='Detecting relevant learnings and offering inclusion options'),
         CCTodo(
             content='Update appropriate service index files',
             activeForm='Updating appropriate service index files'),
@@ -274,6 +300,9 @@ if not is_api_command and task_completion_detected:
         CCTodo(
             content='Run service-documentation agent to update CLAUDE.md files and other documentation',
             activeForm='Running service-documentation agent to update documentation'),
+        CCTodo(
+            content='Run learning-recorder agent to record patterns and gotchas',
+            activeForm='Recording learnings from this task'),
         CCTodo(
             content='Mark task file complete and move to tasks/done/',
             activeForm='Archiving task file')
@@ -450,6 +479,9 @@ if not is_api_command and task_start_detected:
     else:  # 'ask' pattern
         git_handling = '- Either commit changes or explicitly discuss with user'
     
+    # Load learnings section
+    learnings_section = load_protocol_file('task-startup/learnings-section.md')
+
     template_vars = {
         'default_branch': CONFIG.git_preferences.default_branch,
         'submodule_branch_todo': ' and matching submodule branches' if CONFIG.git_preferences.has_submodules else '',
@@ -457,6 +489,7 @@ if not is_api_command and task_start_detected:
         'submodule_management_section': submodule_management,
         'resume_notes': resume_notes,
         'directory_guidance': directory_guidance,
+        'learnings_section': learnings_section,
         'git_status_scope': git_status_scope,
         'git_handling': git_handling,
         'todos': format_todos_for_protocol(todos),

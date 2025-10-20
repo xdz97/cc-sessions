@@ -12,7 +12,7 @@ from pathlib import Path
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, load_state, Mode, PROJECT_ROOT, load_config, find_git_repo
+from shared_state import edit_state, load_state, Mode, PROJECT_ROOT, load_config, find_git_repo, SpecializedMode, SPECIALIZED_MODE_CONFIGS, CCTools
 ##-##
 
 #-#
@@ -304,6 +304,40 @@ if file_path and all([
 #!<
  
 # --- All commands beyond here contain write patterns (read patterns exit early) ---
+
+#!> Specialized mode enforcement (check tool restrictions)
+if STATE.specialized_mode != SpecializedMode.NONE and not STATE.flags.bypass_mode:
+    mode_config = SPECIALIZED_MODE_CONFIGS.get(STATE.specialized_mode)
+    if mode_config:
+        # Map tool names to CCTools enum
+        tool_enum_map = {
+            "Read": CCTools.READ,
+            "Write": CCTools.WRITE,
+            "Edit": CCTools.EDIT,
+            "MultiEdit": CCTools.MULTIEDIT,
+            "NotebookEdit": CCTools.NOTEBOOKEDIT,
+            "Bash": CCTools.BASH,
+            "Grep": CCTools.GREP,
+            "Glob": CCTools.GLOB,
+            "Task": CCTools.TASK,
+        }
+
+        current_tool = tool_enum_map.get(tool_name)
+
+        # Check if tool is in blocked list for this mode
+        if current_tool and current_tool in mode_config.blocked_tools:
+            print(f"[Specialized Mode: {STATE.specialized_mode.value}] The {tool_name} tool is not allowed in this mode.", file=sys.stderr)
+            print(f"This mode only allows: {', '.join([t.value for t in mode_config.allowed_tools])}", file=sys.stderr)
+            print(f"\nTo exit this mode, use one of these phrases: {', '.join(mode_config.exit_phrases[:2])}...", file=sys.stderr)
+            sys.exit(2)  # Block with feedback
+
+        # If tool is not in allowed list (and not explicitly in blocked list), also block
+        if current_tool and mode_config.allowed_tools and current_tool not in mode_config.allowed_tools:
+            print(f"[Specialized Mode: {STATE.specialized_mode.value}] The {tool_name} tool is not in the allowed tools for this mode.", file=sys.stderr)
+            print(f"Allowed tools: {', '.join([t.value for t in mode_config.allowed_tools])}", file=sys.stderr)
+            print(f"\nTo exit this mode, use one of these phrases: {', '.join(mode_config.exit_phrases[:2])}...", file=sys.stderr)
+            sys.exit(2)  # Block with feedback
+#!<
 
 #!> Discussion mode guard (block write tools)
 if STATE.mode is Mode.NO and not STATE.flags.bypass_mode:

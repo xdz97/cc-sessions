@@ -21,11 +21,31 @@ from api.protocol_commands import handle_protocol_command
 from api.config_commands import handle_config_command
 from api.task_commands import handle_task_command
 from api.uninstall_commands import handle_uninstall_command
+from api.learning_commands import route_learning_command
+from api.specialized_mode_commands import route_specialized_mode_command
 ##-##
 
 #-#
 
 # ===== GLOBALS ===== #
+
+def handle_learnings_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
+    """Handle learnings commands"""
+    if not args:
+        return HELP_MESSAGES.get("learnings", "Use: sessions learnings <subcommand> [args...]")
+    subcmd = args[0]
+    subcmd_args = args[1:] if len(args) > 1 else []
+    route_learning_command(subcmd, subcmd_args, json_output)
+    return ""
+
+def handle_specialized_mode_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
+    """Handle specialized mode commands"""
+    if not args:
+        return HELP_MESSAGES.get("specialized_mode", "Use: sessions smode <subcommand> [args...]")
+    subcmd = args[0]
+    subcmd_args = args[1:] if len(args) > 1 else []
+    route_specialized_mode_command(subcmd, subcmd_args, json_output)
+    return ""
 
 COMMAND_HANDLERS = {
     'protocol': handle_protocol_command,
@@ -37,6 +57,8 @@ COMMAND_HANDLERS = {
     'config': handle_config_command,
     'todos': handle_todos_command,
     'tasks': handle_task_command,
+    'learnings': handle_learnings_command,
+    'smode': handle_specialized_mode_command,
     'uninstall': handle_uninstall_command,
 }
 
@@ -47,10 +69,12 @@ if _HAS_KICKSTART and callable(handle_kickstart_command):
 # Help dictionary for progressive disclosure
 HELP_MESSAGES = {
     "root": """Available subsystems:
-  state    - show, mode, task, todos, flags, update
-  config   - show, phrases, git, env, features, read, write, tools
-  tasks    - idx, start
-  protocol - startup-load
+  state     - show, mode, task, todos, flags, update
+  config    - show, phrases, git, env, features, read, write, tools
+  tasks     - idx, start
+  learnings - list, show, add, relevant, init, enable, disable, status
+  smode     - list, enter, exit, current (specialized modes)
+  protocol  - startup-load
   uninstall - Remove cc-sessions framework""" + ("""
   kickstart - full, subagents, next, complete""" if _HAS_KICKSTART else ""),
 
@@ -120,6 +144,28 @@ Features: branch_enforcement, task_detection, auto_ultrathink, icon_style, warn_
   idx list        - List all task indexes
   idx <name>      - Show tasks in specific index
   start @<task>   - Start working on a task""",
+
+    "learnings": """Available learnings commands:
+  list            - List all learning topics
+  show <topic>    - Show detailed information about a topic
+  add <topic> <description> [keywords...] - Add new learning topic
+  relevant        - Show topics relevant to current task
+  init            - Initialize learning system with default topics
+  init --scan     - Initialize AND scan codebase to pre-populate learnings
+  enable          - Enable automatic learning loading
+  disable         - Disable automatic learning loading
+  status          - Show learning system status""",
+
+    "specialized_mode": """Available specialized mode commands:
+  list                     - List all available specialized modes
+  enter <mode> [args...]   - Enter a specialized mode (code_review, refactor, debug, optimize, document)
+  exit                     - Exit current specialized mode
+  current                  - Show current specialized mode
+
+Examples:
+  sessions smode enter code_review src/
+  sessions smode enter refactor myfile.py
+  sessions smode exit""",
 }
 
 #-#
@@ -180,7 +226,7 @@ def route_command(command: str, args: List[str], json_output: bool = False, from
         subsystem_args = args[1:] if len(args) > 1 else []
 
         # Route to appropriate subsystem
-        subsystems = ['tasks', 'state', 'config', 'uninstall']
+        subsystems = ['tasks', 'state', 'config', 'learnings', 'uninstall']
         if _HAS_KICKSTART: subsystems.append('kickstart')
         if subsystem in subsystems: return route_command(subsystem, subsystem_args,
                                                          json_output=json_output, from_slash=True)
@@ -200,7 +246,7 @@ def route_command(command: str, args: List[str], json_output: bool = False, from
     if from_slash:
         try:
             # Pass from_slash to commands that support it
-            if command in ['config', 'state', 'tasks', 'uninstall']:
+            if command in ['config', 'state', 'tasks', 'learnings', 'uninstall']:
                 return handler(args, json_output=json_output, from_slash=from_slash)
             else:
                 # For commands that don't support from_slash, add it to args for backward compatibility
@@ -213,7 +259,7 @@ def route_command(command: str, args: List[str], json_output: bool = False, from
             return resolve_help([command])
     else:
         # Normal API calls - let exceptions propagate
-        if command in ['config', 'state', 'tasks', 'uninstall']:
+        if command in ['config', 'state', 'tasks', 'learnings', 'uninstall']:
             return handler(args, json_output=json_output, from_slash=from_slash)
         else:
             # For commands that don't support from_slash, add it to args for backward compatibility
@@ -243,6 +289,11 @@ def format_slash_help() -> str:
         "  /sessions config read ...       - Manage bash read patterns",
         "  /sessions config write ...      - Manage bash write patterns",
         "  /sessions config tools ...      - Manage blocked tools", "",
+        "### Learnings", "  /sessions learnings list        - List all learning topics",
+        "  /sessions learnings show <topic> - Show topic details",
+        "  /sessions learnings relevant    - Show relevant topics for current task",
+        "  /sessions learnings init        - Initialize learning system",
+        "  /sessions learnings status      - Show learning system status", "",
     ]
     if _HAS_KICKSTART:
         lines += [

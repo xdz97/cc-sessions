@@ -196,15 +196,23 @@ function main() {
 
     // Determine model and context limit
     let currModel = Model.UNKNOWN;
-    let contextLimit = 160000;
+    let contextLimit = 200000;  // Default context window for Claude 3.5 models
 
     if (modelName.toLowerCase().includes('[1m]')) {
-        contextLimit = 800000;
+        contextLimit = 800000;  // Extended context for Sonnet
     }
-    if (modelName.toLowerCase().includes('sonnet')) {
+    if (modelName.toLowerCase().includes('haiku')) {
+        currModel = Model.HAIKU;
+        contextLimit = 200000;  // Haiku 4.5
+    } else if (modelName.toLowerCase().includes('sonnet')) {
         currModel = Model.SONNET;
+        // Sonnet 4.5 has 200k base, 800k with extended context flag
+        if (!modelName.toLowerCase().includes('[1m]')) {
+            contextLimit = 200000;
+        }
     } else if (modelName.toLowerCase().includes('opus')) {
         currModel = Model.OPUS;
+        contextLimit = 200000;  // Kept for backwards compatibility
     }
 
     // Update model in shared state

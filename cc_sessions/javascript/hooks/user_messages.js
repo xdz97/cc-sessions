@@ -200,10 +200,13 @@ if (transcriptPath && fs.existsSync(transcriptPath)) {
     const contextLength = getContextLengthFromTranscript(transcriptPath);
 
     if (contextLength > 0) {
-        // Calculate percentage of usable context (opus 160k/sonnet 800k practical limit before auto-compact)
-        let usableTokens = 160000;
+        // Calculate percentage of usable context before auto-compact
+        // Haiku 4.5: 200k, Sonnet 4.5: 200k (800k with extended context), Opus: 200k
+        let usableTokens = 200000;  // Default for Haiku/Opus
         if (STATE.model === "sonnet") {
-            usableTokens = 800000;
+            usableTokens = 800000;  // Sonnet with extended context
+        } else if (STATE.model === "haiku") {
+            usableTokens = 200000;  // Haiku 4.5
         }
         const usablePercentage = (contextLength / usableTokens) * 100;
 

@@ -126,8 +126,9 @@ const TodoStatus = {
 };
 
 const Model = {
-    OPUS: 'opus',
+    HAIKU: 'haiku',
     SONNET: 'sonnet',
+    OPUS: 'opus',  // Kept for backwards compatibility but not recommended due to cost
     UNKNOWN: 'unknown'
 };
 
@@ -613,7 +614,7 @@ class SessionsState {
         this.api = new APIPerms(data.api || {});
         this.mode = data.mode || Mode.NO;
         this.todos = new SessionsTodos(data.todos || {});
-        this.model = data.model || Model.OPUS;
+        this.model = data.model || Model.SONNET;  // Default to Sonnet for best cost/performance balance
         this.flags = new SessionsFlags(data.flags || {});
         this.metadata = data.metadata || {};
     }
@@ -684,7 +685,7 @@ class SessionsState {
         state.todos = new SessionsTodos({});
         state.todos.active = activeTodos;
         state.todos.stashed = stashedTodos;
-        state.model = data.model || Model.OPUS;
+        state.model = data.model || Model.SONNET;  // Default to Sonnet if not specified
         state.flags = new SessionsFlags({
             context_85: context85,
             context_90: context90,

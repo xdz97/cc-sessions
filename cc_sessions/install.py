@@ -1103,7 +1103,9 @@ def create_directory_structure(project_root):
         'sessions/hooks',
         'sessions/api',
         'sessions/protocols',
-        'sessions/knowledge'
+        'sessions/knowledge',
+        'sessions/learnings',
+        'sessions/learnings/topics'
     ]
 
     for dir_name in dirs:

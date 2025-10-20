@@ -210,8 +210,12 @@ for item in BATCH_DIR.iterdir():
 
 #!> Chunk and save transcript batches
 MAX_BYTES = 24000
-usable_context = 160000
-if STATE.model == "sonnet": usable_context = 800000
+# Set usable context based on model (Haiku 4.5: 200k, Sonnet 4.5: 800k with extended, Opus: 200k)
+usable_context = 200000  # Default for Haiku/Opus
+if STATE.model == "sonnet":
+    usable_context = 800000  # Sonnet with extended context
+elif STATE.model == "haiku":
+    usable_context = 200000  # Haiku 4.5
 clean_transcript_text = json.dumps(list(clean_transcript), indent=2, ensure_ascii=False)
 
 chunks = []

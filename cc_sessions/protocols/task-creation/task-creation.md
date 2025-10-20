@@ -144,6 +144,83 @@ Your choice:
   - If no: Mark this step complete and continue
   - Context manifest MUST be complete before work begins (if not now, during task startup)
 
+### 3.5: Detect relevant learnings and offer to include them
+
+After context gathering decision, check if learning system is enabled and detect relevant topics:
+
+```bash
+# Check if learnings are enabled
+python -m cc_sessions.python.api learnings status
+
+# If enabled, detect relevant topics
+python -m cc_sessions.python.api learnings relevant
+```
+
+If relevant learning topics are detected, present options to the user:
+
+```markdown
+[LEARNINGS: Relevant Knowledge Detected]
+
+I've detected relevant learnings for the following topics based on your task description:
+- {topic_1}: {brief description}
+- {topic_2}: {brief description}
+
+These learnings include patterns, gotchas, and insights from previous similar work.
+
+How would you like to handle learnings for this task?
+
+**Option A - Include Now**:
+  Add learnings directly to the task file as a "Prior Learnings" section
+  ✓ Reference material always available in task file
+  ✓ Good for complex tasks where you'll refer back frequently
+  ✗ Makes task file longer
+
+**Option B - Load at Startup** (Recommended):
+  Load learnings automatically when you start the task with `start^:`
+  ✓ Keeps task file concise
+  ✓ Learnings presented just-in-time when needed
+  ✓ Can still access via `/sessions learnings show <topic>`
+
+**Option C - Skip**:
+  Don't include learnings for this task
+  ✓ For simple tasks or when learnings aren't helpful
+
+Your choice (A/B/C):
+```
+
+Handle user's choice:
+
+**If Option A (Include Now)**:
+- Load the relevant learnings using the learnings API
+- Format them into a "Prior Learnings" section in the task file
+- Add after the "Problem/Goal" section but before "Context Manifest"
+- Include top 3-5 patterns, gotchas, and anti-patterns per topic
+- Mark in task frontmatter: `learnings_included: true`
+
+Example format:
+```markdown
+## Prior Learnings
+
+### SSO - Known Patterns
+- **Token Refresh Pattern** (used 12 times, 100% success)
+  - Description...
+  - Example: services/auth.py:45-60
+
+### SSO - Known Gotchas
+⚠️ services/auth.py:67 - Missing await causes silent failures
+```
+
+**If Option B (Load at Startup)**:
+- Add a note in task frontmatter: `relevant_topics: [sso, security, api]`
+- These will be auto-loaded during task startup
+- Mark complete and continue
+
+**If Option C (Skip)**:
+- Mark complete and continue without adding learnings
+
+**If Learning System is Disabled or No Relevant Topics**:
+- Skip this step silently and continue to next step
+
 ### 4: Update service index files if applicable
   - Check if task relates to any task indexes (sessions/tasks/indexes)
   - If not, present a structured decision:

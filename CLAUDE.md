@@ -27,10 +27,13 @@ cc-sessions transforms Claude Code into a disciplined workflow system where Clau
 Unified state management in `sessions/sessions-state.json`:
 - `current_task` - Active task with frontmatter integration
 - `mode` - Current DAIC mode (discussion/implementation)
+- `specialized_mode` - Active specialized mode (code_review, refactor, debug, optimize, document)
+- `model` - Current model in use (haiku, sonnet, opus) for context limit tracking
 - `active_protocol` - Currently running protocol (CREATE/START/COMPLETE/COMPACT/None)
 - `todos` - Active and stashed todo lists
+- `learnings` - Active learning topics and loaded patterns
 - `flags` - Context warnings, subagent status
-- `metadata` - Runtime state (kickstart progress, update checks)
+- `metadata` - Runtime state (kickstart progress, update checks, specialized mode args)
 - `api` - Protocol-specific command permissions
 
 ### Sessions Config System
@@ -48,6 +51,19 @@ Configuration-driven protocol system that auto-adapts based on user preferences:
 - **Auto-Loading**: `load_protocol_file()` helper eliminates manual file reading
 - **Four Main Protocols**: task-creation, task-startup, task-completion, context-compaction
 - **Kickstart Onboarding**: Interactive first-run tutorial system
+
+### Model Selection & Cost Optimization
+The framework is optimized for cost-efficient operation:
+- **Default Model**: Sonnet 4.5 (best cost/performance balance)
+- **Context Limits**: Auto-detected and tracked per model
+  - Haiku 4.5: 200k tokens (~$1/million input, ~$5/million output)
+  - Sonnet 4.5: 200k base, 800k extended (~$3/million input, ~$15/million output)
+  - Opus 3.5: 200k tokens (~$15/million input, ~$75/million output) - **Not recommended due to cost**
+- **Smart Context Management**: 85% and 90% warnings trigger proactive compaction
+- **Specialized Agents**: Delegate heavy operations to isolated contexts
+- **Learning System**: Records patterns to reduce future exploration time
+
+**Cost Strategy**: The system defaults to Sonnet for the main session (complex reasoning, code generation) and can delegate intensive read-only operations (codebase scanning, log analysis) to cheaper models via specialized agents if implemented.
 
 ## Key Files
 

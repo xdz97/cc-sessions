@@ -96,6 +96,10 @@ Verify branch state:
 
 {directory_guidance}
 
+## 4.5. Load Relevant Learnings
+
+{learnings_section}
+
 ## 5. Initial Discussion & Planning (After Todos Complete)
 
 **Note**: This step happens AFTER all startup todos are complete and you've automatically returned to discussion mode.

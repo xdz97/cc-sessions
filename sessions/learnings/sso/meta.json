@@ -1,0 +1,27 @@
+{
+  "description": "Single Sign-On, OAuth, SAML, authentication flows",
+  "keywords": [
+    "oauth",
+    "saml",
+    "jwt",
+    "token",
+    "auth",
+    "sso",
+    "openid",
+    "oidc",
+    "authentication",
+    "login"
+  ],
+  "file_patterns": [
+    "**/auth/*",
+    "**/sso/*",
+    "**/login/*",
+    "**/oauth/*",
+    "**/saml/*"
+  ],
+  "related_topics": [
+    "security",
+    "api"
+  ],
+  "last_updated": null
+}

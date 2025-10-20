@@ -1,0 +1,28 @@
+{
+  "description": "Database schemas, queries, ORMs, migrations",
+  "keywords": [
+    "database",
+    "sql",
+    "postgres",
+    "mysql",
+    "mongo",
+    "orm",
+    "sqlalchemy",
+    "prisma",
+    "typeorm",
+    "migration",
+    "schema"
+  ],
+  "file_patterns": [
+    "**/models/*",
+    "**/schemas/*",
+    "**/migrations/*",
+    "**/*_model.py",
+    "**/*Model.ts"
+  ],
+  "related_topics": [
+    "api",
+    "security"
+  ],
+  "last_updated": null
+}

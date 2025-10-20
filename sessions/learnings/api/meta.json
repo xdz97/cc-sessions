@@ -1,0 +1,27 @@
+{
+  "description": "REST APIs, GraphQL, endpoints, HTTP, routing",
+  "keywords": [
+    "api",
+    "rest",
+    "graphql",
+    "endpoint",
+    "http",
+    "route",
+    "middleware",
+    "fastapi",
+    "express",
+    "flask"
+  ],
+  "file_patterns": [
+    "**/api/*",
+    "**/routes/*",
+    "**/endpoints/*",
+    "**/controllers/*",
+    "**/handlers/*"
+  ],
+  "related_topics": [
+    "security",
+    "database"
+  ],
+  "last_updated": null
+}

@@ -1,0 +1,22 @@
+{
+  "description": "Unit tests, integration tests, E2E testing",
+  "keywords": [
+    "test",
+    "pytest",
+    "jest",
+    "mocha",
+    "vitest",
+    "unittest",
+    "e2e",
+    "integration",
+    "mock"
+  ],
+  "file_patterns": [
+    "**/tests/*",
+    "**/*_test.py",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "related_topics": [],
+  "last_updated": null
+}

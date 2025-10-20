@@ -1,0 +1,195 @@
+{
+  "topics": {
+    "infrastructure": {
+      "description": "DevOps, CI/CD, deployments, Docker, K8s, infrastructure",
+      "keywords": [
+        "docker",
+        "kubernetes",
+        "k8s",
+        "deploy",
+        "ci/cd",
+        "cicd",
+        "terraform",
+        "ansible",
+        "jenkins",
+        "github actions"
+      ],
+      "file_patterns": [
+        "*.dockerfile",
+        "Dockerfile",
+        "docker-compose*",
+        "k8s/*",
+        "kubernetes/*",
+        ".github/workflows/*",
+        "*.tf",
+        "*.tfvars"
+      ],
+      "related_topics": [
+        "security",
+        "api"
+      ],
+      "last_updated": null
+    },
+    "sso": {
+      "description": "Single Sign-On, OAuth, SAML, authentication flows",
+      "keywords": [
+        "oauth",
+        "saml",
+        "jwt",
+        "token",
+        "auth",
+        "sso",
+        "openid",
+        "oidc",
+        "authentication",
+        "login"
+      ],
+      "file_patterns": [
+        "**/auth/*",
+        "**/sso/*",
+        "**/login/*",
+        "**/oauth/*",
+        "**/saml/*"
+      ],
+      "related_topics": [
+        "security",
+        "api"
+      ],
+      "last_updated": null
+    },
+    "security": {
+      "description": "Security vulnerabilities, input validation, crypto, permissions",
+      "keywords": [
+        "security",
+        "vulnerability",
+        "xss",
+        "sql injection",
+        "csrf",
+        "cors",
+        "crypto",
+        "encrypt",
+        "hash",
+        "permission",
+        "rbac",
+        "abac"
+      ],
+      "file_patterns": [
+        "**/security/*",
+        "**/middleware/auth*",
+        "**/permissions/*"
+      ],
+      "related_topics": [
+        "sso",
+        "api",
+        "database"
+      ],
+      "last_updated": null
+    },
+    "api": {
+      "description": "REST APIs, GraphQL, endpoints, HTTP, routing",
+      "keywords": [
+        "api",
+        "rest",
+        "graphql",
+        "endpoint",
+        "http",
+        "route",
+        "middleware",
+        "fastapi",
+        "express",
+        "flask"
+      ],
+      "file_patterns": [
+        "**/api/*",
+        "**/routes/*",
+        "**/endpoints/*",
+        "**/controllers/*",
+        "**/handlers/*"
+      ],
+      "related_topics": [
+        "security",
+        "database"
+      ],
+      "last_updated": null
+    },
+    "database": {
+      "description": "Database schemas, queries, ORMs, migrations",
+      "keywords": [
+        "database",
+        "sql",
+        "postgres",
+        "mysql",
+        "mongo",
+        "orm",
+        "sqlalchemy",
+        "prisma",
+        "typeorm",
+        "migration",
+        "schema"
+      ],
+      "file_patterns": [
+        "**/models/*",
+        "**/schemas/*",
+        "**/migrations/*",
+        "**/*_model.py",
+        "**/*Model.ts"
+      ],
+      "related_topics": [
+        "api",
+        "security"
+      ],
+      "last_updated": null
+    },
+    "frontend": {
+      "description": "UI components, React, Vue, state management",
+      "keywords": [
+        "react",
+        "vue",
+        "angular",
+        "component",
+        "ui",
+        "frontend",
+        "redux",
+        "zustand",
+        "state management",
+        "css",
+        "tailwind"
+      ],
+      "file_patterns": [
+        "**/components/*",
+        "**/views/*",
+        "**/pages/*",
+        "**/*.jsx",
+        "**/*.tsx",
+        "**/*.vue"
+      ],
+      "related_topics": [
+        "api"
+      ],
+      "last_updated": null
+    },
+    "testing": {
+      "description": "Unit tests, integration tests, E2E testing",
+      "keywords": [
+        "test",
+        "pytest",
+        "jest",
+        "mocha",
+        "vitest",
+        "unittest",
+        "e2e",
+        "integration",
+        "mock"
+      ],
+      "file_patterns": [
+        "**/tests/*",
+        "**/*_test.py",
+        "**/*.test.ts",
+        "**/*.spec.ts"
+      ],
+      "related_topics": [],
+      "last_updated": null
+    }
+  },
+  "last_updated": "2025-10-20T17:44:30.108Z"
+}

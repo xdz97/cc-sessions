@@ -1,0 +1,30 @@
+{
+  "description": "DevOps, CI/CD, deployments, Docker, K8s, infrastructure",
+  "keywords": [
+    "docker",
+    "kubernetes",
+    "k8s",
+    "deploy",
+    "ci/cd",
+    "cicd",
+    "terraform",
+    "ansible",
+    "jenkins",
+    "github actions"
+  ],
+  "file_patterns": [
+    "*.dockerfile",
+    "Dockerfile",
+    "docker-compose*",
+    "k8s/*",
+    "kubernetes/*",
+    ".github/workflows/*",
+    "*.tf",
+    "*.tfvars"
+  ],
+  "related_topics": [
+    "security",
+    "api"
+  ],
+  "last_updated": null
+}

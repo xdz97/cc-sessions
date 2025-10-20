@@ -1,0 +1,28 @@
+{
+  "description": "UI components, React, Vue, state management",
+  "keywords": [
+    "react",
+    "vue",
+    "angular",
+    "component",
+    "ui",
+    "frontend",
+    "redux",
+    "zustand",
+    "state management",
+    "css",
+    "tailwind"
+  ],
+  "file_patterns": [
+    "**/components/*",
+    "**/views/*",
+    "**/pages/*",
+    "**/*.jsx",
+    "**/*.tsx",
+    "**/*.vue"
+  ],
+  "related_topics": [
+    "api"
+  ],
+  "last_updated": null
+}

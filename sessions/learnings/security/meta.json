@@ -1,0 +1,28 @@
+{
+  "description": "Security vulnerabilities, input validation, crypto, permissions",
+  "keywords": [
+    "security",
+    "vulnerability",
+    "xss",
+    "sql injection",
+    "csrf",
+    "cors",
+    "crypto",
+    "encrypt",
+    "hash",
+    "permission",
+    "rbac",
+    "abac"
+  ],
+  "file_patterns": [
+    "**/security/*",
+    "**/middleware/auth*",
+    "**/permissions/*"
+  ],
+  "related_topics": [
+    "sso",
+    "api",
+    "database"
+  ],
+  "last_updated": null
+}

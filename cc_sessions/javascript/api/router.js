@@ -27,11 +27,22 @@ try {
     _HAS_KICKSTART = false;
 }
 const { handleUninstallCommand } = require('./uninstall_commands.js');
+const { routeLearningCommand } = require('./learning_commands.js');
 //--//
 
 //-#
 
 // ==== GLOBALS ===== //
+
+function handleLearningsCommand(args, jsonOutput = false, fromSlash = false) {
+    if (!args || args.length === 0) {
+        return HELP_MESSAGES['learnings'] || 'Use: sessions learnings <subcommand> [args...]';
+    }
+    const subcmd = args[0];
+    const subcmdArgs = args.slice(1);
+    routeLearningCommand(subcmd, subcmdArgs, jsonOutput);
+    return '';
+}
 
 const COMMAND_HANDLERS = {
     'protocol': handleProtocolCommand,
@@ -43,6 +54,7 @@ const COMMAND_HANDLERS = {
     'config': handleConfigCommand,
     'todos': handleTodosCommand,
     'tasks': handleTaskCommand,
+    'learnings': handleLearningsCommand,
     'uninstall': handleUninstallCommand,
 };
 
@@ -54,10 +66,11 @@ if (_HAS_KICKSTART) {
 // Help dictionary for progressive disclosure
 const HELP_MESSAGES = {
     "root": `Available subsystems:
-  state    - show, mode, task, todos, flags, update
-  config   - show, phrases, git, env, features, read, write, tools
-  tasks    - idx, start
-  protocol - startup-load
+  state     - show, mode, task, todos, flags, update
+  config    - show, phrases, git, env, features, read, write, tools
+  tasks     - idx, start
+  learnings - list, show, add, relevant, init, enable, disable, status
+  protocol  - startup-load
   uninstall - Remove cc-sessions framework${_HAS_KICKSTART ? `
   kickstart - full, subagents, next, complete` : ''}`,
 
@@ -127,6 +140,17 @@ Features: branch_enforcement, task_detection, auto_ultrathink, icon_style, warn_
   idx list        - List all task indexes
   idx <name>      - Show tasks in specific index
   start @<task>   - Start working on a task`,
+
+    "learnings": `Available learnings commands:
+  list            - List all learning topics
+  show <topic>    - Show detailed information about a topic
+  add <topic> <description> [keywords...] - Add new learning topic
+  relevant        - Show topics relevant to current task
+  init            - Initialize learning system with default topics
+  init --scan     - Initialize AND scan codebase to pre-populate learnings
+  enable          - Enable automatic learning loading
+  disable         - Disable automatic learning loading
+  status          - Show learning system status`,
 };
 
 //-#
